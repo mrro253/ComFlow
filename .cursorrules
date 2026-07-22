@@ -1,0 +1,180 @@
+PROJECT: CommissionFlow
+
+CommissionFlow is a SaaS commission tracking platform designed specifically for Medicare and Medicaid insurance agencies.
+
+PRIMARY GOAL
+
+Reduce manual commission tracking by automatically syncing CRM data and generating commission records.
+
+The platform should prioritize:
+
+- Simplicity
+- Speed
+- Ease of use
+- Minimal setup
+- Clear dashboards
+- Accurate commission calculations
+
+TARGET CUSTOMER
+
+Small to mid-sized Medicare and Medicaid agencies.
+
+Typical agency structure:
+
+Owner
+Manager
+Agent
+
+MVP SCOPE
+
+The MVP is agency-facing only.
+
+No public marketplace.
+
+No carrier integrations.
+
+No payroll integrations.
+
+No commission statement reconciliation.
+
+No AI features.
+
+No advanced reporting.
+
+No custom workflow builders.
+
+Only build what is necessary for a working MVP.
+
+COMMISSION STRUCTURE
+
+For MVP:
+
+Agent Commission:
+10%
+
+Manager Override:
+2%
+
+Owner Override:
+1%
+
+Commissions are generated when an opportunity reaches:
+
+"Enrolled"
+
+Commission percentages should be stored in the database and configurable.
+
+CRM STRATEGY
+
+Only GoHighLevel is supported for MVP.
+
+All CRM integrations must use an abstraction layer.
+
+Future CRM providers may include:
+
+- HubSpot
+- Salesforce
+- Zoho
+- Pipedrive
+
+New providers should be addable without modifying business logic.
+
+ARCHITECTURE REQUIREMENTS
+
+Use clean architecture.
+
+Separate:
+
+- UI
+- Business Logic
+- Database Layer
+- CRM Layer
+
+Business logic must never depend directly on UI components.
+
+Commission calculations must be isolated from CRM integrations.
+
+TECH STACK
+
+Frontend:
+- Next.js
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- Recharts
+
+Backend:
+- Next.js Route Handlers
+- TypeScript
+
+Database:
+- Supabase Postgres
+- Prisma
+
+Authentication:
+- Supabase Auth
+
+Hosting:
+- Vercel
+
+DATABASE PRINCIPLES
+
+Design schemas for multi-tenancy from day one.
+
+Every major record should belong to an Agency.
+
+Avoid premature optimization.
+
+Favor simple schemas over complex relational models.
+
+UI PRINCIPLES
+
+Design should feel modern and professional.
+
+Reference products:
+
+- Stripe
+- Linear
+- Ramp
+
+Prioritize clarity over visual complexity.
+
+PERFORMANCE PRINCIPLES
+
+Keep pages fast.
+
+Avoid unnecessary dependencies.
+
+Favor server-side operations when appropriate.
+
+MVP DEVELOPMENT RULES
+
+When making decisions:
+
+1. Prefer simplicity.
+2. Prefer maintainability.
+3. Prefer lower cost.
+4. Avoid overengineering.
+5. Leave TODO comments for future enhancements.
+6. Build the fastest path to a usable MVP.
+
+When uncertain, choose the option that gets the product in front of users faster.
+
+Before implementing a feature:
+
+1. Explain the implementation plan.
+2. Identify files that will be modified.
+3. Identify risks.
+4. Wait for approval if a large refactor is required.
+
+When generating code:
+
+- Use TypeScript best practices.
+- Use strict typing.
+- Avoid duplicated code.
+- Keep functions small and readable.
+- Add comments only where necessary.
+- Do not create unnecessary abstractions.
+- Do not introduce new libraries unless required.
+
+Always optimize for MVP delivery speed.
