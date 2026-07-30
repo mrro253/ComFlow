@@ -36,14 +36,20 @@ export function UserMenu({ user }: { user: CurrentUser }) {
           <p className="text-xs">{ROLE_LABEL[user.role]}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <form action={signOut}>
-          <DropdownMenuItem asChild>
-            <button type="submit" className="flex w-full items-center gap-2">
-              <LogOut className="h-4 w-4" />
-              Sign out
-            </button>
-          </DropdownMenuItem>
-        </form>
+        <DropdownMenuItem
+          className="gap-2"
+          onSelect={(event) => {
+            // A submit button nested in a form inside this menu item would
+            // race the portal unmounting on select - call the server action
+            // directly instead, which is the more robust pattern for
+            // triggering a server action (and its redirect) from a menu.
+            event.preventDefault();
+            void signOut();
+          }}
+        >
+          <LogOut className="h-4 w-4" />
+          Sign out
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

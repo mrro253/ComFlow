@@ -24,6 +24,8 @@ export interface AppUser {
 export interface Agency {
   id: string;
   name: string;
+  /** Null until the Owner finishes or dismisses the onboarding checklist (see app/(dashboard)/onboarding). */
+  onboardingCompletedAt: string | null;
   createdAt: string;
 }
 

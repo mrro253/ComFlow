@@ -1,6 +1,8 @@
 import { DollarSign, Target, TrendingUp, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
+import { getAgencyById } from "@/lib/repositories/agencyRepository";
+import { getConnectionForAgency } from "@/lib/repositories/crmConnectionRepository";
 import { buildNameMap, getScopedTransactions } from "@/lib/reporting/scopedTransactions";
 import {
   buildMonthlyCommissionSeries,
@@ -10,8 +12,10 @@ import {
   sumCommission,
   sumUniqueSaleAmount,
 } from "@/lib/reporting/metrics";
+import { isOnboardingIncomplete } from "@/lib/onboarding";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { BarChartCard } from "@/components/dashboard/bar-chart-card";
+import { OnboardingChecklistCard } from "@/components/dashboard/onboarding-checklist-card";
 import { TopAgentsTable } from "@/components/dashboard/top-agents-table";
 import { TransactionsTable, type TransactionRow } from "@/components/dashboard/transactions-table";
 import { formatCurrency } from "@/lib/utils";
@@ -24,6 +28,14 @@ export default async function DashboardPage() {
 
   const { transactions, scopeUsers, scopeLabel } = await getScopedTransactions(user, 300);
   const nameById = buildNameMap(scopeUsers);
+
+  // Owner-only setup checklist - never fetched/shown for Managers or Agents.
+  const showOnboardingChecklist = user.role === "owner";
+  const [agency, crmConnection] = showOnboardingChecklist
+    ? await Promise.all([getAgencyById(user.agencyId), getConnectionForAgency(user.agencyId)])
+    : [null, null];
+  const shouldShowOnboardingChecklist =
+    showOnboardingChecklist && agency !== null && isOnboardingIncomplete(agency);
 
   const totalSales = sumUniqueSaleAmount(transactions);
   const totalCommission = sumCommission(transactions);
@@ -55,6 +67,13 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
         <p className="text-sm text-muted-foreground">{scopeLabel}</p>
       </div>
+
+      {shouldShowOnboardingChecklist && (
+        <OnboardingChecklistCard
+          hasTeammates={scopeUsers.length > 1}
+          hasCrmConnection={crmConnection !== null}
+        />
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total sales" value={formatCurrency(totalSales)} icon={TrendingUp} />

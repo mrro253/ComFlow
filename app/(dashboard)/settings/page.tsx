@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { listPlansWithDetails } from "@/lib/repositories/commissionPlanRepository";
@@ -28,13 +29,23 @@ export default async function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          {isOwner
-            ? "Manage your commission plans, CRM connection, and team."
-            : "View-only. Ask an Owner to make changes here."}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+          <p className="text-sm text-muted-foreground">
+            {isOwner
+              ? "Manage your commission plans, CRM connection, and team."
+              : "View-only. Ask an Owner to make changes here."}
+          </p>
+        </div>
+        {isOwner && (
+          <Link
+            href="/onboarding"
+            className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            Reopen setup guide
+          </Link>
+        )}
       </div>
 
       <CompPlansSection plans={plans} editable={isOwner} />

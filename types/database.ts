@@ -25,16 +25,19 @@ export interface Database {
         Row: {
           id: string;
           name: string;
+          onboarding_completed_at: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           name: string;
+          onboarding_completed_at?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
+          onboarding_completed_at?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -271,6 +274,20 @@ export interface Database {
       get_my_role: {
         Args: Record<string, never>;
         Returns: string;
+      };
+      create_agency_with_owner: {
+        Args: {
+          p_auth_user_id: string;
+          p_agency_name: string;
+          p_first_name: string;
+          p_last_name: string;
+          p_email: string;
+        };
+        Returns: {
+          agency_id: string;
+          user_id: string;
+          commission_plan_id: string | null;
+        }[];
       };
     };
     Enums: Record<string, never>;

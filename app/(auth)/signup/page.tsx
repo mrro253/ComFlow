@@ -18,6 +18,25 @@ import {
 export default function SignupPage() {
   const [state, formAction, isPending] = useActionState(signup, undefined);
 
+  if (state?.info) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Check your email</CardTitle>
+          <CardDescription>{state.info}</CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <Link
+            href="/login"
+            className="w-full text-center text-sm font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            Go to sign in
+          </Link>
+        </CardFooter>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
