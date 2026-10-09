@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Receipt, Settings, Users } from "lucide-react";
+import { CircleDollarSign, FileText, KeyRound, LayoutDashboard, Settings, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/types/domain";
@@ -17,7 +17,9 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/commissions", label: "Commissions", icon: Receipt },
+  { href: "/payments", label: "Payments", icon: CircleDollarSign },
+  { href: "/statements", label: "Statements", icon: FileText, roles: ["owner"] },
+  { href: "/carriers", label: "Carriers", icon: KeyRound, roles: ["owner", "agent"] },
   { href: "/users", label: "Users", icon: Users, roles: ["owner", "manager"] },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

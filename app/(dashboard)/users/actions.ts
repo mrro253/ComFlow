@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/requireRole";
 import { getUserById, updateUserProfile } from "@/lib/repositories/userRepository";
+import { parseAgentClassification } from "@/lib/auth/agentClassification";
 import type { ActionResult } from "@/app/(auth)/actions";
 
 /**
@@ -43,7 +44,22 @@ export async function editUser(
       return { error: "The agency owner's role can't be changed here." };
     }
 
-    await updateUserProfile(userId, { firstName, lastName, role, managerId, commissionPlanId });
+    const classification = parseAgentClassification(
+      role,
+      String(formData.get("agentType") ?? ""),
+      String(formData.get("careerLevel") ?? "")
+    );
+    if (!classification.ok) return { error: classification.error };
+
+    await updateUserProfile(userId, {
+      firstName,
+      lastName,
+      role,
+      managerId,
+      commissionPlanId,
+      agentType: classification.agentType,
+      careerLevel: classification.careerLevel,
+    });
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Failed to update teammate." };
   }

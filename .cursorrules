@@ -1,83 +1,83 @@
 PROJECT: CommissionFlow
 
-CommissionFlow is a SaaS commission tracking platform designed specifically for Medicare and Medicaid insurance agencies.
+CommissionFlow is a SaaS commission management platform for Medicare and Medicaid insurance agencies. First customer: TruePlan FL Inc.
 
 PRIMARY GOAL
 
-Reduce manual commission tracking by automatically syncing CRM data and generating commission records.
+Remove manual commission tracking by pulling carrier commission statements, processing them accurately, and showing each person exactly what they were paid and what they are owed.
 
 The platform should prioritize:
 
+- Accurate money handling
 - Simplicity
 - Speed
 - Ease of use
 - Minimal setup
 - Clear dashboards
-- Accurate commission calculations
 
-TARGET CUSTOMER
+BUSINESS MODEL (source of truth: the business owner, Ryan)
 
-Small to mid-sized Medicare and Medicaid agencies.
+Commissions come from ACTUAL CARRIER PAYMENTS on carrier commission statements.
+The CRM never decides what is payable.
 
-Typical agency structure:
+Account levels:
 
-Owner
-Manager
-Agent
+- Agency account: a company that has its own Career Agents (owner, optional managers, agents).
+- Individual account: an Independent Agent on their own.
+- Every agent has their own login.
+
+Agent types:
+
+Career Agent
+- TruePlan (the agency) receives the carrier commission and pays the agent.
+- Has a career level: Benefit Consultant, Senior Benefit Consultant, Client Advisor, Private Client Advisor.
+- Paid fixed-dollar or percent amounts from effective-dated compensation rules, by level, product, and carrier payment category (e.g. MAPD T65, plan change, renewal).
+- Payouts are biweekly, require owner approval, and require the carrier payment to have been received.
+- Career Agents do NOT receive overrides.
+
+Independent Agent
+- Enters their own carrier portal username/password in the app so statements can be pulled.
+- The carrier pays them 100% directly. The app only pulls and processes statements so they can see client status and what they were paid by payment category.
+- No payout obligation is ever created for Independent Agents.
+
+Independent Agency Owner
+- Is the only role that receives overrides. Some carriers show overrides on statements, others do not. Amounts vary, so they are tracked as reported by the carrier, never computed from a fixed percentage.
+
+Production reporting:
+
+- Personal production (owner's own writing-agent business) and agency production must never be mixed in management reports.
+- Writing-agent proof establishes who owns a transaction. A payee name alone never does.
+- Unidentified transactions stay unassigned until a human reviews them. Never guess.
+
+NON-NEGOTIABLE RULES
+
+1. Never pay an agent without carrier receipt AND owner approval.
+2. Never overwrite historical rates. Each policy locks the career level and rates in effect when it was written; promotions only affect new business.
+3. Missing rates are NOT_CONFIGURED, never zero.
+4. Store all money as integer cents (bigint in Postgres). No floating point money math.
+5. Keep carrier-reported amounts and agent-earned amounts in separate tables.
+6. Imports, earnings approval, and payout execution are separate approval steps.
+7. Keep an audit trail for imports, assignments, approvals, and adjustments.
+8. Never expose one agent's records to another (enforced by Row Level Security).
+9. Never store carrier credentials or any secret in source code or plaintext. Encrypt at rest.
+10. Statements and member data are PHI. Never put real client data in the repo, fixtures, logs, or tests. Use synthetic data only.
 
 MVP SCOPE
 
-The MVP is agency-facing only.
+In scope:
+- Carrier statement import (Ultimate Health Plans first; manual PDF upload before automated pulls)
+- Career and Independent agent processing as described above
+- Agency/personal production reporting
+- Approval-gated earnings and biweekly payout batches
+- Role-based dashboards (owner, manager, agent)
+- GoHighLevel as an OUTPUT/matching target (match contacts, push statuses). Never the source of payable amounts.
 
-No public marketplace.
-
-No carrier integrations.
-
-No payroll integrations.
-
-No commission statement reconciliation.
-
-No AI features.
-
-No advanced reporting.
-
-No custom workflow builders.
-
-Only build what is necessary for a working MVP.
-
-COMMISSION STRUCTURE
-
-For MVP:
-
-Agent Commission:
-10%
-
-Manager Override:
-2%
-
-Owner Override:
-1%
-
-Commissions are generated when an opportunity reaches:
-
-"Enrolled"
-
-Commission percentages should be stored in the database and configurable.
-
-CRM STRATEGY
-
-Only GoHighLevel is supported for MVP.
-
-All CRM integrations must use an abstraction layer.
-
-Future CRM providers may include:
-
-- HubSpot
-- Salesforce
-- Zoho
-- Pipedrive
-
-New providers should be addable without modifying business logic.
+Out of scope:
+- Public marketplace
+- Payroll or payment execution integrations
+- AI features
+- Custom workflow builders
+- Bonuses (the business does not use them)
 
 ARCHITECTURE REQUIREMENTS
 
@@ -86,46 +86,48 @@ Use clean architecture.
 Separate:
 
 - UI
-- Business Logic
-- Database Layer
-- CRM Layer
+- Business logic (pure functions, no I/O)
+- Database layer (repositories)
+- Carrier layer (lib/carriers: statement parsing/downloading per carrier)
+- CRM layer (lib/crm)
 
 Business logic must never depend directly on UI components.
+Commission/earnings calculations must be isolated from carrier and CRM integrations.
+All carrier and CRM integrations use an abstraction layer so new providers can be added without changing business logic.
 
-Commission calculations must be isolated from CRM integrations.
+Browser automation (Playwright/Chromium) runs in a separate long-lived worker service, never in a Vercel request handler or browser component. The worker talks to the app through the database.
 
 TECH STACK
 
 Frontend:
-- Next.js
+- Next.js (App Router)
 - TypeScript
 - Tailwind CSS
-- shadcn/ui
+- shadcn/ui-style components
 - Recharts
 
 Backend:
-- Next.js Route Handlers
+- Next.js Route Handlers and Server Actions
 - TypeScript
 
 Database:
 - Supabase Postgres
-- Prisma
+- Plain SQL migrations in supabase/migrations (no ORM) accessed through supabase-js repositories
 
 Authentication:
 - Supabase Auth
 
 Hosting:
-- Vercel
+- Vercel (app)
+- A separate small host for the carrier worker
 
 DATABASE PRINCIPLES
 
-Design schemas for multi-tenancy from day one.
-
-Every major record should belong to an Agency.
-
-Avoid premature optimization.
-
-Favor simple schemas over complex relational models.
+Design for multi-tenancy from day one.
+Every table carries agency_id and has Row Level Security.
+Financial tables are written only by server code using the service-role client after a role check; authenticated users get read access scoped by role.
+Use constraints, unique keys, and triggers to enforce immutability and duplicate protection in the database, not only in app code.
+Favor simple schemas. Avoid premature optimization.
 
 UI PRINCIPLES
 
@@ -142,9 +144,7 @@ Prioritize clarity over visual complexity.
 PERFORMANCE PRINCIPLES
 
 Keep pages fast.
-
 Avoid unnecessary dependencies.
-
 Favor server-side operations when appropriate.
 
 MVP DEVELOPMENT RULES
@@ -157,8 +157,6 @@ When making decisions:
 4. Avoid overengineering.
 5. Leave TODO comments for future enhancements.
 6. Build the fastest path to a usable MVP.
-
-When uncertain, choose the option that gets the product in front of users faster.
 
 Before implementing a feature:
 
@@ -176,5 +174,25 @@ When generating code:
 - Add comments only where necessary.
 - Do not create unnecessary abstractions.
 - Do not introduce new libraries unless required.
+- Write Vitest tests for all business logic.
+
+README IS A LIVING HANDOFF DOCUMENT
+
+README.md is how the owner (Marshall), the business owner (Ryan) and their
+AI assistants understand the project. Every change that alters behavior,
+setup, schema, environment variables, scope or decisions MUST update
+README.md in the same change. Specifically keep these sections accurate:
+
+- Status (what works, what is unverified)
+- Current functionality (by role)
+- What's missing / not built
+- Recommended next steps (ordered)
+- Decisions to check with Ryan (open questions and assumptions made)
+- Setup and environment variables
+- Changelog (newest first, one line per change, with the date)
+
+Never claim something works unless it was actually run. Mark anything that
+has not been exercised against a live Supabase project or a real carrier
+portal as "unverified".
 
 Always optimize for MVP delivery speed.

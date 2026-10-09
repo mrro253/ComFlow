@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AgentTypeFields } from "@/components/users/agent-type-fields";
 import { initials } from "@/lib/utils";
 import type { AppUser, CommissionPlan, Role } from "@/types/domain";
 
@@ -68,6 +69,11 @@ export function EditUserRow({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {user.agentType && (
+            <span className="text-xs text-muted-foreground">
+              {user.agentType === "career" ? (user.careerLevel ?? "Career") : "Independent"}
+            </span>
+          )}
           <span className="text-xs text-muted-foreground">{planLabel}</span>
           <Badge variant={ROLE_BADGE[user.role]}>{user.role}</Badge>
           {editable && (
@@ -134,6 +140,13 @@ export function EditUserRow({
           </select>
         </div>
       </div>
+
+      <AgentTypeFields
+        idPrefix={`edit-${user.id}`}
+        defaultType={user.agentType}
+        defaultLevel={user.careerLevel}
+        isManager={role === "manager"}
+      />
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`commissionPlanId-${user.id}`}>Comp plan</Label>

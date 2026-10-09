@@ -1,0 +1,22 @@
+{
+  "name": "commissionflow-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pulls carrier commission statement PDFs from carrier portals. Runs separately from the web app (needs a real browser; cannot run on Vercel).",
+  "type": "module",
+  "scripts": {
+    "browsers": "playwright install chromium",
+    "start": "tsx --env-file=../.env.local src/index.ts",
+    "once": "tsx --env-file=../.env.local src/index.ts --once",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.47.10",
+    "playwright": "^1.49.1",
+    "tsx": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3"
+  }
+}

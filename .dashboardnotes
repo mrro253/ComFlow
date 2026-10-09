@@ -1,0 +1,12 @@
+If your developer is building his own dashboard, give him:
+
+    Backend: ultimate-*.js, statement-sync.js, pdf-store.js, commission-*.js, import-commissions.js, production-classification.js.
+    Database and source documents: trueplan.db, statements/, and database-backups/.
+    Dependencies and tests: package.json, package-lock.json, offline-tests/, offline-browser-tests/, and Playwright configurations.
+    Documentation: ULTIMATE-INTEGRATION.md, DASHBOARD.md, and the checklist above.
+    Existing dashboard as an optional reference: dashboard-server.js, client-details.js, and dashboard/. Client details are currently read from PDFs rather than stored in the commission table.
+    Business rules: Ryan Ball writing-agent production is personal; Joseph Vitale is an active Career agent at Private Client Advisor level. Remaining compensation rules need confirmation.
+    Operating constraints: Preserve records/backups; downloads and commission changes need approval. The proposed 1st/15th, 8 AM Eastern schedule is inactive.
+    Carrier access: Credentials through secure sharing. The saved browser session may expire.
+
+The simplest handoff is the full project folder, excluding node_modules because he can reinstall dependencies.

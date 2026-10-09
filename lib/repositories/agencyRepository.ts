@@ -9,6 +9,7 @@ function mapAgencyRow(row: AgencyRow): Agency {
   return {
     id: row.id,
     name: row.name,
+    accountType: row.account_type,
     onboardingCompletedAt: row.onboarding_completed_at,
     createdAt: row.created_at,
   };

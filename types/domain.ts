@@ -8,6 +8,28 @@ export type Role = "owner" | "manager" | "agent";
 
 export const ROLES: Role[] = ["owner", "manager", "agent"];
 
+/**
+ * How a producer is paid. Career Agents are paid by the agency from
+ * compensation rules; Independent Agents are paid 100% directly by the
+ * carrier and are only tracked.
+ */
+export type AgentType = "career" | "independent";
+
+export const AGENT_TYPES: AgentType[] = ["career", "independent"];
+
+/** Career Agent tiers, lowest to highest. */
+export const CAREER_LEVELS = [
+  "Benefit Consultant",
+  "Senior Benefit Consultant",
+  "Client Advisor",
+  "Private Client Advisor",
+] as const;
+
+export type CareerLevel = (typeof CAREER_LEVELS)[number];
+
+/** "agency" = a company with its own Career Agents; "individual" = one Independent Agent. */
+export type AccountType = "agency" | "individual";
+
 export interface AppUser {
   id: string;
   agencyId: string;
@@ -15,6 +37,11 @@ export interface AppUser {
   lastName: string;
   email: string;
   role: Role;
+  /** Null for users who are not producers (e.g. an Owner who does not write business). */
+  agentType: AgentType | null;
+  /** Set if and only if `agentType` is "career". */
+  careerLevel: CareerLevel | null;
+  active: boolean;
   managerId: string | null;
   /** Explicit plan assignment; falls back to the agency's default plan when null. */
   commissionPlanId: string | null;
@@ -24,6 +51,7 @@ export interface AppUser {
 export interface Agency {
   id: string;
   name: string;
+  accountType: AccountType;
   /** Null until the Owner finishes or dismisses the onboarding checklist (see app/(dashboard)/onboarding). */
   onboardingCompletedAt: string | null;
   createdAt: string;

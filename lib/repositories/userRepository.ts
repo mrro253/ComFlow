@@ -1,7 +1,7 @@
 import { createClient, type TypedSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
-import type { AppUser, Role } from "@/types/domain";
+import type { AgentType, AppUser, CareerLevel, Role } from "@/types/domain";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
 
@@ -13,6 +13,9 @@ export function mapUserRow(row: UserRow): AppUser {
     lastName: row.last_name,
     email: row.email,
     role: row.role,
+    agentType: row.agent_type,
+    careerLevel: row.career_level,
+    active: row.active,
     managerId: row.manager_id,
     commissionPlanId: row.commission_plan_id,
     createdAt: row.created_at,
@@ -123,6 +126,8 @@ export async function createUserWithAuth(input: {
   email: string;
   role: Role;
   managerId?: string | null;
+  agentType?: AgentType | null;
+  careerLevel?: CareerLevel | null;
 }): Promise<{ user: AppUser; temporaryPassword: string }> {
   const admin = createAdminClient();
   const temporaryPassword = generateTemporaryPassword();
@@ -148,6 +153,8 @@ export async function createUserWithAuth(input: {
       email: input.email,
       role: input.role,
       manager_id: input.managerId ?? null,
+      agent_type: input.agentType ?? null,
+      career_level: input.careerLevel ?? null,
     })
     .select("*")
     .single();
@@ -176,6 +183,8 @@ export async function updateUserProfile(
     managerId: string | null;
     /** `undefined` leaves the current assignment untouched; `null` clears it (falls back to the agency default plan). */
     commissionPlanId?: string | null;
+    agentType?: AgentType | null;
+    careerLevel?: CareerLevel | null;
   }
 ): Promise<AppUser> {
   const supabase = await createClient();
@@ -188,6 +197,11 @@ export async function updateUserProfile(
       manager_id: updates.managerId,
       ...(updates.commissionPlanId !== undefined && {
         commission_plan_id: updates.commissionPlanId,
+      }),
+      // Set together so the database check (career_level iff career) always holds.
+      ...(updates.agentType !== undefined && {
+        agent_type: updates.agentType,
+        career_level: updates.careerLevel ?? null,
       }),
     })
     .eq("id", id)

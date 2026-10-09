@@ -1,0 +1,321 @@
+Developer Project Handoff
+Project Objective
+
+Build a centralized commission management system for TruePlan FL Inc., a Medicare and insurance brokerage operating with Career Agents and Independent Agents.
+
+The system needs to import insurance carrier commission statements, identify production ownership, calculate compensation, track agency revenue, and generate agent commission statements.
+
+The long-term goal is a secure, web-based application integrated with GoHighLevel (GHL).
+1. Work Already Completed
+
+A Node.js prototype has been developed using SQLite.
+
+Current functionality includes:
+
+    Extracting commission transactions from an Ultimate Health Plans PDF statement.
+
+    Converting extracted transactions into structured JSON.
+
+    Validating the extracted commission total against the statement.
+
+    Importing transactions into a SQLite database.
+
+    Preventing duplicate imports of the same statement.
+
+    Creating Career Agent records with compensation levels.
+
+    Storing initial life insurance commission percentages.
+
+    Separating personal production from agency production for management reporting.
+
+Successful test:
+
+September 2026 Ultimate Health Plans statement:
+
+    Five renewal transactions imported.
+
+    Total commission revenue: $144.60.
+
+    Reimport test: zero new transactions and five duplicates skipped.
+
+    All five transactions classified as Ryan Ball — Personal Production.
+
+    No Career Agent payouts created.
+
+This is an early prototype, not a production-ready commission system. The parser currently supports the tested Ultimate statement format; other carriers and statement layouts still require development.
+2. Revenue and Production Structure
+
+There are two management-reporting categories:
+
+TruePlan FL Inc. — Agency Production
+
+Tracks commissions associated with agency operations, Career Agent production, agency overrides, and applicable agency revenue.
+
+Ryan Ball — Personal Production
+
+Tracks policies personally written by the owner and their related commissions.
+
+Both categories may receive deposits into the same bank account. They must remain separate for internal financial reporting.
+
+These categories do not necessarily represent separate legal or tax entities. Preserve the actual carrier payee and legal entity information.
+3. Agent Types
+
+Career Agents
+
+    Operate under TruePlan's Career Agent model.
+
+    Have assigned compensation levels.
+
+    TruePlan calculates and pays their commissions.
+
+    Commissions are paid biweekly.
+
+    Agent payouts must be based on eligible carrier commissions actually received.
+
+    All payouts require owner review and approval before payment.
+
+Independent Agents
+
+    Generally receive their commissions directly from insurance carriers.
+
+    Need access to their own production and commission reporting.
+
+    TruePlan must track applicable agency overrides separately.
+
+    Each independent agent or agency must only see authorized information.
+
+4. Career Agent Levels
+
+The system must support these four levels:
+
+    Benefit Consultant
+
+    Senior Benefit Consultant
+
+    Client Advisor
+
+    Private Client Advisor
+
+Initial life insurance commission percentages entered into the prototype:
+Level	Life Initial Commission
+Benefit Consultant	70%
+Senior Benefit Consultant	75%
+Client Advisor	80%
+Private Client Advisor	85%
+
+These rates are preliminary configuration and should remain editable, with effective dates and historical preservation.
+
+The system must also support Medicare Advantage, Medicare Supplement, ACA, annuities, hospital indemnity, cancer, and other insurance products.
+
+Medicare Advantage compensation discussed previously includes tentative Career Agent rates of $300 for T65, $100 for plan changes, and $7 for applicable renewals. These should be confirmed before configuration.
+
+Other compensation schedules are not finalized. Missing rates must remain unconfigured, not automatically treated as zero.
+5. Commission Processing
+
+Required workflow:
+
+    Import a carrier statement.
+
+    Parse and normalize each transaction.
+
+    Validate statement totals.
+
+    Detect duplicate transactions.
+
+    Match transactions to members, policies, writing agents, and production entities.
+
+    Identify commission types: initial, renewal, adjustment, chargeback, override, etc.
+
+    Match commission records to actual carrier payment receipts.
+
+    Apply the correct compensation rules.
+
+    Calculate agent earnings and agency margins.
+
+    Generate biweekly payout batches.
+
+    Present payouts for owner approval.
+
+    Record approved and completed payments.
+
+    Maintain a complete audit trail.
+
+The system must handle corrections, reversals, negative commissions, chargebacks, and carrier statement reprocessing.
+
+It should never automatically pay agents simply because a commission appears on a statement.
+6. Commission Calculation Requirements
+
+The calculation engine must support:
+
+    Fixed-dollar compensation.
+
+    Percentage-based compensation.
+
+    Percentage of first-year annual premium.
+
+    Renewal compensation.
+
+    Carrier-specific compensation.
+
+    Product-specific compensation.
+
+    Agent-level compensation.
+
+    Effective-dated rate schedules.
+
+    Overrides and hierarchy-based compensation.
+
+    Chargebacks and adjustments.
+
+Agent compensation and actual carrier revenue must be stored separately.
+7. Dashboard Requirements
+
+Administrator Dashboard
+
+    Total carrier commissions.
+
+    TruePlan agency production.
+
+    Owner personal production.
+
+    Career Agent compensation obligations.
+
+    Independent Agent production and overrides.
+
+    Unassigned transactions.
+
+    Commission discrepancies.
+
+    Carrier statement import history.
+
+    Pending payout approvals.
+
+    Paid versus unpaid commissions.
+
+    Reporting by carrier, product, agent, agency, and period.
+
+Career Agent Dashboard
+
+    Individual production.
+
+    Earned commissions.
+
+    Pending commissions.
+
+    Approved payouts.
+
+    Payment history.
+
+    Chargebacks and adjustments.
+
+Independent Agent Dashboard
+
+    Individual or agency production.
+
+    Carrier commission information where available.
+
+    Applicable overrides and reporting.
+
+    No visibility into unrelated agents or agencies.
+
+8. Technology Direction
+
+The current prototype uses:
+
+    Node.js
+
+    JavaScript
+
+    SQLite
+
+    better-sqlite3
+
+    pdf-parse
+
+We are considering Budibase, Retool, or Appsmith for the dashboard rather than developing the entire frontend from scratch.
+
+The developer should evaluate the best option based on security, permission controls, maintainability, cost, and scalability.
+
+For production, evaluate a hosted relational database such as PostgreSQL, secure authentication, role-based permissions, tenant isolation, backups, and audit logging.
+9. GHL Integration
+
+TruePlan uses GoHighLevel as its CRM.
+
+Future integration should support:
+
+    Matching agents and customers.
+
+    Connecting policy production to CRM contacts.
+
+    Updating commission-related information.
+
+    Supporting agency subaccounts.
+
+    Synchronizing appropriate production and payment statuses.
+
+The commission database should remain the authoritative source for financial calculations. CRM data should not independently determine payable commissions.
+10. Developer Priorities
+
+Phase 1 — Foundation
+
+    Review the existing code and database.
+
+    Validate statement extraction and transaction accuracy.
+
+    Improve duplicate detection.
+
+    Establish secure production architecture.
+
+    Build a usable administrator dashboard.
+
+Phase 2 — Commission Engine
+
+    Agent and policy matching.
+
+    Configurable commission schedules.
+
+    Carrier payment reconciliation.
+
+    Chargebacks and overrides.
+
+    Biweekly payout calculation and approval.
+
+Phase 3 — Agent Portals
+
+    Secure Career Agent access.
+
+    Secure Independent Agent access.
+
+    Statements and payment histories.
+
+    Agent-level data restrictions.
+
+Phase 4 — Integrations and Scale
+
+    GHL integration.
+
+    Additional carrier statement formats.
+
+    Automated statement ingestion where authorized.
+
+    Reporting, exports, and operational monitoring.
+
+11. Important Requirements
+
+    Never mix personal production with agency production in management reports.
+
+    Never generate agent payouts without verifying eligibility and carrier receipt.
+
+    Never overwrite historical commission rates when schedules change.
+
+    Never assume an unidentified transaction belongs to an agent.
+
+    Never expose one agent's private records to another.
+
+    Never store carrier portal passwords in application source code.
+
+    Maintain an audit trail for imports, assignments, calculations, approvals, and adjustments.
+
+Expected Deliverable
+
+A secure, maintainable commission management application that allows TruePlan to process multiple carriers, manage different agent compensation structures, approve biweekly payouts, and provide accurate financial reporting through administrator and agent dashboards.

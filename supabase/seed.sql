@@ -389,3 +389,69 @@ values
   ('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'OPP-1131', 'agent', 'new', 5000, 600, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', now() - interval '1 days'),
   ('11111111-1111-1111-1111-111111111111', '66666666-6666-6666-6666-666666666666', 'OPP-1131', 'manager', 'new', 5000, 125, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', now() - interval '1 days'),
   ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'OPP-1131', 'owner', 'new', 5000, 50, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', now() - interval '1 days');
+
+-- ============================================================================
+-- Carrier-statement model (migration 0005)
+-- ============================================================================
+-- Demo producers for the statement-driven model. Names and rates are
+-- synthetic except the MAPD schedule, which mirrors the confirmed TruePlan
+-- Career rates (effective 2026-10-08). Managers are not producers.
+--   Jane (owner)  - Independent Agency Owner (paid directly by the carrier)
+--   Alex          - Career, Benefit Consultant
+--   Priya         - Career, Senior Benefit Consultant
+--   Chris         - Career, Client Advisor
+--   Taylor        - Career, Private Client Advisor
+--   Jordan        - Independent agent
+
+update public.users set agent_type = 'independent'
+  where id in (
+    '22222222-2222-2222-2222-222222222222',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+  );
+
+update public.users set agent_type = 'career', career_level = 'Benefit Consultant'
+  where id = '44444444-4444-4444-4444-444444444444';
+update public.users set agent_type = 'career', career_level = 'Senior Benefit Consultant'
+  where id = '77777777-7777-7777-7777-777777777777';
+update public.users set agent_type = 'career', career_level = 'Client Advisor'
+  where id = '88888888-8888-8888-8888-888888888888';
+update public.users set agent_type = 'career', career_level = 'Private Client Advisor'
+  where id = '99999999-9999-9999-9999-999999999999';
+
+-- MAPD fixed-dollar schedule, stored in integer cents.
+insert into public.compensation_rules (
+  agency_id, agent_type, career_level, product, commission_type,
+  calculation_method, rate_cents, status, effective_from
+)
+select
+  '11111111-1111-1111-1111-111111111111', 'career', level, 'MAPD', commission_type,
+  'FIXED', rate_cents, 'ACTIVE', date '2026-10-08'
+from (values
+  ('Benefit Consultant',        'T65',         30000),
+  ('Benefit Consultant',        'PLAN_CHANGE', 10000),
+  ('Benefit Consultant',        'RENEWAL',       700),
+  ('Senior Benefit Consultant', 'T65',         35000),
+  ('Senior Benefit Consultant', 'PLAN_CHANGE', 12500),
+  ('Senior Benefit Consultant', 'RENEWAL',      1000),
+  ('Client Advisor',            'T65',         40000),
+  ('Client Advisor',            'PLAN_CHANGE', 15000),
+  ('Client Advisor',            'RENEWAL',      1250),
+  ('Private Client Advisor',    'T65',         45000),
+  ('Private Client Advisor',    'PLAN_CHANGE', 15000),
+  ('Private Client Advisor',    'RENEWAL',      1500)
+) as rates(level, commission_type, rate_cents);
+
+-- Owner's personal production is reported separately from the agency's.
+insert into public.production_entities (agency_id, name, entity_type, user_id)
+values
+  ('11111111-1111-1111-1111-111111111111', 'Demo Agency - Agency Production', 'agency', null),
+  ('11111111-1111-1111-1111-111111111111', 'Jane Owner - Personal Production', 'personal',
+   '22222222-2222-2222-2222-222222222222');
+
+-- Statement writing-agent names resolve to users only via explicit aliases.
+insert into public.writing_agent_aliases (agency_id, user_id, alias)
+values
+  ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'JANE OWNER'),
+  ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'OWNER JANE'),
+  ('11111111-1111-1111-1111-111111111111', '44444444-4444-4444-4444-444444444444', 'ALEX AGENT'),
+  ('11111111-1111-1111-1111-111111111111', '44444444-4444-4444-4444-444444444444', 'AGENT ALEX');

@@ -12,16 +12,18 @@ import { cn } from "@/lib/utils";
 /**
  * Owner-only, dismissible nudge shown on the dashboard until onboarding is
  * finished or dismissed (agencies.onboarding_completed_at). "Done" state
- * here is computed live from data the dashboard already loaded - it's not
+ * is computed live from data the dashboard already loaded - it's not
  * persisted per-step, matching the "keep onboarding state lightweight"
  * requirement.
  */
 export function OnboardingChecklistCard({
   hasTeammates,
-  hasCrmConnection,
+  hasStatements,
+  hasCarrierLogin,
 }: {
   hasTeammates: boolean;
-  hasCrmConnection: boolean;
+  hasStatements: boolean;
+  hasCarrierLogin: boolean;
 }) {
   const [state, formAction, isPending] = useActionState<ActionResult | undefined, FormData>(
     async () => dismissOnboardingChecklist(),
@@ -29,9 +31,9 @@ export function OnboardingChecklistCard({
   );
 
   const items = [
-    { label: "Review your commission plan", done: false },
-    { label: "Add your first teammate", done: hasTeammates },
-    { label: "Connect GoHighLevel", done: hasCrmConnection },
+    { label: "Add your team", done: hasTeammates, href: "/users" },
+    { label: "Upload a carrier statement", done: hasStatements, href: "/statements" },
+    { label: "Connect your carrier login", done: hasCarrierLogin, href: "/carriers" },
   ];
 
   return (
@@ -59,7 +61,7 @@ export function OnboardingChecklistCard({
         {items.map((item) => (
           <Link
             key={item.label}
-            href="/onboarding"
+            href={item.href}
             className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-secondary/60"
           >
             {item.done ? (

@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "sample:statement": "cd worker && npx tsx ../scripts/make-sample-statement.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.3",
@@ -23,6 +24,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
     "next": "^15.1.4",
+    "pdf-parse": "1.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^2.15.0",
@@ -31,6 +33,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@types/node": "^22.10.5",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19.0.4",
     "@types/react-dom": "^19.0.2",
     "autoprefixer": "^10.4.20",

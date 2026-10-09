@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/requireRole";
 import { createUserWithAuth } from "@/lib/repositories/userRepository";
+import { parseAgentClassification } from "@/lib/auth/agentClassification";
 import { upsertConnection } from "@/lib/repositories/crmConnectionRepository";
 import type { ActionResult } from "@/app/(auth)/actions";
 
@@ -27,6 +28,13 @@ export async function addUser(
       return { error: "First name, last name, and email are required." };
     }
 
+    const classification = parseAgentClassification(
+      role,
+      String(formData.get("agentType") ?? ""),
+      String(formData.get("careerLevel") ?? "")
+    );
+    if (!classification.ok) return { error: classification.error };
+
     const { temporaryPassword } = await createUserWithAuth({
       agencyId: currentUser.agencyId,
       firstName,
@@ -34,6 +42,8 @@ export async function addUser(
       email,
       role,
       managerId,
+      agentType: classification.agentType,
+      careerLevel: classification.careerLevel,
     });
 
     revalidatePath("/settings");

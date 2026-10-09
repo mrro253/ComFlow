@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AgentTypeFields } from "@/components/users/agent-type-fields";
 import type { AppUser } from "@/types/domain";
 
 export function AddUserForm({ managers }: { managers: AppUser[] }) {
   const [open, setOpen] = useState(false);
+  const [role, setRole] = useState<"agent" | "manager">("agent");
   const [state, formAction, isPending] = useActionState(addUser, undefined);
 
   if (!open) {
@@ -48,7 +50,8 @@ export function AddUserForm({ managers }: { managers: AppUser[] }) {
               id="role"
               name="role"
               className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm"
-              defaultValue="agent"
+              value={role}
+              onChange={(e) => setRole(e.target.value as "agent" | "manager")}
             >
               <option value="agent">Agent</option>
               <option value="manager">Manager</option>
@@ -71,6 +74,8 @@ export function AddUserForm({ managers }: { managers: AppUser[] }) {
             </select>
           </div>
         </div>
+
+        <AgentTypeFields idPrefix="add" defaultType={null} defaultLevel={null} isManager={role === "manager"} />
 
         {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
         {state?.temporaryPassword && (
