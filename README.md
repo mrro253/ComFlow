@@ -11,7 +11,9 @@ what the agency owes them).
 > The business rules live in `.cursorrules`; this file describes the system as
 > it is *right now*.
 
-Last updated: 2026-10-08
+Last updated: 2026-10-10
+
+> **Changing code? Read section 13 (Contributing) first.** Work on a branch, never directly on `Main`.
 
 ---
 
@@ -334,8 +336,108 @@ offset bug). Real statements are much larger; only hand-made test PDFs are affec
 
 ---
 
-## 13. Changelog (newest first)
+## 13. Contributing (version control process)
 
+**For Ryan and his AI assistant: follow this every time you change the project.**
+Repo: `https://github.com/mrro253/ComFlow` (remote `origin`). The main branch is
+named **`Main`** (capital M). Do not fork; work on branches in this same repo.
+Pull requests are **not required**. Marshall reviews after the fact.
+
+### Daily workflow
+
+Use one branch per feature or fix. Never commit straight to `Main`.
+
+```bash
+# 1. Start from the latest Main
+git checkout Main
+git pull
+
+# 2. Make a branch for the feature (lowercase, hyphens)
+git checkout -b feature/short-description
+
+# 3. Work, then check it (all three must pass before merging)
+npx tsc --noEmit
+npx eslint app components lib
+npx vitest run
+
+# 4. Commit with a meaningful message (see below)
+git add -A
+git commit -m "Add carrier selector to the Statements upload page"
+
+# 5. Push the branch (this does NOT change Main)
+git push -u origin feature/short-description
+
+# 6. When the feature is finished and the checks pass, merge it into Main
+git checkout Main
+git pull
+git merge feature/short-description
+git push
+```
+
+- Pushing a branch only creates that branch on GitHub. Nothing reaches `Main`
+  until step 6. GitHub will not open a pull request on its own.
+- Commit small and often on the branch. Push the branch at the end of each
+  work session so Marshall can see it.
+- If `git merge` reports **conflicts**, or anything else looks wrong, **stop and
+  ask Marshall**. Do not force anything.
+- Never use `git push --force`, `git reset --hard` on shared work, or delete
+  `Main`.
+
+### Commit messages
+
+Say what changed and why it matters, in plain English, present tense.
+Good: `Add Ultimate override line parsing and tests`.
+Bad: `update`, `fix stuff`, `wip`, `changes`.
+
+### What you can do on your own vs. what needs Marshall
+
+You can merge on your own when the change is **new functionality or a fix that
+fits the existing architecture and stack**: new screens, new carrier parsers,
+new reports, copy changes, tests.
+
+**Ask Marshall first** (do the work on a branch and push it, but do not merge) if the
+change would:
+- add or replace a library, framework, or hosting service
+- change the layering (UI -> server actions -> services -> repositories, pure logic in `lib/carriers`)
+- change the business rules in `.cursorrules` (carrier-driven commissions, no pay without carrier receipt AND owner approval, integer cents, locked rates, RLS)
+- alter or remove existing database tables, or touch money, RLS or audit tables in a way that changes meaning
+- make browser automation run anywhere other than the `worker/` service
+
+### Rules every change must follow
+
+1. **README updates ship with the change.** Update the affected sections (status, functionality, missing, next steps, decisions, setup) and add a line to the Changelog with the date, in the same commit.
+2. **Never mark something as working unless it was actually run.** Mark unrun things "unverified".
+3. **Database changes are new migration files** in `supabase/migrations/`, never edits to old ones. Use the next number. If someone else already used that number, rename yours to the next free one before merging.
+4. **No real client data, ever.** Statements and member data are PHI: no real PDFs, names, member IDs or screenshots in the repo, commit history, tests, fixtures or logs. Use synthetic data only (`npm run sample:statement`).
+5. **No secrets in the repo.** Logins, API keys and `CREDENTIAL_ENCRYPTION_KEY` live only in `.env.local` (gitignored). Never paste them into chat, issues or commits.
+6. **Business logic is pure and tested.** Add Vitest tests for any new calculation or parsing logic.
+7. **Money is integer cents.** No floating-point money math.
+
+### Reviewing (Marshall)
+
+Pull requests are optional. To review a pushed branch without one:
+
+```bash
+git fetch
+git log Main..origin/feature/short-description --oneline
+git diff Main...origin/feature/short-description
+```
+
+An AI assistant can review that diff on request. If a pull request is ever
+wanted, open one on GitHub from the branch into `Main`.
+
+### Prompt to give an AI assistant
+
+> Read `README.md` (especially section 13) and `.cursorrules` before changing
+> anything. Work on a new `feature/...` branch, follow the checks and README rules,
+> and only merge into `Main` if the change needs no approval under "What you can do
+> on your own". Otherwise push the branch and tell me.
+
+---
+
+## 14. Changelog (newest first)
+
+- **2026-10-10** - Added section 13 "Contributing" (branch workflow, merge rules, what needs Marshall's approval) and a matching "GIT WORKFLOW" block in `.cursorrules`.
 - **2026-10-10** - GoHighLevel is output-only: removed the inbound CRM webhook route (`/api/webhooks/crm`) and the stub "Connect GoHighLevel" action; CRM card is now an informational "Coming soon" card. tsc, eslint and vitest (113) pass.
 - **2026-10-08** - MVP statement flow: upload/preview/approve import, Payments, Carriers (encrypted logins + Sync now), carrier-based dashboard, agent type/level in Users, carrier worker (unverified), `import_statement` + storage bucket migration (`0006`), sample statement generator, README rewritten as a living handoff document.
 - **2026-10-08** - Merged Ryan's carrier-statement logic: Ultimate parser, duplicate planning, writing-agent classification, rate locks and earnings plan (pure logic + tests), migration `0005`, `.cursorrules` rewritten for the statement-driven model.

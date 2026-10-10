@@ -176,6 +176,28 @@ When generating code:
 - Do not introduce new libraries unless required.
 - Write Vitest tests for all business logic.
 
+GIT WORKFLOW (full details: README section 13 "Contributing")
+
+- Never commit directly to Main (capital M). Start from an up-to-date Main
+  (git checkout Main && git pull), then create feature/<short-description> or
+  fix/<short-description>.
+- Before merging, all of these must pass: npx tsc --noEmit,
+  npx eslint app components lib, npx vitest run.
+- Commit with meaningful plain-English messages. Never "update", "wip", "fix stuff".
+- README and changelog updates go in the same commit as the change.
+- Push the branch (git push -u origin <branch>). Pushing a branch does not touch Main.
+- Merge into Main yourself only for new functionality or fixes that fit the existing
+  stack and architecture. Otherwise push the branch and ask Marshall first. Needs approval:
+  adding/replacing libraries or hosting, changing the layering, changing the business
+  rules in this file, altering/removing existing tables or the meaning of money/RLS/audit
+  tables, or moving browser automation out of worker/.
+- Merge with: git checkout Main && git pull && git merge <branch> && git push.
+  Pull requests are optional and not required.
+- Stop and ask on merge conflicts. Never force-push, never reset --hard shared work.
+- Migrations are new files with the next free number, never edits to old ones.
+- Do not run git commit/push/merge unless the user has asked for it in the current
+  task or has said to follow this workflow; when in doubt, ask.
+
 README IS A LIVING HANDOFF DOCUMENT
 
 README.md is how the owner (Marshall), the business owner (Ryan) and their
