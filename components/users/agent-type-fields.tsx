@@ -21,6 +21,7 @@ export function AgentTypeFields({
   isManager,
   principals = [],
   defaultPrincipalId = null,
+  defaultIndependentOwner = false,
 }: {
   idPrefix: string;
   /** The agency's own career levels (a teammate's current level is included even if turned off). */
@@ -32,6 +33,7 @@ export function AgentTypeFields({
   /** Teammates who can be a captive agent's principal (never captive themselves). */
   principals?: { id: string; name: string }[];
   defaultPrincipalId?: string | null;
+  defaultIndependentOwner?: boolean;
 }) {
   const [type, setType] = useState<AgentType | "">(defaultType ?? "");
 
@@ -98,6 +100,24 @@ export function AgentTypeFields({
             ))}
           </select>
         </div>
+      )}
+      {type === "independent" && (
+        <label className="col-span-2 flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="independentOwner"
+            value="true"
+            defaultChecked={defaultIndependentOwner}
+            className="mt-1"
+          />
+          <span>
+            Owner-level profile
+            <span className="block text-xs text-muted-foreground">
+              They can upload and approve statements for their own book. They still cannot see
+              anyone else&apos;s statements.
+            </span>
+          </span>
+        </label>
       )}
     </div>
   );

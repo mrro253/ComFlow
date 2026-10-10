@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calculator, CircleDollarSign, FileText, KeyRound, LayoutDashboard, Settings, Users } from "lucide-react";
+import { Calculator, CircleDollarSign, FileText, KeyRound, LayoutDashboard, Settings, Users, ClipboardList } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Role } from "@/types/domain";
+import type { AppUser, Role } from "@/types/domain";
+import { canManageStatements } from "@/lib/auth/statementAccess";
 
 interface NavItem {
   href: string;
@@ -18,6 +19,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/payments", label: "Payments", icon: CircleDollarSign },
+  { href: "/reports", label: "Reports", icon: ClipboardList },
   { href: "/statements", label: "Statements", icon: FileText, roles: ["owner"] },
   { href: "/carriers", label: "Carriers", icon: KeyRound, roles: ["owner", "agent"] },
   { href: "/users", label: "Users", icon: Users, roles: ["owner", "manager"] },
@@ -25,9 +27,12 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function SidebarNav({ role }: { role: Role }) {
+export function SidebarNav({ user }: { user: Pick<AppUser, "role" | "agentType" | "independentOwner"> }) {
   const pathname = usePathname();
-  const items = NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role));
+  const items = NAV_ITEMS.filter((item) => {
+    if (item.href === "/statements") return canManageStatements(user);
+    return !item.roles || item.roles.includes(user.role);
+  });
 
   return (
     <nav className="flex flex-col gap-1">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CircleDollarSign, Copy, ExternalLink, FileText, UserX } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
+import { canAccessStatement, canManageStatements } from "@/lib/auth/statementAccess";
 import { formatCents } from "@/lib/carriers/money";
 import type { StatementPreview } from "@/lib/carriers/buildStatementPreview";
 import { splitWritingAgentName, summarizeUnmatchedAgents } from "@/lib/carriers/unmatchedWritingAgents";
@@ -36,11 +37,11 @@ const DISPOSITION_LABEL = {
 export default async function StatementDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (user.role !== "owner") redirect("/dashboard");
+  if (!canManageStatements(user)) redirect("/dashboard");
 
   const { id } = await params;
   const statement = await getStatement(id);
-  if (!statement) notFound();
+  if (!statement || !canAccessStatement(user, statement)) notFound();
 
   const status = STATEMENT_STATUS_BADGE[statement.status];
   const header = (

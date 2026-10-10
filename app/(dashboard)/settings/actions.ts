@@ -53,6 +53,8 @@ export async function addUser(
       careerLevel: classification.careerLevel,
       principalId: classification.principalId,
       payeeId: normalizePayeeId(String(formData.get("payeeId") ?? "")),
+      independentOwner:
+        classification.agentType === "independent" && formData.get("independentOwner") === "true",
     });
 
     revalidatePath("/settings");

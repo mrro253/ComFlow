@@ -86,6 +86,8 @@ export interface Database {
           payee_id: string | null;
           /** Set exactly when agent_type is "captive": the principal who is credited their production (0008). */
           principal_id: string | null;
+          /** Independent only: can manage statements attributed to themselves (0010). */
+          independent_owner: boolean;
           created_at: string;
         };
         Insert: {
@@ -102,6 +104,7 @@ export interface Database {
           commission_plan_id?: string | null;
           payee_id?: string | null;
           principal_id?: string | null;
+          independent_owner?: boolean;
           created_at?: string;
         };
         Update: {
@@ -118,6 +121,7 @@ export interface Database {
           commission_plan_id?: string | null;
           payee_id?: string | null;
           principal_id?: string | null;
+          independent_owner?: boolean;
           created_at?: string;
         };
         Relationships: [];

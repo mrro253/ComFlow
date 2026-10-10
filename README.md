@@ -28,6 +28,7 @@ Last updated: 2026-10-10
 | Statement review (2026-10-10): PDF viewer, corrected-version "Superseded" flow, same-file-name duplicate rule, unmatched writing agents prompt, payee ID | Built | Unit tests (planner, classifier, unmatched summary) and the migration `0007` function on a throwaway Postgres 14 (supersede succeeds and keeps old rows, cross-agency rejected, re-import blocked, payee ID unique). **UI never run against live Supabase** |
 | Captive / LOA agents (2026-10-10): captive type + principal, production credited to the principal, own login for the captive agent | Built | Unit tests and migration `0008` on a throwaway Postgres 14 (constraints, no chains, cross-agency principal rejected, RLS: captive sees only their rows, principal sees both, other agency sees none). **UI never run against live Supabase** |
 | Per-agency compensation settings (2026-10-10): career levels + visibility, Owner-editable rates, bonuses on/off, payouts removed | Built | Unit tests for rule/level planning; migration `0009` on a throwaway Postgres 14. **UI never run against live Supabase** |
+| Independent collective report + owner-level profile (2026-10-10) | Built | Unit tests for the report/CSV and statement-access rules; migration `0010`. **UI never run against live Supabase** |
 | Upload -> preview -> approve -> payments UI | Built | Compiles, lints, `next build` passes. **Never run in a browser against a live Supabase project** (no Docker/Supabase CLI was available while building) |
 | Carrier login screen (encrypted credentials) | Built | Encryption unit-tested. UI **unverified** against live Supabase |
 | Carrier worker (auto-pull from the portal) | Built, **unverified** | Typechecks. Ported from Ryan's working prototype but **never run** against the live Ultimate portal |
@@ -40,9 +41,22 @@ first run as the real test, starting with `sample-statement.pdf` (section 2).
 
 ---
 
-## 2. Try it (what to do with Ryan)
+## 2. Next session together (Marshall + Ryan)
 
-### A. One-time setup (Marshall)
+Nothing below has been run against a live Supabase project or a real Ultimate
+PDF. Treat this as the first real test, not a demo of a proven product.
+
+**Before you sit down (Marshall)**
+
+```bash
+npx supabase migration up    # applies 0008, 0009, 0010; keeps existing data
+# If you would rather wipe local data and re-seed: npx supabase db reset
+npm run dev
+```
+
+Do **not** use `db reset` if you already have imported statements you want to keep.
+
+### A. One-time setup (if this machine is new)
 
 See [Setup](#8-setup-and-environment-variables). In short: `npm install`,
 `npx supabase start`, `npx supabase db reset`, fill `.env.local`,
@@ -89,6 +103,72 @@ npm run sample:statement             # writes sample-statement.pdf (synthetic, s
 5. If the portal asks for MFA or the markup differs, the connection turns to
    "Needs attention" with a safe error message. See section 9.
 
+### E. Confirm the new review features (synthetic or real PDF)
+
+1. **View PDF** on the statement page. Confirm it opens the original and that
+   the numbers match the preview.
+2. Upload the **same file again**: it should be recognized as already imported
+   (same bytes). Upload a same-named file with **different** payments: it should
+   be offered as the corrected version; after approve, the old one is
+   **Superseded** (still openable, not in Dashboard/Payments/Reports).
+3. A writing-agent name that is **not on the team** should appear under
+   "Writing agents to match". Create the agent or assign an existing teammate
+   and confirm later statements remember the match.
+4. Two teammates with the **same name**: without a payee ID the row stays
+   unmatched. Add the payee ID on the user and confirm it breaks the tie.
+   **Confirm with Ryan** where the payee ID sits on a real Ultimate row (we
+   assumed the `W####` right after `ADV/MCC/PFS/BRP`).
+
+### F. Confirm Captive / LOA agents
+
+1. In Users, add a Captive agent and pick a principal (Career or Independent).
+2. Import a statement whose writing agent is that captive name. The payment
+   should be **credited to the principal**; Payments should show **Written by**
+   the captive agent.
+3. Sign in as the captive agent: they see the payments they wrote, including
+   the **carrier-paid dollar amounts**. **Confirm with Ryan** whether that is
+   acceptable (it reveals the principal's margin) or whether they should see
+   counts only.
+4. Confirm a captive cannot be someone else's principal, and cannot enter a
+   carrier login.
+
+### G. Confirm Compensation settings
+
+1. Open **Compensation** (also in onboarding). Confirm TruePlan's four demo
+   levels and MAPD rates are there after a seed/reset.
+2. Add a level, change visibility, turn one off. Confirm you cannot rename a
+   level.
+3. Add a **percent of annual premium** rate (e.g. FINAL_EXPENSE / FIRST_YEAR /
+   75%). Confirm a later rate for the same key closes the previous one the day
+   before. Confirm the seeded MAPD dollars match what Ryan wants, or change them.
+4. Toggle **Bonuses** on/off. Note: this only records the choice; bonus amounts
+   are not calculated from statements yet.
+5. Confirm there is **no payouts** screen.
+
+### H. Confirm Independent reports and owner-level profile
+
+1. Sign in as `agent5@commissionflow.dev` (Jordan, Independent, owner-level
+   profile in the seed). Confirm they see **Statements** and **Reports**, and
+   can upload a statement that is attributed only to them.
+2. Sign in as a regular Independent (or turn Jordan's flag off) and confirm
+   they do **not** see Statements, but they **do** see Reports and can
+   **Download CSV**.
+3. As Owner, open Reports, pick a month range, download the CSV. Confirm
+   superseded statements are not in it.
+
+### Decisions still open (ask Ryan)
+
+See section 7 for the full list. The ones that still need an answer:
+
+- Where is the **payee ID** on a real Ultimate statement?
+- Should a **captive agent see dollar amounts**?
+- How should Career-agent visibility work **"up the hierarchy"** (today:
+  Managers see self + direct reports; a Career level can be set to
+  `direct_reports`)?
+- Where will **annual premium** come from for percent rules?
+- Confirm the seeded **TruePlan MAPD rates** and level names, or change them
+  on Compensation.
+
 > **Never** paste a real statement, member data or portal password into chat,
 > an issue, a commit or a test fixture. See [Security](#10-security-and-phi).
 
@@ -99,6 +179,7 @@ npm run sample:statement             # writes sample-statement.pdf (synthetic, s
 **Everyone signed in**
 - Dashboard of carrier payments in their own scope (Owner: agency; Manager: self + direct reports; Agent: self).
 - **Payments**: carrier-paid transactions by month, with totals by payment category (chargebacks are negative).
+- **Reports**: a collective production report (totals by category + a downloadable CSV) of whatever they are allowed to see. Independents use this to send a report upstream externally; nothing is sent automatically.
 
 **Owner**
 - **Statements**: upload a PDF, preview it (new / already imported / needs review / unassigned), approve the import. History of all statements (manual and portal).
@@ -113,6 +194,8 @@ npm run sample:statement             # writes sample-statement.pdf (synthetic, s
 
 **Independent agent**
 - **Carriers**: enter their own portal login, Sync now, remove login. They are paid directly by the carrier; the app only shows what they were paid, by category.
+- **Reports**: their own production as a CSV they can send upstream.
+- Optional **owner-level profile** (set by the agency Owner): they can upload and approve statements attributed to themselves. They never see another teammate's statements, Users, or Compensation.
 
 **Captive (LOA) agent**
 - Created in Users / Settings as agent type **Captive** with a **principal agent** (any active teammate who is not captive). Their writing-agent name on a statement is matched like anyone else's, but the payment is **credited to the principal** (dashboards and reports count it as the principal's production, in the principal's agency/personal bucket) and the captive agent is recorded as the writer.
@@ -176,7 +259,6 @@ Important properties:
 - Hosted deployment of the worker.
 
 **Agreed with Ryan (2026-10-10), not built yet** (see section 7)
-- **Independent agents**: optional owner-level profile and a collective report they can send upstream (externally). Default stays one-person company. (Phase 4)
 - Not wanted for now: override tiers, chargeback rules, split-commission features beyond the compensation rules above.
 
 **Built: per-company compensation settings (2026-10-10)**
@@ -201,7 +283,7 @@ Important properties:
 2. **Answer the open decisions** in section 7, especially how Independent agents' production rolls up and how aliases should work.
 3. **Run the worker once** with Ryan's Ultimate login on a machine with a browser; fix selector/flow issues.
 4. **Keep running locally for now. Do not deploy yet.** Run the app, local Supabase and the worker (`npm run start` in `worker/`) on your own machine. Hosting costs money and real client data (PHI) cannot go on any hosted service until HIPAA agreements are in place. Deploy when you are ready to launch, following the roadmap in section 14 (hosted setup, nightly sync, HIPAA).
-5. **Phase 4: Independent owner-level profile and collective report**, then the career **earnings UI** (preview via `buildEarningsPlan`, Owner approval; no payouts).
+5. Career **earnings UI** (preview via `buildEarningsPlan`, Owner approval; no payouts).
 6. **Second carrier:** write a `StatementParser` and a `CarrierPortal` (see section 9).
 7. **GoHighLevel output** (reshape `lib/crm` around push operations; no inbound payable data).
 8. Retire the legacy CRM-driven code and the old seed data.
@@ -216,7 +298,7 @@ Ryan's answers from 2026-10-10 are marked **Ryan:**.
 
 1. **Overrides**: only for Independent Agency Owners, carrier-reported, never computed. **Ryan:** do not worry about overrides yet.
 2. **Owner's own writing is "personal production"**, reported separately from agency production. **Ryan:** correct.
-3. **Independent agents' production**: tracked by person only. **Ryan:** independents get their own portal; some can have an owner-level profile. Let them pull a **collective report** and send it upstream externally if they choose, but treat them as a one-person company by default (Phase 4).
+3. **Independent agents' production**: tracked by person only. **Ryan:** independents get their own portal; some can have an owner-level profile. Let them pull a **collective report** and send it upstream externally if they choose, but treat them as a one-person company by default. **Built** (Reports CSV + optional owner-level profile on the Independent).
 4. **Name matching**: **Ryan:** assign by writing-agent name (the carrier prints `LAST, FIRST`). If nobody has that name, prompt to create a new agent (built). If two people share a name, use the **payee ID** from the statement, stored on each user (built; the statement location of the ID is unverified, see section 5).
 5. **Payee is not proof of the writer.** **Ryan:** agree.
 6. **Approval**: Owner approves every import. **Ryan:** sure (keep as is).
@@ -224,7 +306,7 @@ Ryan's answers from 2026-10-10 are marked **Ryan:**.
 8. **Who sees what** for Managers: self + direct reports. **Ryan:** correct.
 9. **Duplicate rule**: **Ryan:** identical rows + same file name = duplicate, bring in once; different file name + identical data = review (built). Same file name + different data (decided with Marshall) = corrected version, old one moved to Superseded (built).
 10. **Career agents** have no carrier portal login but do log in to CommissionFlow and see only the statements assigned to them up the hierarchy. **Open:** how "up the hierarchy" should work for visibility (today Managers see self + direct reports).
-11. **Per-company settings**: **Ryan:** different level names and visibility, compensation plans, bonuses on/off (setting); **no payouts for now (remove)**; split commissions handled by #7; no override tiers, no chargeback rules for now. **Built** except the independent collective report / owner-level profile (Phase 4).
+11. **Per-company settings**: **Ryan:** different level names and visibility, compensation plans, bonuses on/off (setting); **no payouts for now (remove)**; split commissions handled by #7; no override tiers, no chargeback rules for now. **Built.**
 12. **Open (Captive/LOA agents, built):** a captive agent currently sees the **carrier-paid dollar amounts** on the payments they wrote (the database cannot hide a column per role). That reveals the principal's margin over what the principal pays them. Confirm with Ryan whether that is acceptable, or whether captive agents should see counts only (a change that needs a separate view or hiding the amount column in the app).
 
 ---
@@ -262,7 +344,7 @@ Demo logins (all `password123`; created by `supabase/seed.sql`):
 | Agent | `agent2@commissionflow.dev` | Priya Patel | Career, Senior Benefit Consultant |
 | Agent | `agent3@commissionflow.dev` | Chris Nguyen | Career, Client Advisor |
 | Agent | `agent4@commissionflow.dev` | Taylor Brooks | Career, Private Client Advisor |
-| Agent | `agent5@commissionflow.dev` | Jordan Lee | Independent |
+| Agent | `agent5@commissionflow.dev` | Jordan Lee | Independent (owner-level profile in seed) |
 
 Going live: see **section 14 (Launch roadmap)** for hosting options, costs, step-by-step
 setup and the HIPAA requirements. In short: create a hosted Supabase project,
@@ -322,6 +404,7 @@ TODO: nightly scheduled syncs; MFA handling; monitoring/alerts.
   carriers/         carrier login + sync status (Owner, Independent agents)
   users/            team + agent type/level (Owner/Manager)
   compensation/     per-agency levels, rates, bonuses on/off (Owner)
+  reports/          collective production report + CSV
   settings/         legacy plans/bonuses/CRM + team add
 /components         ui/ primitives; dashboard/, statements/, payments/, carriers/, users/
 /lib
@@ -335,7 +418,7 @@ TODO: nightly scheduled syncs; MFA handling; monitoring/alerts.
   auth/             session, role guards, agent-type validation, carrier-login access rule
   commission-engine/, crm/   LEGACY CRM-driven model
 /worker             separate package: Playwright portal pull
-/supabase           migrations/ (0001-0009), seed.sql
+/supabase           migrations/ (0001-0010), seed.sql
 /types              hand-written schema + domain types
 /scripts            make-sample-statement.ts
 ```
@@ -346,7 +429,7 @@ parsing never touches the database.
 
 Migrations: `0001` base schema/RLS, `0002` grants, `0003` comp plans (legacy),
 `0004` onboarding, `0005` carrier statements/compensation model, `0006` statement
-import function + storage bucket + sync request column, `0007` statement review (superseded statements, payee ID, `import_statement` supersede support), `0008` captive agents (`users.principal_id`, `carrier_transactions.writing_user_id`, RLS for the captive agent, `import_statement` records the writer), `0009` per-agency career levels, bonuses on/off, percent-of-premium rules, payout tables removed.
+import function + storage bucket + sync request column, `0007` statement review (superseded statements, payee ID, `import_statement` supersede support), `0008` captive agents (`users.principal_id`, `carrier_transactions.writing_user_id`, RLS for the captive agent, `import_statement` records the writer), `0009` per-agency career levels, bonuses on/off, percent-of-premium rules, payout tables removed, `0010` Independent owner-level profile (`users.independent_owner`).
 
 `types/database.ts` is hand-written; regenerate with
 `supabase gen types typescript --linked` once linked to a real project.
@@ -355,7 +438,7 @@ import function + storage bucket + sync request column, `0007` statement review 
 
 ## 12. Verification log
 
-Last full run (2026-10-10, compensation settings): `vitest` 161 tests passing, `tsc` and `eslint` clean, `next build` succeeds. Migrations `0008` and `0009` applied on top of `0001`-`0007` on a throwaway Postgres 14. Earlier statement-review run: `vitest` 133. Earlier run (2026-10-08): `vitest` 113 tests passing, `tsc` clean (app and
+Last full run (2026-10-10, independent reports): `vitest` 170 tests passing, `tsc` and `eslint` clean, `next build` succeeds. Migrations `0008`-`0010` applied on a throwaway Postgres 14. Earlier statement-review run: `vitest` 133. Earlier run (2026-10-08): `vitest` 113 tests passing, `tsc` clean (app and
 worker), `eslint` clean, `next build` succeeds. SQL behavior verified on a
 throwaway Postgres 14 (not Supabase). **Not verified:** any screen against live
 Supabase/Auth/Storage, the worker against the live portal, any real PDF.
@@ -626,6 +709,7 @@ Each Independent-agent customer is their own business associate of their carrier
 
 ## 15. Changelog (newest first)
 
+- **2026-10-10** - Independent collective report and owner-level profile (Phase 4): Reports page + CSV download (RLS-scoped); Independents can be given an owner-level profile to upload/approve their own statements only. Migration `0010`. README section 2 is the next-session test plan for Marshall and Ryan. tsc, eslint, vitest (170) pass.
 - **2026-10-10** - Per-agency compensation settings (Phase 3): Owner-editable career levels (name, order, visibility), effective-dated rates (fixed dollars or percent of annual premium), bonuses on/off, payout batches removed. Compensation page + the same forms in onboarding. Migration `0009` (apply with `npx supabase migration up`; refuses to run if payout data exists). Git workflow is a standing instruction (do not wait to be asked). tsc, eslint, vitest (161) pass.
 - **2026-10-10** - Captive / LOA agents (Phase 2): new agent type with a principal, production credited to the principal with the writer recorded, captive agents get their own login scoped to what they wrote, "Written by" column on Payments, migration `0008` (apply with `npx supabase migration up`). `.cursorrules` now makes the git workflow a standing instruction. tsc, eslint, vitest (145) pass.
 - **2026-10-10** - Statement review (Ryan's feedback): open the original PDF, same-file-name duplicate rule and "Superseded" corrected statements (excluded from reports, still viewable), unmatched writing agents prompt (assign or create agent, remembered), payee ID on users and statements with never-guess tie-breaking for shared names. Migration `0007` (apply with `npx supabase migration up`). Ryan's #7 answers recorded in section 7. Captive/LOA agents, editable compensation rules and payout removal are agreed but not built yet. tsc, eslint, vitest (133) pass.
