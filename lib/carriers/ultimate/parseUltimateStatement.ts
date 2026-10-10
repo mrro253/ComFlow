@@ -52,11 +52,14 @@ function toIsoDate(month: string, day: string, year: string, row: number): strin
  * W####" code pair. Only these prefixes are verified against real Ultimate
  * layouts; anything else leaves the writing agent unverified so the row goes to
  * review instead of falling back to the payee (the payee never proves ownership).
+ * The W#### inside the first code is taken as the writing agent's carrier number
+ * (UNVERIFIED: confirm against a real statement, the second W#### is the payee's).
  */
-function extractWritingAgent(afterDate: string): string | null {
-  const fields = afterDate.match(/^\s*([\s\S]*?)((?:ADV|MCC|PFS|BRP)W\d+)\s*(W\d+)/);
+function extractWritingAgent(afterDate: string): { name: string; id: string } | null {
+  const fields = afterDate.match(/^\s*([\s\S]*?)((?:ADV|MCC|PFS|BRP)(W\d+))\s*(W\d+)/);
   const text = fields?.[1].replace(/\s+/g, " ").trim();
-  return text && /^[A-Za-z][A-Za-z ,.'-]*$/.test(text) ? text : null;
+  if (!fields || !text || !/^[A-Za-z][A-Za-z ,.'-]*$/.test(text)) return null;
+  return { name: text, id: fields[3].toUpperCase() };
 }
 
 export function parseUltimateText(text: string, sourceHash: string): ParsedStatement {
@@ -122,7 +125,8 @@ export function parseUltimateText(text: string, sourceHash: string): ParsedState
       throw new Error(`Row ${row}: positive chargeback requires review`);
     }
 
-    const writingAgent = extractWritingAgent(section.slice(date[0].length));
+    const writer = extractWritingAgent(section.slice(date[0].length));
+    const writingAgent = writer?.name ?? null;
     const effectiveDate = date[0].trim();
     const fingerprint = JSON.stringify([member[0], effectiveDate, type, amountCents]);
     const occurrence = (occurrenceCounts.get(fingerprint) ?? 0) + 1;
@@ -138,6 +142,7 @@ export function parseUltimateText(text: string, sourceHash: string): ParsedState
       amountCents,
       writingAgent,
       writingAgentVerified: writingAgent !== null,
+      writingAgentId: writer?.id ?? null,
       sourceHash,
       sourceRow: row,
       occurrence,

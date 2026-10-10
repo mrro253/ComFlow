@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/requireRole";
 import { createUserWithAuth } from "@/lib/repositories/userRepository";
 import { parseAgentClassification } from "@/lib/auth/agentClassification";
+import { normalizePayeeId } from "@/lib/carriers/payeeId";
 import type { ActionResult } from "@/app/(auth)/actions";
 
 export interface AddUserResult extends ActionResult {
@@ -43,6 +44,7 @@ export async function addUser(
       managerId,
       agentType: classification.agentType,
       careerLevel: classification.careerLevel,
+      payeeId: normalizePayeeId(String(formData.get("payeeId") ?? "")),
     });
 
     revalidatePath("/settings");

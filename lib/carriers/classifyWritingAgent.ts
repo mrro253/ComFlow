@@ -1,3 +1,4 @@
+import { normalizePayeeId } from "@/lib/carriers/payeeId";
 import type { AgentType } from "@/types/domain";
 
 /**
@@ -11,11 +12,19 @@ export interface WritingAgentOwner {
   agentType: AgentType | null;
   productionEntityId: string | null;
   entityType: "agency" | "personal" | null;
+  /** The person's carrier agent number, used only to tell apart people who share a name. */
+  payeeId?: string | null;
 }
+
+/** Why a row was not assigned automatically. */
+export type ReviewCode = "unverified" | "no-match" | "ambiguous";
 
 export type WritingAgentClassification =
   | ({ status: "assigned"; reason: string } & WritingAgentOwner)
-  | { status: "review"; reason: string };
+  | { status: "review"; reason: string; code: ReviewCode };
+
+/** Normalized statement name -> everyone who could be that name. */
+export type WritingAgentIndex = ReadonlyMap<string, readonly WritingAgentOwner[]>;
 
 /** Upper-case, commas removed, whitespace collapsed. Stored form of an alias. */
 export function normalizeWritingAgentName(name: string): string {
@@ -35,30 +44,54 @@ export function writingAgentAliasesFor(firstName: string, lastName: string): str
 export interface ClassifiableRow {
   writingAgent: string | null;
   writingAgentVerified: boolean;
+  /** The writer's carrier agent number as printed, when the layout has one. */
+  writingAgentId?: string | null;
 }
 
 /**
  * Assigns a transaction to a user only when the statement itself proves who
  * wrote the business. A payee name alone never establishes ownership, and an
  * unrecognized or unverified name stays unassigned for human review.
+ *
+ * If several people share a name, the writer's carrier agent number decides;
+ * without a match on it the row stays unassigned. Never guess.
  */
 export function classifyWritingAgent(
   row: ClassifiableRow,
-  aliases: ReadonlyMap<string, WritingAgentOwner>
+  index: WritingAgentIndex
 ): WritingAgentClassification {
   if (!row.writingAgentVerified || typeof row.writingAgent !== "string") {
-    return { status: "review", reason: "Writing agent could not be verified" };
+    return { status: "review", reason: "Writing agent could not be verified", code: "unverified" };
   }
-  const owner = aliases.get(normalizeWritingAgentName(row.writingAgent));
-  if (!owner) {
+
+  const candidates = index.get(normalizeWritingAgentName(row.writingAgent)) ?? [];
+  if (candidates.length === 0) {
     return {
       status: "review",
-      reason: "Writing agent does not match any configured agent alias",
+      reason: "Writing agent does not match any configured agent",
+      code: "no-match",
+    };
+  }
+  if (candidates.length === 1) {
+    return {
+      status: "assigned",
+      reason: "Verified writing agent matches a configured agent",
+      ...candidates[0],
+    };
+  }
+
+  const printedId = normalizePayeeId(row.writingAgentId);
+  const byId = printedId ? candidates.filter((c) => normalizePayeeId(c.payeeId) === printedId) : [];
+  if (byId.length === 1) {
+    return {
+      status: "assigned",
+      reason: "Several people share this name; matched on the carrier agent ID",
+      ...byId[0],
     };
   }
   return {
-    status: "assigned",
-    reason: "Verified writing agent matches a configured alias",
-    ...owner,
+    status: "review",
+    reason: "Several people share this name; add each person's carrier agent ID so rows match",
+    code: "ambiguous",
   };
 }

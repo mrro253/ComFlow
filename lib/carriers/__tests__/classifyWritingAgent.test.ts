@@ -16,8 +16,8 @@ const OWNER_PERSONAL: WritingAgentOwner = {
 };
 
 // Synthetic name pair; matches both printed orderings.
-const aliases = new Map<string, WritingAgentOwner>(
-  writingAgentAliasesFor("Pat", "Sample").map((alias) => [alias, OWNER_PERSONAL])
+const aliases = new Map<string, readonly WritingAgentOwner[]>(
+  writingAgentAliasesFor("Pat", "Sample").map((alias) => [alias, [OWNER_PERSONAL]])
 );
 
 function parsedRow(agent: string, payee: string, prefix = "MCC") {
@@ -68,6 +68,30 @@ describe("classifyWritingAgent", () => {
     expect(classifyWritingAgent(parsedRow("SAMPLE, PAT", "SAMPLE, PAT", "UNKNOWN"), aliases).status).toBe(
       "review"
     );
+  });
+
+  it("never guesses between teammates who share a name", () => {
+    const twinA: WritingAgentOwner = { ...OWNER_PERSONAL, userId: "twin-a", payeeId: "W1111" };
+    const twinB: WritingAgentOwner = { ...OWNER_PERSONAL, userId: "twin-b", payeeId: "W2222" };
+    const shared = new Map<string, readonly WritingAgentOwner[]>([["PAT SAMPLE", [twinA, twinB]]]);
+    const row = { writingAgent: "Pat Sample", writingAgentVerified: true };
+
+    const ambiguous = classifyWritingAgent({ ...row, writingAgentId: null }, shared);
+    expect(ambiguous).toMatchObject({ status: "review", code: "ambiguous" });
+    // An ID that matches nobody does not break the tie either.
+    expect(classifyWritingAgent({ ...row, writingAgentId: "W9999" }, shared)).toMatchObject({
+      status: "review",
+      code: "ambiguous",
+    });
+
+    const byId = classifyWritingAgent({ ...row, writingAgentId: "W2222" }, shared);
+    expect(byId).toMatchObject({ status: "assigned", userId: "twin-b" });
+  });
+
+  it("reports names nobody has as no-match", () => {
+    expect(
+      classifyWritingAgent({ writingAgent: "Nobody Here", writingAgentVerified: true }, aliases)
+    ).toMatchObject({ status: "review", code: "no-match" });
   });
 
   it("parses multiline names without changing the transaction key", () => {

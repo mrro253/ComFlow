@@ -14,7 +14,9 @@ const CAREER: WritingAgentOwner = {
   productionEntityId: "entity-agency",
   entityType: "agency",
 };
-const aliases = new Map(writingAgentAliasesFor("Pat", "Sample").map((a) => [a, CAREER]));
+const aliases = new Map<string, readonly WritingAgentOwner[]>(
+  writingAgentAliasesFor("Pat", "Sample").map((a) => [a, [CAREER]])
+);
 
 // Two rows: one written by a known agent (prefix layout verified), one unknown.
 const TEXT = [
@@ -97,5 +99,26 @@ describe("buildStatementPreview", () => {
     expect(preview.counts.review).toBe(2);
     expect(preview.canImport).toBe(false);
     expect(preview.blockers[0]).toMatch(/duplicates/);
+  });
+
+  it("treats a same-name, same-payments statement as a duplicate to bring in once", () => {
+    const preview = buildStatementPreview(statement, aliases, [], null, {
+      kind: "duplicate",
+      of: { id: "earlier", filename: "ultimate-sept.pdf" },
+    });
+    expect(preview.counts["already-imported"]).toBe(2);
+    expect(preview.counts.new).toBe(0);
+    expect(toImportRows(preview)).toHaveLength(0);
+    expect(preview.canImport).toBe(true);
+  });
+
+  it("carries the replaced statements for a corrected version", () => {
+    const correction = {
+      kind: "supersede" as const,
+      replaces: [{ id: "old", filename: "ultimate-sept.pdf" }],
+    };
+    const preview = buildStatementPreview(statement, aliases, [], null, correction);
+    expect(preview.correction).toEqual(correction);
+    expect(preview.counts.new).toBe(2);
   });
 });

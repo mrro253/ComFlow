@@ -77,6 +77,14 @@ export function AddUserForm({ managers }: { managers: AppUser[] }) {
 
         <AgentTypeFields idPrefix="add" defaultType={null} defaultLevel={null} isManager={role === "manager"} />
 
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="payeeId">Carrier payee ID (optional)</Label>
+          <Input id="payeeId" name="payeeId" placeholder="e.g. W1234" />
+          <p className="text-xs text-muted-foreground">
+            Used on carrier statements to tell apart teammates who share a name.
+          </p>
+        </div>
+
         {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
         {state?.temporaryPassword && (
           <p className="rounded-md bg-secondary p-3 text-sm">

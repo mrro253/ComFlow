@@ -20,6 +20,13 @@ export interface ParsedTransaction {
   /** Writing agent as printed, or null when the statement layout did not prove one. */
   writingAgent: string | null;
   writingAgentVerified: boolean;
+  /**
+   * The writing agent's carrier agent number (Ultimate: the W#### in the first
+   * code pair), upper-case, or null when the layout did not print one. Used only
+   * to tell apart people who share a name.
+   * UNVERIFIED against a real statement: confirm which code is the writer's.
+   */
+  writingAgentId: string | null;
   /** SHA-256 of the source PDF. */
   sourceHash: string;
   sourceRow: number;

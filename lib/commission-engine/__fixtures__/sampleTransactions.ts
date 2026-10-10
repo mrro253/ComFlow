@@ -33,6 +33,7 @@ export const sampleOwner: AppUser = {
   active: true,
   managerId: null,
   commissionPlanId: null,
+  payeeId: null,
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
@@ -48,6 +49,7 @@ export const sampleManager: AppUser = {
   active: true,
   managerId: null,
   commissionPlanId: null,
+  payeeId: null,
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
@@ -63,6 +65,7 @@ export const sampleAgent: AppUser = {
   active: true,
   managerId: sampleManager.id,
   commissionPlanId: null,
+  payeeId: null,
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 

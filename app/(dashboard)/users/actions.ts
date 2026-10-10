@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/requireRole";
 import { getUserById, updateUserProfile } from "@/lib/repositories/userRepository";
 import { parseAgentClassification } from "@/lib/auth/agentClassification";
+import { normalizePayeeId } from "@/lib/carriers/payeeId";
 import type { ActionResult } from "@/app/(auth)/actions";
 
 /**
@@ -58,6 +59,7 @@ export async function editUser(
       commissionPlanId,
       agentType: classification.agentType,
       careerLevel: classification.careerLevel,
+      payeeId: normalizePayeeId(String(formData.get("payeeId") ?? "")),
     });
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Failed to update teammate." };

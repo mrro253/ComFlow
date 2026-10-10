@@ -45,10 +45,9 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isPublicPath = PUBLIC_PATHS.some((p) => path.startsWith(p));
-  // API routes (e.g. CRM webhooks) never carry a browser session - they
-  // authenticate/authorize themselves (see the webhook route's own
-  // agencyId + TODO'd signature check) - redirecting them to /login would
-  // break the integration entirely.
+  // API routes authenticate/authorize themselves (e.g. the statement PDF route
+  // checks the session and role and answers 401/403) - redirecting them to
+  // /login would hand a fetch an HTML page instead.
   const isApiPath = path.startsWith("/api/");
 
   if (!user && !isPublicPath && !isApiPath) {

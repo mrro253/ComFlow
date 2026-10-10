@@ -10,8 +10,9 @@ import {
 } from "@/lib/carriers/writingAgentOwners";
 import {
   normalizeWritingAgentName,
-  type WritingAgentOwner,
+  type WritingAgentIndex,
 } from "@/lib/carriers/classifyWritingAgent";
+import { normalizeFilename } from "@/lib/carriers/planCorrection";
 import type { Database, Json } from "@/types/database";
 import type { AppUser } from "@/types/domain";
 
@@ -46,6 +47,9 @@ export interface StatementRecord {
   errorMessage: string | null;
   createdAt: string;
   importedAt: string | null;
+  /** The corrected statement that replaced this one, when status is "superseded". */
+  supersededBy: string | null;
+  supersededAt: string | null;
 }
 
 function mapStatement(row: StatementRow): StatementRecord {
@@ -65,6 +69,8 @@ function mapStatement(row: StatementRow): StatementRecord {
     errorMessage: row.error_message,
     createdAt: row.created_at,
     importedAt: row.imported_at,
+    supersededBy: row.superseded_by,
+    supersededAt: row.superseded_at,
   };
 }
 
@@ -122,6 +128,50 @@ export async function getStatement(id: string): Promise<StatementRecord | null> 
     .maybeSingle();
   if (error || !data) return null;
   return mapStatement(data);
+}
+
+/** Statements that this statement replaced (shown on the corrected statement's page). */
+export async function listStatementsSupersededBy(statementId: string): Promise<StatementRecord[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("commission_statements")
+    .select("*")
+    .eq("superseded_by", statementId)
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return data.map(mapStatement);
+}
+
+/**
+ * Imported statements that could be the earlier copy of a new statement: same
+ * carrier, month and owner, and the same file name (case-insensitive).
+ */
+export async function findImportedStatementsByFilename(input: {
+  agencyId: string;
+  carrier: string;
+  statementMonth: string;
+  /** Null for the agency's own statements. */
+  userId: string | null;
+  filename: string | null;
+  excludeStatementId: string;
+}): Promise<StatementRecord[]> {
+  const wanted = normalizeFilename(input.filename);
+  if (!wanted) return [];
+
+  const admin = createAdminClient();
+  let query = admin
+    .from("commission_statements")
+    .select("*")
+    .eq("agency_id", input.agencyId)
+    .eq("carrier", input.carrier)
+    .eq("statement_month", input.statementMonth)
+    .eq("status", "imported")
+    .neq("id", input.excludeStatementId);
+  query = input.userId ? query.eq("user_id", input.userId) : query.is("user_id", null);
+
+  const { data, error } = await query;
+  if (error || !data) throw new Error(error?.message ?? "Could not look up earlier statements");
+  return data.map(mapStatement).filter((s) => normalizeFilename(s.originalFilename) === wanted);
 }
 
 export async function findStatementByHash(
@@ -201,6 +251,8 @@ export async function importStatementRows(input: {
   statementTotalCents: number;
   carriedBalanceCents: number;
   rows: ImportRowPayload[];
+  /** Earlier statements this one corrects; they are marked superseded in the same transaction. */
+  supersedes?: string[];
 }): Promise<number> {
   const admin = createAdminClient();
   const { data, error } = await admin.rpc("import_statement", {
@@ -211,6 +263,7 @@ export async function importStatementRows(input: {
     p_statement_total_cents: input.statementTotalCents,
     p_carried_balance_cents: input.carriedBalanceCents,
     p_rows: input.rows as unknown as Json,
+    p_supersedes: input.supersedes ?? [],
   });
   if (error) throw new Error(error.message);
   return data ?? 0;
@@ -241,6 +294,7 @@ export async function listExistingTransactions(
       .eq("agency_id", agencyId)
       .eq("carrier", carrier)
       .eq("statement_month", statementMonth)
+      .is("superseded_at", null)
       .order("id", { ascending: true })
       .range(from, from + PAGE_SIZE - 1);
     if (error || !data) throw new Error(error?.message ?? "Could not load existing transactions");
@@ -260,6 +314,41 @@ export async function listExistingTransactions(
   throw new Error("Too many existing transactions to check for duplicates");
 }
 
+/** Live ledger rows of the given statements, grouped by statement id (for correction detection). */
+export async function listExistingForStatements(
+  agencyId: string,
+  statementIds: readonly string[]
+): Promise<Map<string, ExistingTransaction[]>> {
+  const result = new Map<string, ExistingTransaction[]>(statementIds.map((id) => [id, []]));
+  if (statementIds.length === 0) return result;
+
+  const admin = createAdminClient();
+  for (let from = 0; from < MAX_ROWS; from += PAGE_SIZE) {
+    const { data, error } = await admin
+      .from("carrier_transactions")
+      .select("id, statement_id, transaction_key, carrier, statement_month, carrier_member_id, commission_type, amount_cents")
+      .eq("agency_id", agencyId)
+      .in("statement_id", [...statementIds])
+      .is("superseded_at", null)
+      .order("id", { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+    if (error || !data) throw new Error(error?.message ?? "Could not load earlier statement rows");
+    for (const row of data) {
+      result.get(row.statement_id)?.push({
+        id: row.id,
+        transactionKey: row.transaction_key,
+        carrier: row.carrier,
+        statementMonth: row.statement_month,
+        memberId: row.carrier_member_id,
+        type: row.commission_type,
+        amountCents: row.amount_cents,
+      });
+    }
+    if (data.length < PAGE_SIZE) return result;
+  }
+  throw new Error("Too many rows on earlier statements to compare");
+}
+
 /**
  * Everything the signed-in user may see (RLS scopes it), newest statement month
  * first. Pages through results so dashboard totals are never silently truncated.
@@ -271,6 +360,8 @@ export async function listVisibleTransactions(): Promise<CarrierTransactionRecor
     const { data, error } = await supabase
       .from("carrier_transactions")
       .select("*")
+      // Superseded statements stay viewable but are never reported.
+      .is("superseded_at", null)
       .order("statement_month", { ascending: false })
       .order("effective_date", { ascending: false })
       .order("id", { ascending: true })
@@ -343,7 +434,7 @@ export async function ensureProductionEntities(
 }
 
 export interface WritingAgentContext {
-  owners: Map<string, WritingAgentOwner>;
+  owners: WritingAgentIndex;
   users: AppUser[];
   entities: ProductionEntityRef[];
 }
@@ -445,4 +536,54 @@ export async function assignTransaction(input: {
     details: { assigned_to: input.user.id, rows: ids.length, remembered_alias: input.rememberAlias },
   });
   return ids.length;
+}
+
+/**
+ * Remembers that a printed writing-agent name belongs to a teammate, so future
+ * statements assign automatically. An explicit choice replaces an older alias.
+ */
+export async function saveWritingAgentAlias(input: {
+  agencyId: string;
+  actorId: string;
+  name: string;
+  userId: string;
+}): Promise<void> {
+  const admin = createAdminClient();
+  const alias = normalizeWritingAgentName(input.name);
+  const { error } = await admin
+    .from("writing_agent_aliases")
+    .upsert(
+      { agency_id: input.agencyId, user_id: input.userId, alias },
+      { onConflict: "agency_id,alias" }
+    );
+  if (error) throw new Error(error.message);
+  await recordAuditEvent({
+    agencyId: input.agencyId,
+    actorId: input.actorId,
+    action: "writing_agent_alias.saved",
+    entityType: "user",
+    entityId: input.userId,
+    details: { alias },
+  });
+}
+
+/** Appends to the audit trail (service role; the table is append-only). */
+export async function recordAuditEvent(input: {
+  agencyId: string;
+  actorId: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  details?: Json;
+}): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin.from("audit_events").insert({
+    agency_id: input.agencyId,
+    actor_user_id: input.actorId,
+    action: input.action,
+    entity_type: input.entityType,
+    entity_id: input.entityId,
+    details: input.details ?? {},
+  });
+  if (error) throw new Error(error.message);
 }

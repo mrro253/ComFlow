@@ -1,8 +1,10 @@
 import {
   classifyWritingAgent,
   type WritingAgentClassification,
+  type WritingAgentIndex,
   type WritingAgentOwner,
 } from "@/lib/carriers/classifyWritingAgent";
+import type { CorrectionPlan } from "@/lib/carriers/planCorrection";
 import {
   planStatementImport,
   type ExistingTransaction,
@@ -17,6 +19,8 @@ export interface PreviewRow extends PlannedRow {
 
 export interface StatementPreview {
   statement: ParsedStatement;
+  /** What this statement means next to earlier ones with the same file name. */
+  correction: CorrectionPlan;
   rows: PreviewRow[];
   counts: Record<ImportDisposition, number>;
   /** New rows the carrier paid (signed, so chargebacks reduce it). */
@@ -44,18 +48,30 @@ function forcedClassification(owner: WritingAgentOwner): WritingAgentClassificat
  */
 export function buildStatementPreview(
   statement: ParsedStatement,
-  aliases: ReadonlyMap<string, WritingAgentOwner>,
+  aliases: WritingAgentIndex,
   existing: readonly ExistingTransaction[],
-  statementOwner: WritingAgentOwner | null = null
+  statementOwner: WritingAgentOwner | null = null,
+  correction: CorrectionPlan = { kind: "none" }
 ): StatementPreview {
   const [plan] = planStatementImport([statement], existing);
 
-  const rows: PreviewRow[] = plan.rows.map((row) => ({
-    ...row,
-    classification: statementOwner
-      ? forcedClassification(statementOwner)
-      : classifyWritingAgent(row.transaction, aliases),
-  }));
+  const rows: PreviewRow[] = plan.rows.map((planned) => {
+    // Same file name and the same payments as an earlier import: bring it only once.
+    const row: PlannedRow =
+      correction.kind === "duplicate"
+        ? {
+            ...planned,
+            disposition: "already-imported",
+            reason: `Identical to ${correction.of.filename ?? "an earlier statement"} (same file name and payments)`,
+          }
+        : planned;
+    return {
+      ...row,
+      classification: statementOwner
+        ? forcedClassification(statementOwner)
+        : classifyWritingAgent(row.transaction, aliases),
+    };
+  });
 
   const counts: Record<ImportDisposition, number> = {
     new: 0,
@@ -75,6 +91,7 @@ export function buildStatementPreview(
 
   return {
     statement,
+    correction,
     rows,
     counts,
     newTotalCents: newRows.reduce((sum, row) => sum + row.transaction.amountCents, 0),
