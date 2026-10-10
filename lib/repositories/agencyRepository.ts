@@ -11,6 +11,7 @@ function mapAgencyRow(row: AgencyRow): Agency {
     name: row.name,
     accountType: row.account_type,
     onboardingCompletedAt: row.onboarding_completed_at,
+    bonusesEnabled: row.bonuses_enabled,
     createdAt: row.created_at,
   };
 }

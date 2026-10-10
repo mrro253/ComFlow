@@ -13,9 +13,12 @@ import type { AppUser } from "@/types/domain";
 export function AddUserForm({
   managers,
   principals = [],
+  levels,
 }: {
   managers: AppUser[];
   principals?: { id: string; name: string }[];
+  /** Active career levels for this agency. */
+  levels: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState<"agent" | "manager">("agent");
@@ -83,6 +86,7 @@ export function AddUserForm({
 
         <AgentTypeFields
           idPrefix="add"
+          levels={levels}
           defaultType={null}
           defaultLevel={null}
           isManager={role === "manager"}

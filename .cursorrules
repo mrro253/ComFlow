@@ -39,15 +39,21 @@ Agent types:
 
 Career Agent
 - The agency receives the carrier commission and pays the agent.
-- Has a career level. TruePlan's levels: Benefit Consultant, Senior Benefit Consultant, Client Advisor, Private Client Advisor (TODO: make levels configurable per agency).
-- Paid fixed-dollar or percent amounts from effective-dated compensation rules, by level, product, and carrier payment category (e.g. MAPD T65, plan change, renewal).
-- Payouts are biweekly, require owner approval, and require the carrier payment to have been received.
+- Has a career level. Level names, order and visibility are per-agency data
+  (career_levels). TruePlan's names are demo seed only.
+- Paid fixed-dollar or percent amounts from effective-dated compensation rules, by level, product, and carrier payment category (e.g. MAPD T65, plan change, renewal). Percent rules are a percent of annual premium; until a parser supplies premium they stay NOT_CONFIGURED, never zero.
+- Payout batches are not used for now. Earnings (carrier receipt + owner approval) stay.
 - Career Agents do NOT receive overrides.
 
 Independent Agent
 - Enters their own carrier portal username/password in the app so statements can be pulled.
 - The carrier pays them 100% directly. The app only pulls and processes statements so they can see client status and what they were paid by payment category.
 - No payout obligation is ever created for Independent Agents.
+
+Captive / LOA Agent
+- Writes under a principal agent. Production is credited to the principal; the
+  captive agent is recorded as the writer. The principal pays them outside the app.
+- Has their own login and sees the payments they wrote. No carrier portal login.
 
 Independent Agency Owner
 - Is the only role that receives overrides. Some carriers show overrides on statements, others do not. Amounts vary, so they are tracked as reported by the carrier, never computed from a fixed percentage.
@@ -65,7 +71,7 @@ NON-NEGOTIABLE RULES
 3. Missing rates are NOT_CONFIGURED, never zero.
 4. Store all money as integer cents (bigint in Postgres). No floating point money math.
 5. Keep carrier-reported amounts and agent-earned amounts in separate tables.
-6. Imports, earnings approval, and payout execution are separate approval steps.
+6. Imports and earnings approval are separate steps. Payout execution is not used for now.
 7. Keep an audit trail for imports, assignments, approvals, and adjustments.
 8. Never expose one agent's records to another (enforced by Row Level Security).
 9. Never store carrier credentials or any secret in source code or plaintext. Encrypt at rest.
@@ -77,7 +83,7 @@ In scope:
 - Carrier statement import (Ultimate Health Plans first; manual PDF upload before automated pulls)
 - Career and Independent agent processing as described above
 - Agency/personal production reporting
-- Approval-gated earnings and biweekly payout batches
+- Approval-gated earnings (no payout batches for now)
 - Role-based dashboards (owner, manager, agent)
 - GoHighLevel as an OUTPUT/matching target (match contacts, push statuses). Never the source of payable amounts.
 
@@ -86,7 +92,8 @@ Out of scope:
 - Payroll or payment execution integrations
 - AI features
 - Custom workflow builders
-- Bonuses (TruePlan does not use them; TODO: optional per-agency setting, off by default, for other companies)
+- Payroll or payout-batch execution (removed for now; earnings stay)
+- Bonuses as calculated amounts (the per-agency on/off setting exists; calculation is not built)
 
 ARCHITECTURE REQUIREMENTS
 
@@ -187,6 +194,9 @@ When generating code:
 - Write Vitest tests for all business logic.
 
 GIT WORKFLOW (full details: README section 13 "Contributing")
+
+Do this automatically on every task that changes files. Never wait to be asked
+("as always, follow our github practices" is already the default).
 
 - Never commit directly to Main (capital M). Start from an up-to-date Main
   (git checkout Main && git pull), then create feature/<short-description> or

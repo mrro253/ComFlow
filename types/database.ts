@@ -15,11 +15,8 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-type CareerLevelDb =
-  | "Benefit Consultant"
-  | "Senior Benefit Consultant"
-  | "Client Advisor"
-  | "Private Client Advisor";
+/** Level names are defined per agency in `career_levels` (0009). */
+type CareerLevelDb = string;
 
 /**
  * Builds a Supabase table shape from a Row type. `Defaulted` lists columns that
@@ -35,8 +32,7 @@ type TableShape<Row, Defaulted extends keyof Row = never> = {
 
 type AgentTypeDb = "career" | "independent" | "captive";
 type CompensationStatusDb = "ACTIVE" | "NOT_CONFIGURED";
-type EarningStatusDb = "PENDING" | "APPROVED" | "PAID" | "VOID";
-type PayoutStatusDb = "DRAFT" | "APPROVED" | "PAID";
+type EarningStatusDb = "PENDING" | "APPROVED" | "VOID";
 type StatementStatusDb = "received" | "previewed" | "imported" | "failed" | "superseded";
 
 export interface Database {
@@ -51,6 +47,8 @@ export interface Database {
           name: string;
           account_type: "agency" | "individual";
           onboarding_completed_at: string | null;
+          /** Optional per-agency bonuses; off by default (0009). */
+          bonuses_enabled: boolean;
           created_at: string;
         };
         Insert: {
@@ -58,6 +56,7 @@ export interface Database {
           name: string;
           account_type?: "agency" | "individual";
           onboarding_completed_at?: string | null;
+          bonuses_enabled?: boolean;
           created_at?: string;
         };
         Update: {
@@ -65,6 +64,7 @@ export interface Database {
           name?: string;
           account_type?: "agency" | "individual";
           onboarding_completed_at?: string | null;
+          bonuses_enabled?: boolean;
           created_at?: string;
         };
         Relationships: [];
@@ -449,6 +449,8 @@ export interface Database {
           calculation_method: "FIXED" | "PERCENT";
           rate_cents: number | null;
           rate_percent: number | null;
+          /** What a PERCENT rule is a percent of (0009). */
+          percent_basis: "ANNUAL_PREMIUM" | null;
           status: CompensationStatusDb;
           effective_from: string;
           effective_to: string | null;
@@ -458,6 +460,7 @@ export interface Database {
         | "career_level"
         | "rate_cents"
         | "rate_percent"
+        | "percent_basis"
         | "status"
         | "effective_to"
         | "created_at"
@@ -483,19 +486,17 @@ export interface Database {
         },
         "id" | "created_at"
       >;
-      payout_batches: TableShape<
+      career_levels: TableShape<
         {
           id: string;
           agency_id: string;
-          period_start: string;
-          period_end: string;
-          status: PayoutStatusDb;
-          approved_by: string | null;
-          approved_at: string | null;
-          paid_at: string | null;
+          name: string;
+          rank: number;
+          visibility: "own" | "direct_reports";
+          active: boolean;
           created_at: string;
         },
-        "id" | "status" | "approved_by" | "approved_at" | "paid_at" | "created_at"
+        "id" | "visibility" | "active" | "created_at"
       >;
       agent_earnings: TableShape<
         {
@@ -506,10 +507,9 @@ export interface Database {
           earned_amount_cents: number;
           payable_amount_cents: number | null;
           status: EarningStatusDb;
-          payout_batch_id: string | null;
           created_at: string;
         },
-        "id" | "payable_amount_cents" | "status" | "payout_batch_id" | "created_at"
+        "id" | "payable_amount_cents" | "status" | "created_at"
       >;
       career_earning_sources: TableShape<
         {

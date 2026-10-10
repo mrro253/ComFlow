@@ -18,6 +18,7 @@ import {
 import { isOnboardingIncomplete } from "@/lib/onboarding";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { BarChartCard } from "@/components/dashboard/bar-chart-card";
+import { listCareerLevels } from "@/lib/repositories/compensationSettingsRepository";
 import { OnboardingChecklistCard } from "@/components/dashboard/onboarding-checklist-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,9 +38,14 @@ export default async function DashboardPage() {
   // RLS scopes every query below to what this user is allowed to see.
   const [transactions, team] = await Promise.all([listVisibleTransactions(), listUsersForAgency(user.agencyId)]);
 
-  const [agency, statements, connections] = isOwner
-    ? await Promise.all([getAgencyById(user.agencyId), listStatements(5), listVisibleConnections()])
-    : [null, [], []];
+  const [agency, statements, connections, levels] = isOwner
+    ? await Promise.all([
+        getAgencyById(user.agencyId),
+        listStatements(5),
+        listVisibleConnections(),
+        listCareerLevels(user.agencyId),
+      ])
+    : [null, [], [], []];
   const showChecklist = isOwner && agency !== null && isOnboardingIncomplete(agency);
 
   const month = latestMonth(transactions);
@@ -48,7 +54,7 @@ export default async function DashboardPage() {
   const unassignedCount = inMonth.filter((tx) => tx.userId === null).length;
   const categories = totalsByCategory(inMonth);
   const groups = isOwner ? totalsByProducerGroup(inMonth, usersById) : [];
-  const pendingReview = statements.filter((s) => s.status !== "imported").length;
+  const pendingReview = statements.filter((s) => s.status !== "imported" && s.status !== "superseded").length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -59,6 +65,7 @@ export default async function DashboardPage() {
 
       {showChecklist && (
         <OnboardingChecklistCard
+          hasCompensation={levels.length > 0}
           hasTeammates={team.length > 1}
           hasStatements={statements.length > 0}
           hasCarrierLogin={connections.some((c) => c.userId === user.id && c.status !== "disabled")}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
-import { CAREER_LEVELS, type AgentType, type CareerLevel } from "@/types/domain";
+import type { AgentType, CareerLevel } from "@/types/domain";
 
 const SELECT_CLASS = "h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm";
 
@@ -15,6 +15,7 @@ const SELECT_CLASS = "h-9 rounded-md border border-input bg-background px-3 text
  */
 export function AgentTypeFields({
   idPrefix,
+  levels,
   defaultType,
   defaultLevel,
   isManager,
@@ -22,6 +23,8 @@ export function AgentTypeFields({
   defaultPrincipalId = null,
 }: {
   idPrefix: string;
+  /** The agency's own career levels (a teammate's current level is included even if turned off). */
+  levels: string[];
   defaultType: AgentType | null;
   defaultLevel: CareerLevel | null;
   /** Managers may stay untyped; agents must pick one. */
@@ -45,7 +48,9 @@ export function AgentTypeFields({
           required={!isManager}
         >
           <option value="">{isManager ? "None" : "Choose..."}</option>
-          <option value="career">Career (paid by the agency)</option>
+          <option value="career" disabled={levels.length === 0}>
+            Career (paid by the agency)
+          </option>
           <option value="independent">Independent (paid by the carrier)</option>
           {!isManager && (
             <option value="captive">Captive / LOA (paid by their principal agent)</option>
@@ -65,7 +70,7 @@ export function AgentTypeFields({
             <option value="" disabled>
               Choose...
             </option>
-            {CAREER_LEVELS.map((level) => (
+            {levels.map((level) => (
               <option key={level} value={level}>
                 {level}
               </option>

@@ -1,4 +1,4 @@
-import { AGENT_TYPES, CAREER_LEVELS, type AgentType, type AppUser, type CareerLevel, type Role } from "@/types/domain";
+import { AGENT_TYPES, type AgentType, type AppUser, type CareerLevel, type Role } from "@/types/domain";
 
 export type AgentClassification =
   | {
@@ -21,7 +21,9 @@ export function parseAgentClassification(
   role: Exclude<Role, "owner">,
   rawType: string,
   rawLevel: string,
-  rawPrincipalId = ""
+  rawPrincipalId = "",
+  /** The agency's active career levels. */
+  validLevels: readonly string[] = []
 ): AgentClassification {
   if (rawType === "") {
     if (role === "agent") {
@@ -41,10 +43,13 @@ export function parseAgentClassification(
     return { ok: true, agentType: "captive", careerLevel: null, principalId: rawPrincipalId };
   }
 
-  if (!(CAREER_LEVELS as readonly string[]).includes(rawLevel)) {
+  if (validLevels.length === 0) {
+    return { ok: false, error: "Add a career level in Compensation before adding Career agents." };
+  }
+  if (!validLevels.includes(rawLevel)) {
     return { ok: false, error: "Choose a career level for Career agents." };
   }
-  return { ok: true, agentType: "career", careerLevel: rawLevel as CareerLevel, principalId: null };
+  return { ok: true, agentType: "career", careerLevel: rawLevel, principalId: null };
 }
 
 /**
@@ -86,11 +91,19 @@ export function classifyForSave(input: {
   rawType: string;
   rawLevel: string;
   rawPrincipalId: string;
+  /** The agency's active career levels. */
+  validLevels: readonly string[];
   agentId: string | null;
   agencyId: string;
   team: readonly Pick<AppUser, "id" | "agencyId" | "agentType" | "active" | "principalId">[];
 }): AgentClassification {
-  const parsed = parseAgentClassification(input.role, input.rawType, input.rawLevel, input.rawPrincipalId);
+  const parsed = parseAgentClassification(
+    input.role,
+    input.rawType,
+    input.rawLevel,
+    input.rawPrincipalId,
+    input.validLevels
+  );
   if (!parsed.ok || parsed.agentType !== "captive" || parsed.principalId === null) return parsed;
 
   const problem = checkPrincipal(parsed.principalId, input.agentId, input.agencyId, input.team);

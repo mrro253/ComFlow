@@ -23,6 +23,7 @@ export function TeamGroup({
   allManagers = [],
   plans = [],
   principals = [],
+  levels = [],
 }: {
   manager: AppUser | null;
   agents: AppUser[];
@@ -34,6 +35,8 @@ export function TeamGroup({
   plans?: CommissionPlan[];
   /** Teammates who can be a captive agent's principal. */
   principals?: { id: string; name: string }[];
+  /** Active career levels for this agency. */
+  levels?: string[];
 }) {
   return (
     <Card>
@@ -70,6 +73,7 @@ export function TeamGroup({
             managers={allManagers.filter((m) => m.id !== agent.id)}
             plans={plans}
             principals={principals.filter((p) => p.id !== agent.id)}
+            levels={levels}
             editable={editable}
           />
         ))}

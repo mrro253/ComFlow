@@ -1,5 +1,7 @@
 "use server";
 
+import { activeLevelNames } from "@/lib/carriers/careerLevels";
+import { listCareerLevels } from "@/lib/repositories/compensationSettingsRepository";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/requireRole";
 import { createUserWithAuth, listUsersForAgency } from "@/lib/repositories/userRepository";
@@ -33,6 +35,7 @@ export async function addUser(
       rawType: String(formData.get("agentType") ?? ""),
       rawLevel: String(formData.get("careerLevel") ?? ""),
       rawPrincipalId: String(formData.get("principalId") ?? ""),
+      validLevels: activeLevelNames(await listCareerLevels(currentUser.agencyId)),
       agentId: null,
       agencyId: currentUser.agencyId,
       team: await listUsersForAgency(currentUser.agencyId),

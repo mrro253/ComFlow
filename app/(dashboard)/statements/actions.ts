@@ -1,5 +1,7 @@
 "use server";
 
+import { activeLevelNames } from "@/lib/carriers/careerLevels";
+import { listCareerLevels } from "@/lib/repositories/compensationSettingsRepository";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/requireRole";
@@ -130,6 +132,7 @@ export async function createWritingAgent(
       rawType: String(formData.get("agentType") ?? ""),
       rawLevel: String(formData.get("careerLevel") ?? ""),
       rawPrincipalId: String(formData.get("principalId") ?? ""),
+      validLevels: activeLevelNames(await listCareerLevels(user.agencyId)),
       agentId: null,
       agencyId: user.agencyId,
       team: await listUsersForAgency(user.agencyId),

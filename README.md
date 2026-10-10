@@ -27,10 +27,11 @@ Last updated: 2026-10-10
 | Database schema, RLS, immutability triggers | Built | Same throwaway Postgres run |
 | Statement review (2026-10-10): PDF viewer, corrected-version "Superseded" flow, same-file-name duplicate rule, unmatched writing agents prompt, payee ID | Built | Unit tests (planner, classifier, unmatched summary) and the migration `0007` function on a throwaway Postgres 14 (supersede succeeds and keeps old rows, cross-agency rejected, re-import blocked, payee ID unique). **UI never run against live Supabase** |
 | Captive / LOA agents (2026-10-10): captive type + principal, production credited to the principal, own login for the captive agent | Built | Unit tests and migration `0008` on a throwaway Postgres 14 (constraints, no chains, cross-agency principal rejected, RLS: captive sees only their rows, principal sees both, other agency sees none). **UI never run against live Supabase** |
+| Per-agency compensation settings (2026-10-10): career levels + visibility, Owner-editable rates, bonuses on/off, payouts removed | Built | Unit tests for rule/level planning; migration `0009` on a throwaway Postgres 14. **UI never run against live Supabase** |
 | Upload -> preview -> approve -> payments UI | Built | Compiles, lints, `next build` passes. **Never run in a browser against a live Supabase project** (no Docker/Supabase CLI was available while building) |
 | Carrier login screen (encrypted credentials) | Built | Encryption unit-tested. UI **unverified** against live Supabase |
 | Carrier worker (auto-pull from the portal) | Built, **unverified** | Typechecks. Ported from Ryan's working prototype but **never run** against the live Ultimate portal |
-| Career-agent earnings, rate locks, payouts | Logic built, **no UI** | Unit tests. Intentionally not in the MVP screens |
+| Career-agent earnings, rate locks | Logic built, **no UI** | Unit tests. Payout batches removed. Intentionally not in the MVP screens |
 | GoHighLevel output | Not started | |
 
 **Bottom line:** the whole manual-upload path should work end to end the first
@@ -106,7 +107,8 @@ npm run sample:statement             # writes sample-statement.pdf (synthetic, s
 - **Duplicates and corrections** (same carrier, month and owner): same file name + identical payments = duplicate, imported once. Same file name + mostly the same payments (50% or more) = **corrected version**: it is imported and the earlier one moves to **Superseded** (kept and viewable, excluded from the dashboard and reports; each page links to the other). Identical PDF bytes under another name are skipped. Different file name with identical payments still goes to review.
 - Mark a statement as belonging to an **Independent agent** (every row is then theirs, whatever name is printed).
 - **Payments**: assign unassigned payments to a teammate; optionally remember the printed name as an alias.
-- **Users**: add/edit teammates with **agent type** (Career + level, or Independent) and an optional **carrier payee ID**. Owner only.
+- **Users**: add/edit teammates with **agent type** (Career + this agency's levels, Independent, or Captive) and an optional **carrier payee ID**. Owner only.
+- **Compensation**: set this agency's career levels (name, order, visibility, on/off), effective-dated rates (fixed dollars or percent of annual premium), and bonuses on/off. History is never overwritten: a new rate starts on its date and ends the previous one the day before.
 - **Carriers**: enter the agency's carrier portal login, Sync now, remove login; see Independent agents' connection status.
 
 **Independent agent**
@@ -123,8 +125,10 @@ npm run sample:statement             # writes sample-statement.pdf (synthetic, s
 **Manager**
 - Sees self + direct reports on Dashboard and Payments. No Statements/Carriers.
 
-**Not linked from the menu (legacy, still in the code):** `/commissions`, the
-comp-plan/bonus screens in Settings, `/onboarding`. See section 5.
+**Onboarding** (Owner): welcome, then the same Compensation sections (levels, rates, bonuses), then team, then GoHighLevel (coming soon).
+
+**Not linked from the menu (legacy, still in the code):** `/commissions` and the
+old percent-split plan / bonus screens in Settings. See section 5.
 
 ---
 
@@ -164,31 +168,21 @@ Important properties:
 
 **Not built yet**
 - GoHighLevel **output** (match contacts, push statuses). Not built: Settings/Onboarding show an informational "Coming soon" card only. GHL is never a source of payable amounts.
-- Career-agent **earnings screens** (payouts are being removed, see above): the rules, rate locks and approval logic exist in `lib/carriers/compensation`, with tables, but no UI and no job that creates earnings. Needs Ryan's rate decisions first (section 7).
+- Career-agent **earnings screens**: the rules, rate locks and approval logic exist in `lib/carriers/compensation`, with tables, but no UI and no job that creates earnings. Payout batches have been removed.
 - Carriers other than **Ultimate Health Plans** (parser and portal).
 - **Scheduled** syncing. The worker only handles "Sync now" requests.
 - Auto-import for Independent agents' statements (currently the Owner approves every statement).
 - Inviting teammates by email (new users get a temporary password shown to the Owner).
 - Hosted deployment of the worker.
 
-**Agreed with Ryan (2026-10-10), not built yet** (see section 7 for his answers)
-- **Compensation rules editable by the Owner** in onboarding and Settings, including **percent-of-annual-premium** rules for non-MAPD products (e.g. final expense). Open: Ultimate MAPD statements do not print premium, so a percent-of-premium rule needs premium data from somewhere; until then such rules stay `NOT_CONFIGURED`.
-- **Remove payouts**: no payout batches, PAID status or biweekly approval for now. Earnings calculation stays. Needs a migration and an update to `.cursorrules` (done only when this phase is built).
-- **Independent agents**: optional owner-level profile and a collective report they can send upstream (externally). Default stays one-person company.
+**Agreed with Ryan (2026-10-10), not built yet** (see section 7)
+- **Independent agents**: optional owner-level profile and a collective report they can send upstream (externally). Default stays one-person company. (Phase 4)
 - Not wanted for now: override tiers, chargeback rules, split-commission features beyond the compensation rules above.
 
-**Not built: per-company configuration (needed to sell this as SaaS to other agencies)**
-
-The data model is already multi-tenant (every table carries `agency_id` and has RLS),
-but several things are still **TruePlan's model baked in**. None of these is a quick
-change, so they are TODOs, deliberately **not** touched while Ryan is testing:
-- **Career levels per agency.** "Benefit Consultant / Senior Benefit Consultant / Client Advisor / Private Client Advisor" are TruePlan's titles, hard-coded in database CHECK constraints (migration `0005`: `users.career_level`, `compensation_rules.career_level`, `policy_compensation_locks.career_level_at_write`) and in `types/domain.ts`. Each agency should define its own level names, order, and **what each level can see** (visibility rules). Needs a `career_levels` table per agency, a migration replacing the CHECK constraints, and a settings screen. Existing rate locks must keep their level (non-negotiable rule 2).
-- **Compensation rules / percentage plans per agency.** Rules exist only as seeded SQL rows (TruePlan's MAPD fixed-dollar rates, demo only). Each agency needs a screen to create and edit effective-dated rules by level, product and payment category, as **fixed dollars or percent**, without overwriting history.
-- **Bonuses on/off per agency.** TruePlan does not use bonuses; other agencies may. Make bonuses an agency setting (off by default). The old bonus code is legacy CRM-driven and must not be reused as is.
-- **Payout options per agency.** Payout frequency (biweekly is TruePlan's), whether owner approval is required, and whether payouts are tracked at all. Carrier receipt before payout stays mandatory.
-- **Starter setup for a new agency.** Signup still seeds the legacy 10% / 2% / 1% plan and no compensation rules or levels. Onboarding should walk a new owner through levels, rules, bonuses and payouts (replace the old plan step).
-- **Carrier and product catalog per agency** (which carriers and products each company uses), and confirming parser assumptions (for example the Ultimate writing-agent codes) hold across companies.
-- Any customer-specific value must live in per-agency **data**, never in code (see `.cursorrules`).
+**Built: per-company compensation settings (2026-10-10)**
+- Career levels, visibility, Owner-editable rates (fixed or percent of annual premium), bonuses on/off, payouts removed. TruePlan's level names and MAPD rates remain **demo seed only**.
+- **Still open:** Ultimate MAPD statements do not print premium, so a percent-of-premium rule cannot be quoted until a parser supplies premium (stays `NOT_CONFIGURED`).
+- **Still not built:** carrier/product catalog per agency; signup still seeds the legacy 10% / 2% / 1% plan (unused by the statement dashboard). A new agency starts with no career levels until the Owner adds them.
 
 **Legacy code still present (CRM-driven model)**
 - `commission_plans`, `commission_plan_rates`, bonuses, `commission_transactions`, `lib/commission-engine`, `/commissions`, Settings plan/bonus screens, `/onboarding`, and the inbound GoHighLevel adapter in `lib/crm` (its webhook route and fake "Connect" button were removed 2026-10-10; `crm_connections` table stays). They still work but no longer feed the dashboard. The signup function `create_agency_with_owner` still seeds the old 10% / 2% / 1% plan. Retire these once nothing needs them.
@@ -207,11 +201,10 @@ change, so they are TODOs, deliberately **not** touched while Ryan is testing:
 2. **Answer the open decisions** in section 7, especially how Independent agents' production rolls up and how aliases should work.
 3. **Run the worker once** with Ryan's Ultimate login on a machine with a browser; fix selector/flow issues.
 4. **Keep running locally for now. Do not deploy yet.** Run the app, local Supabase and the worker (`npm run start` in `worker/`) on your own machine. Hosting costs money and real client data (PHI) cannot go on any hosted service until HIPAA agreements are in place. Deploy when you are ready to launch, following the roadmap in section 14 (hosted setup, nightly sync, HIPAA).
-5. **Phase 2: Captive/LOA agents**, then **Phase 3: editable compensation rules and level names, bonuses on/off, remove payouts** (see "Agreed with Ryan" in section 5), then the career **earnings UI** (preview via `buildEarningsPlan`, Owner approval; no payouts).
+5. **Phase 4: Independent owner-level profile and collective report**, then the career **earnings UI** (preview via `buildEarningsPlan`, Owner approval; no payouts).
 6. **Second carrier:** write a `StatementParser` and a `CarrierPortal` (see section 9).
 7. **GoHighLevel output** (reshape `lib/crm` around push operations; no inbound payable data).
 8. Retire the legacy CRM-driven code and the old seed data.
-9. **Per-company configuration** (section 5, "Not built: per-company configuration"): configurable career levels and visibility, compensation rule/percentage-plan editor, optional bonuses, payout options, new-agency onboarding. Do this before onboarding a second company. Plan it first (it needs a migration, so it requires Marshall's approval per section 13).
 
 ---
 
@@ -227,11 +220,11 @@ Ryan's answers from 2026-10-10 are marked **Ryan:**.
 4. **Name matching**: **Ryan:** assign by writing-agent name (the carrier prints `LAST, FIRST`). If nobody has that name, prompt to create a new agent (built). If two people share a name, use the **payee ID** from the statement, stored on each user (built; the statement location of the ID is unverified, see section 5).
 5. **Payee is not proof of the writer.** **Ryan:** agree.
 6. **Approval**: Owner approves every import. **Ryan:** sure (keep as is).
-7. **Career rates** (MAPD, fixed dollars): BC $300 / $100 / $7, SBC $350 / $125 / $10, CA $400 / $150 / $12.50, PCA $450 / $150 / $15 (T65 / plan change / renewal), effective 2026-10-08. **Ryan:** yes, but TruePlan-specific; every agency must be able to change this in onboarding **and** in Settings at any time. Also rules for other products as a **percentage** (e.g. final expense: percent of annual premium) while MAPD stays fixed dollars. Owner-editable (Phase 3).
+7. **Career rates** (MAPD, fixed dollars): BC $300 / $100 / $7, SBC $350 / $125 / $10, CA $400 / $150 / $12.50, PCA $450 / $150 / $15 (T65 / plan change / renewal), effective 2026-10-08. **Ryan:** yes, but TruePlan-specific; every agency must be able to change this in onboarding **and** in Settings at any time. Also rules for other products as a **percentage** (e.g. final expense: percent of annual premium) while MAPD stays fixed dollars. **Built** on Compensation (and the same forms in onboarding). Confirm the seeded TruePlan numbers with Ryan.
 8. **Who sees what** for Managers: self + direct reports. **Ryan:** correct.
 9. **Duplicate rule**: **Ryan:** identical rows + same file name = duplicate, bring in once; different file name + identical data = review (built). Same file name + different data (decided with Marshall) = corrected version, old one moved to Superseded (built).
 10. **Career agents** have no carrier portal login but do log in to CommissionFlow and see only the statements assigned to them up the hierarchy. **Open:** how "up the hierarchy" should work for visibility (today Managers see self + direct reports).
-11. **Per-company settings**: **Ryan:** different level names and visibility, compensation plans, bonuses on/off (setting); **no payouts for now (remove)**; split commissions handled by #7; no override tiers, no chargeback rules for now.
+11. **Per-company settings**: **Ryan:** different level names and visibility, compensation plans, bonuses on/off (setting); **no payouts for now (remove)**; split commissions handled by #7; no override tiers, no chargeback rules for now. **Built** except the independent collective report / owner-level profile (Phase 4).
 12. **Open (Captive/LOA agents, built):** a captive agent currently sees the **carrier-paid dollar amounts** on the payments they wrote (the database cannot hide a column per role). That reveals the principal's margin over what the principal pays them. Confirm with Ryan whether that is acceptable, or whether captive agents should see counts only (a change that needs a separate view or hiding the amount column in the app).
 
 ---
@@ -328,6 +321,7 @@ TODO: nightly scheduled syncs; MFA handling; monitoring/alerts.
   statements/       upload + history + [id] preview/approve (Owner)
   carriers/         carrier login + sync status (Owner, Independent agents)
   users/            team + agent type/level (Owner/Manager)
+  compensation/     per-agency levels, rates, bonuses on/off (Owner)
   settings/         legacy plans/bonuses/CRM + team add
 /components         ui/ primitives; dashboard/, statements/, payments/, carriers/, users/
 /lib
@@ -341,7 +335,7 @@ TODO: nightly scheduled syncs; MFA handling; monitoring/alerts.
   auth/             session, role guards, agent-type validation, carrier-login access rule
   commission-engine/, crm/   LEGACY CRM-driven model
 /worker             separate package: Playwright portal pull
-/supabase           migrations/ (0001-0008), seed.sql
+/supabase           migrations/ (0001-0009), seed.sql
 /types              hand-written schema + domain types
 /scripts            make-sample-statement.ts
 ```
@@ -352,7 +346,7 @@ parsing never touches the database.
 
 Migrations: `0001` base schema/RLS, `0002` grants, `0003` comp plans (legacy),
 `0004` onboarding, `0005` carrier statements/compensation model, `0006` statement
-import function + storage bucket + sync request column, `0007` statement review (superseded statements, payee ID, `import_statement` supersede support), `0008` captive agents (`users.principal_id`, `carrier_transactions.writing_user_id`, RLS for the captive agent, `import_statement` records the writer).
+import function + storage bucket + sync request column, `0007` statement review (superseded statements, payee ID, `import_statement` supersede support), `0008` captive agents (`users.principal_id`, `carrier_transactions.writing_user_id`, RLS for the captive agent, `import_statement` records the writer), `0009` per-agency career levels, bonuses on/off, percent-of-premium rules, payout tables removed.
 
 `types/database.ts` is hand-written; regenerate with
 `supabase gen types typescript --linked` once linked to a real project.
@@ -361,7 +355,7 @@ import function + storage bucket + sync request column, `0007` statement review 
 
 ## 12. Verification log
 
-Last full run (2026-10-10, statement review): `vitest` 133 tests passing, `tsc` and `eslint` clean. Migration `0007` applied on top of `0001`-`0006` on a throwaway Postgres 14 and its behavior checked (details in section 1). Earlier run (2026-10-08): `vitest` 113 tests passing, `tsc` clean (app and
+Last full run (2026-10-10, compensation settings): `vitest` 161 tests passing, `tsc` and `eslint` clean, `next build` succeeds. Migrations `0008` and `0009` applied on top of `0001`-`0007` on a throwaway Postgres 14. Earlier statement-review run: `vitest` 133. Earlier run (2026-10-08): `vitest` 113 tests passing, `tsc` clean (app and
 worker), `eslint` clean, `next build` succeeds. SQL behavior verified on a
 throwaway Postgres 14 (not Supabase). **Not verified:** any screen against live
 Supabase/Auth/Storage, the worker against the live portal, any real PDF.
@@ -374,7 +368,8 @@ offset bug). Real statements are much larger; only hand-made test PDFs are affec
 
 ## 13. Contributing (version control process)
 
-**For Ryan and his AI assistant: follow this every time you change the project.**
+**For Ryan, Marshall, and their AI assistants: follow this every time you change
+the project. AI assistants must do this automatically — do not wait to be asked.**
 Repo: `https://github.com/mrro253/ComFlow` (remote `origin`). The main branch is
 named **`Main`** (capital M). Do not fork; work on branches in this same repo.
 Pull requests are **not required**. Marshall reviews after the fact.
@@ -631,6 +626,7 @@ Each Independent-agent customer is their own business associate of their carrier
 
 ## 15. Changelog (newest first)
 
+- **2026-10-10** - Per-agency compensation settings (Phase 3): Owner-editable career levels (name, order, visibility), effective-dated rates (fixed dollars or percent of annual premium), bonuses on/off, payout batches removed. Compensation page + the same forms in onboarding. Migration `0009` (apply with `npx supabase migration up`; refuses to run if payout data exists). Git workflow is a standing instruction (do not wait to be asked). tsc, eslint, vitest (161) pass.
 - **2026-10-10** - Captive / LOA agents (Phase 2): new agent type with a principal, production credited to the principal with the writer recorded, captive agents get their own login scoped to what they wrote, "Written by" column on Payments, migration `0008` (apply with `npx supabase migration up`). `.cursorrules` now makes the git workflow a standing instruction. tsc, eslint, vitest (145) pass.
 - **2026-10-10** - Statement review (Ryan's feedback): open the original PDF, same-file-name duplicate rule and "Superseded" corrected statements (excluded from reports, still viewable), unmatched writing agents prompt (assign or create agent, remembered), payee ID on users and statements with never-guess tie-breaking for shared names. Migration `0007` (apply with `npx supabase migration up`). Ryan's #7 answers recorded in section 7. Captive/LOA agents, editable compensation rules and payout removal are agreed but not built yet. tsc, eslint, vitest (133) pass.
 - **2026-10-10** - Multi-company framing: TruePlan is the first customer, not the only one. Documented per-company configuration TODOs (career levels and visibility, compensation/percentage plans, optional bonuses, payout options, new-agency onboarding) in sections 5-7; made section 14.5 (HIPAA) per-customer. Docs and rules only; no code or schema changes.

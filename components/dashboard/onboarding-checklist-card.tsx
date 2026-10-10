@@ -17,10 +17,12 @@ import { cn } from "@/lib/utils";
  * requirement.
  */
 export function OnboardingChecklistCard({
+  hasCompensation,
   hasTeammates,
   hasStatements,
   hasCarrierLogin,
 }: {
+  hasCompensation: boolean;
   hasTeammates: boolean;
   hasStatements: boolean;
   hasCarrierLogin: boolean;
@@ -31,6 +33,7 @@ export function OnboardingChecklistCard({
   );
 
   const items = [
+    { label: "Set up career levels and rates", done: hasCompensation, href: "/compensation" },
     { label: "Add your team", done: hasTeammates, href: "/users" },
     { label: "Upload a carrier statement", done: hasStatements, href: "/statements" },
     { label: "Connect your carrier login", done: hasCarrierLogin, href: "/carriers" },
