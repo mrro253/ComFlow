@@ -158,8 +158,20 @@ Important properties:
 - **Scheduled** syncing. The worker only handles "Sync now" requests.
 - Auto-import for Independent agents' statements (currently the Owner approves every statement).
 - Inviting teammates by email (new users get a temporary password shown to the Owner).
-- Editing compensation rules in the UI (they are seeded SQL rows).
 - Hosted deployment of the worker.
+
+**Not built: per-company configuration (needed to sell this as SaaS to other agencies)**
+
+The data model is already multi-tenant (every table carries `agency_id` and has RLS),
+but several things are still **TruePlan's model baked in**. None of these is a quick
+change, so they are TODOs, deliberately **not** touched while Ryan is testing:
+- **Career levels per agency.** "Benefit Consultant / Senior Benefit Consultant / Client Advisor / Private Client Advisor" are TruePlan's titles, hard-coded in database CHECK constraints (migration `0005`: `users.career_level`, `compensation_rules.career_level`, `policy_compensation_locks.career_level_at_write`) and in `types/domain.ts`. Each agency should define its own level names, order, and **what each level can see** (visibility rules). Needs a `career_levels` table per agency, a migration replacing the CHECK constraints, and a settings screen. Existing rate locks must keep their level (non-negotiable rule 2).
+- **Compensation rules / percentage plans per agency.** Rules exist only as seeded SQL rows (TruePlan's MAPD fixed-dollar rates, demo only). Each agency needs a screen to create and edit effective-dated rules by level, product and payment category, as **fixed dollars or percent**, without overwriting history.
+- **Bonuses on/off per agency.** TruePlan does not use bonuses; other agencies may. Make bonuses an agency setting (off by default). The old bonus code is legacy CRM-driven and must not be reused as is.
+- **Payout options per agency.** Payout frequency (biweekly is TruePlan's), whether owner approval is required, and whether payouts are tracked at all. Carrier receipt before payout stays mandatory.
+- **Starter setup for a new agency.** Signup still seeds the legacy 10% / 2% / 1% plan and no compensation rules or levels. Onboarding should walk a new owner through levels, rules, bonuses and payouts (replace the old plan step).
+- **Carrier and product catalog per agency** (which carriers and products each company uses), and confirming parser assumptions (for example the Ultimate writing-agent codes) hold across companies.
+- Any customer-specific value must live in per-agency **data**, never in code (see `.cursorrules`).
 
 **Legacy code still present (CRM-driven model)**
 - `commission_plans`, `commission_plan_rates`, bonuses, `commission_transactions`, `lib/commission-engine`, `/commissions`, Settings plan/bonus screens, `/onboarding`, and the inbound GoHighLevel adapter in `lib/crm` (its webhook route and fake "Connect" button were removed 2026-10-10; `crm_connections` table stays). They still work but no longer feed the dashboard. The signup function `create_agency_with_owner` still seeds the old 10% / 2% / 1% plan. Retire these once nothing needs them.
@@ -181,6 +193,7 @@ Important properties:
 6. **Second carrier:** write a `StatementParser` and a `CarrierPortal` (see section 9).
 7. **GoHighLevel output** (reshape `lib/crm` around push operations; no inbound payable data).
 8. Retire the legacy CRM-driven code and the old seed data.
+9. **Per-company configuration** (section 5, "Not built: per-company configuration"): configurable career levels and visibility, compensation rule/percentage-plan editor, optional bonuses, payout options, new-agency onboarding. Do this before onboarding a second company. Plan it first (it needs a migration, so it requires Marshall's approval per section 13).
 
 ---
 
@@ -198,6 +211,7 @@ Assumptions already built in. Please confirm or correct each:
 8. **Who sees what** for Managers: self + direct reports. Correct?
 9. **Duplicate rule**: two statements that contain economically identical rows (same member/month/type/amount) but different PDFs are held for review instead of imported. Is that the right safety net?
 10. **Career agents never enter logins**; only the agency's login is used. Correct for agencies with Career agents?
+11. **Which things must each company be able to configure?** Current plan (section 5): career level names and visibility, compensation rules (fixed dollars or percent), bonuses on/off, payout frequency and approval. Anything else other agencies would need (override tiers, split commissions, chargeback rules)? Ask Ryan and any prospective customers.
 
 ---
 
@@ -489,7 +503,7 @@ cost matters when pricing CommissionFlow to customers.
 Alternatives considered:
 - **Render** HIPAA workspaces need the Scale plan ($499/mo) plus a 20% usage surcharge. **Railway** needs a $1,000/mo committed-spend tier for a BAA. Both cost more than Fly for the worker.
 - **One AWS account for everything.** AWS's BAA is free to accept (AWS Artifact), and EC2, RDS and S3 are HIPAA-eligible, so this is cheaper at scale. But it means leaving Supabase (auth, storage, RLS, supabase-js) and hosting Postgres yourself, which is a rewrite. Self-hosted Supabase is not covered by Supabase's HIPAA program. Keep as a **future cost-reduction option**, not for the pilot.
-- **Option 2A (cheapest real-data pilot): no cloud at all.** Ryan runs the app, local Supabase and worker on a TruePlan computer with full-disk encryption (FileVault or BitLocker), a login password and no sharing. PHI then stays inside TruePlan's own environment, under their existing carrier agreements. Cost $0, but only Ryan's machine can use it and Marshall never sees real data. Reasonable until Ryan needs remote or multi-user access.
+- **Option 2A (cheapest real-data pilot): no cloud at all.** For the first customer (TruePlan), Ryan runs the app, local Supabase and worker on a company computer with full-disk encryption (FileVault or BitLocker), a login password and no sharing. PHI then stays inside the customer's own environment, under their existing carrier agreements. Cost $0, but only that machine can use it and Marshall never sees real data. A pilot-only option for the first customer; it does not scale to other companies.
 
 ### 14.4 How to set up the hosted stack
 
@@ -526,12 +540,16 @@ TODO: add a small scheduler to the worker that, once a day, sets `sync_requested
 
 **Why it applies.** Commission statements contain member names, policy details and carrier data, which is PHI. Carriers are HIPAA "covered entities". Agencies and agents who receive PHI from carriers on the carriers' behalf are typically treated as **business associates**, and carrier broker agreements usually include a BAA addendum for this (Medica and Fallon Health publish theirs). A business associate must get a written BAA from any subcontractor that handles that PHI. That includes CommissionFlow, and then every hosting vendor CommissionFlow uses.
 
-**The chain of agreements** (the pattern to confirm with an attorney):
+CommissionFlow is sold to **many companies** (TruePlan FL Inc. is only the first), so every
+agreement below repeats **per customer**. Build one standard set of paperwork and reuse it.
+
+**The chain of agreements** (the pattern to confirm with an attorney). "Customer" means an
+agency or an Independent agent using CommissionFlow:
 
 | # | Agreement | Between | Status / how to get it |
 | --- | --- | --- | --- |
-| 1 | Carrier contract + BAA addendum | Each carrier <-> TruePlan (and each Independent agent) | Already exists as part of contracting. **Ryan: read it** for rules on subcontractors and vendors, offshore data, breach-notice timing, and whether automated portal access is allowed |
-| 2 | **BAA** | TruePlan <-> **CommissionFlow** (Marshall's company) | Needed before TruePlan's PHI touches a hosted CommissionFlow. Have the attorney draft a standard BAA you reuse for every customer |
+| 1 | Carrier contract + BAA addendum | Each carrier <-> each customer (agency or Independent agent) | Already exists as part of the customer's carrier contracting. **Each customer must read theirs** for rules on subcontractors and vendors, offshore data, breach-notice timing, and whether automated portal access is allowed. Contracts differ by customer and carrier |
+| 2 | **BAA** | Each customer <-> **CommissionFlow** (Marshall's company) | Needed before that customer's PHI touches a hosted CommissionFlow. Have the attorney draft **one standard customer BAA** (include terms for returning or deleting a customer's PHI when they leave, and breach notice to the affected customer) and sign it at onboarding |
 | 3 | **BAA** | CommissionFlow <-> **Supabase** | Team plan + HIPAA add-on, then sign via Supabase |
 | 4 | **BAA** | CommissionFlow <-> **Vercel** | Pro + HIPAA add-on (click-through) |
 | 5 | **BAA** | CommissionFlow <-> **Fly.io** (or AWS) | Fly HIPAA package, or AWS free BAA through AWS Artifact |
@@ -540,17 +558,24 @@ TODO: add a small scheduler to the worker that, once a day, sets `sync_requested
 
 Each Independent-agent customer is their own business associate of their carriers, so they also need agreement #2 with CommissionFlow.
 
+**Multi-customer items to plan for:**
+- Keep a **subprocessor list** (Supabase, Vercel, Fly.io) to give customers, and notify them when it changes.
+- **Tenant isolation is a HIPAA safeguard.** The row-level security that keeps one agency's data from another (and one agent's from another) should get independent testing before launch.
+- **Onboarding checklist per customer:** signed BAA, customer confirms their carrier contracts allow this vendor and automated portal access, admin account created.
+- **Offboarding:** return or delete the customer's PHI on request or termination, and record when it was done.
+- **Pricing:** the HIPAA hosting stack is a fixed cost shared by all customers, so each added customer lowers the cost per customer.
+
 **Steps, in order**
 1. **Form a legal entity** for CommissionFlow (LLC or similar), so agreements are signed by a company, not you personally. Get business insurance, ideally cyber liability and E&O. Ask an attorney or insurer about it.
-2. **Hire a healthcare/privacy attorney** (one-time review; get a fixed quote). Ask them to: confirm the agreement chain above, draft the customer BAA, review TruePlan's carrier contracts for restrictions, and review Florida's breach-notification law (FIPA), which also applies.
-3. **Ask Ryan for TruePlan's carrier agreements** and check each carrier's portal terms of use for automated (robot) access. Some carriers forbid it.
+2. **Hire a healthcare/privacy attorney** (one-time review; get a fixed quote). Ask them to: confirm the agreement chain above, draft the customer BAA, review the first customer's (TruePlan's) carrier contracts for restrictions, and review the breach-notification laws of the states you will serve (Florida's FIPA first), which also apply.
+3. **Ask Ryan for TruePlan's carrier agreements** and check each carrier's portal terms of use for automated (robot) access. Some carriers forbid it. Repeat this check for each new customer and carrier.
 4. **Complete the HIPAA Security Rule basics** (a lightweight version is fine at this size), written down:
    - a **risk assessment** (what PHI we hold, where, and the risks)
    - written **policies**: access control, encryption, data retention/deletion, incident response and breach notification, backup and recovery
    - **workforce training** and a signed confidentiality agreement for anyone with access (you, Ryan, any contractors)
    - an **access review** schedule and a breach-response contact list
 5. **Sign vendor BAAs** (rows 3-5) and enable each vendor's HIPAA settings **before** any real data is uploaded.
-6. **Sign the customer BAA** (row 2) with TruePlan.
+6. **Sign the customer BAA** (row 2) with the first customer (TruePlan), then with each new customer at onboarding.
 7. **Only then** upload real data, starting with one real PDF and checking nothing leaks (logs, error messages, previews).
 8. Keep records: signed agreements, the risk assessment, and the training log, for at least 6 years (HIPAA documentation rule).
 
@@ -577,6 +602,7 @@ Each Independent-agent customer is their own business associate of their carrier
 
 ## 15. Changelog (newest first)
 
+- **2026-10-10** - Multi-company framing: TruePlan is the first customer, not the only one. Documented per-company configuration TODOs (career levels and visibility, compensation/percentage plans, optional bonuses, payout options, new-agency onboarding) in sections 5-7; made section 14.5 (HIPAA) per-customer. Docs and rules only; no code or schema changes.
 - **2026-10-10** - Added section 14 "Launch roadmap" (stages local -> hosted test -> real-data pilot -> launch, hosting options and prices, setup steps for Supabase/Vercel/Fly.io, HIPAA agreements and steps, pre-launch checklist). Reworded next step #4: keep running locally, deploy only when ready to launch.
 - **2026-10-10** - Added section 13 "Contributing" (branch workflow, merge rules, what needs Marshall's approval) and a matching "GIT WORKFLOW" block in `.cursorrules`.
 - **2026-10-10** - GoHighLevel is output-only: removed the inbound CRM webhook route (`/api/webhooks/crm`) and the stub "Connect GoHighLevel" action; CRM card is now an informational "Coming soon" card. tsc, eslint and vitest (113) pass.

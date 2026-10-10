@@ -395,7 +395,9 @@ values
 -- ============================================================================
 -- Demo producers for the statement-driven model. Names and rates are
 -- synthetic except the MAPD schedule, which mirrors the confirmed TruePlan
--- Career rates (effective 2026-10-08). Managers are not producers.
+-- Career rates (effective 2026-10-08). This is demo data for the first
+-- customer only; other agencies will define their own levels and rules
+-- (see README section 5, per-company configuration). Managers are not producers.
 --   Jane (owner)  - Independent Agency Owner (paid directly by the carrier)
 --   Alex          - Career, Benefit Consultant
 --   Priya         - Career, Senior Benefit Consultant

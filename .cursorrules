@@ -1,6 +1,15 @@
 PROJECT: CommissionFlow
 
-CommissionFlow is a SaaS commission management platform for Medicare and Medicaid insurance agencies. First customer: TruePlan FL Inc.
+CommissionFlow is a SaaS commission management platform for Medicare and Medicaid insurance agencies. First customer: TruePlan FL Inc. (a design customer, NOT the only one: this is a multi-company SaaS).
+
+MULTI-TENANT RULE
+
+- No customer-specific logic or values in code. Anything that differs by company (career level
+  names and visibility, compensation rules and percentage plans, bonuses on/off, payout frequency
+  and approval, carrier/product lists) belongs in per-agency data keyed by agency_id.
+- TruePlan's rates and level names below are the reference model and demo seed data only.
+  Planned per-company configuration is tracked in README section 5.
+- Do not add new hard-coded level names or rates. Existing ones are known debt (README section 5).
 
 PRIMARY GOAL
 
@@ -15,7 +24,7 @@ The platform should prioritize:
 - Minimal setup
 - Clear dashboards
 
-BUSINESS MODEL (source of truth: the business owner, Ryan)
+BUSINESS MODEL (source of truth so far: Ryan, owner of TruePlan, the first customer; other agencies may differ in the configurable areas listed above)
 
 Commissions come from ACTUAL CARRIER PAYMENTS on carrier commission statements.
 The CRM never decides what is payable.
@@ -29,8 +38,8 @@ Account levels:
 Agent types:
 
 Career Agent
-- TruePlan (the agency) receives the carrier commission and pays the agent.
-- Has a career level: Benefit Consultant, Senior Benefit Consultant, Client Advisor, Private Client Advisor.
+- The agency receives the carrier commission and pays the agent.
+- Has a career level. TruePlan's levels: Benefit Consultant, Senior Benefit Consultant, Client Advisor, Private Client Advisor (TODO: make levels configurable per agency).
 - Paid fixed-dollar or percent amounts from effective-dated compensation rules, by level, product, and carrier payment category (e.g. MAPD T65, plan change, renewal).
 - Payouts are biweekly, require owner approval, and require the carrier payment to have been received.
 - Career Agents do NOT receive overrides.
@@ -77,7 +86,7 @@ Out of scope:
 - Payroll or payment execution integrations
 - AI features
 - Custom workflow builders
-- Bonuses (the business does not use them)
+- Bonuses (TruePlan does not use them; TODO: optional per-agency setting, off by default, for other companies)
 
 ARCHITECTURE REQUIREMENTS
 
