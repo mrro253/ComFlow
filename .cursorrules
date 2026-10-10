@@ -205,8 +205,17 @@ GIT WORKFLOW (full details: README section 13 "Contributing")
   Pull requests are optional and not required.
 - Stop and ask on merge conflicts. Never force-push, never reset --hard shared work.
 - Migrations are new files with the next free number, never edits to old ones.
-- Do not run git commit/push/merge unless the user has asked for it in the current
-  task or has said to follow this workflow; when in doubt, ask.
+- STANDING INSTRUCTION (Marshall, 2026-10-10): this workflow applies to every task
+  that changes files, without being asked each time. Always: branch from an
+  up-to-date Main, run the three checks (and `npx next build` when pages or routes
+  changed), commit with a meaningful message that includes the README/changelog
+  update, push the branch, then merge to Main when the rules above allow it (and
+  ask first when they do not). Never leave finished work uncommitted on Main.
+  Still never: commit directly to Main, force-push, reset --hard shared work, or
+  resolve a merge conflict without asking.
+- Split big requests into one branch per phase so each merge stays small and
+  reviewable. A merge that needs approval (see the list above) is pushed as a branch
+  and Marshall is asked before it goes into Main.
 
 README IS A LIVING HANDOFF DOCUMENT
 
