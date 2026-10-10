@@ -121,4 +121,14 @@ describe("buildStatementPreview", () => {
     expect(preview.correction).toEqual(correction);
     expect(preview.counts.new).toBe(2);
   });
+
+  it("imports captive agents' rows credited to the principal with the writer recorded", () => {
+    const credited: WritingAgentOwner = { ...CAREER, userId: "user-principal", writingUserId: "user-captive" };
+    const index = new Map<string, readonly WritingAgentOwner[]>(
+      writingAgentAliasesFor("Pat", "Sample").map((a) => [a, [credited]])
+    );
+    const rows = toImportRows(buildStatementPreview(statement, index, []));
+    expect(rows[0]).toMatchObject({ user_id: "user-principal", writing_user_id: "user-captive" });
+    expect(rows[1]).toMatchObject({ user_id: null, writing_user_id: null });
+  });
 });

@@ -15,6 +15,8 @@ export interface OwnerCandidate {
   active: boolean;
   /** The person's carrier agent number, when known. */
   payeeId?: string | null;
+  /** Captive agents: the principal their production is credited to. */
+  principalId?: string | null;
 }
 
 export interface ProductionEntityRef {
@@ -44,7 +46,21 @@ export function productionEntityFor(
   return null;
 }
 
-function ownerFor(user: OwnerCandidate, entities: readonly ProductionEntityRef[]): WritingAgentOwner {
+function ownerFor(
+  user: OwnerCandidate,
+  entities: readonly ProductionEntityRef[],
+  usersById: ReadonlyMap<string, OwnerCandidate>
+): WritingAgentOwner | null {
+  if (user.agentType === "captive") {
+    // The principal is credited and reported; the captive agent is only recorded as the
+    // writer. Without an active principal there is nobody to credit, so stay unmatched.
+    const principal = user.principalId ? usersById.get(user.principalId) : undefined;
+    if (!principal?.active || principal.agentType === "captive") return null;
+    const credited = ownerFor(principal, entities, usersById);
+    return credited
+      ? { ...credited, payeeId: normalizePayeeId(user.payeeId), writingUserId: user.id }
+      : null;
+  }
   const entity = productionEntityFor(user, entities);
   return {
     userId: user.id,
@@ -52,6 +68,7 @@ function ownerFor(user: OwnerCandidate, entities: readonly ProductionEntityRef[]
     productionEntityId: entity?.id ?? null,
     entityType: entity?.entityType ?? null,
     payeeId: normalizePayeeId(user.payeeId),
+    writingUserId: null,
   };
 }
 
@@ -65,9 +82,11 @@ export function buildWritingAgentOwners(
   entities: readonly ProductionEntityRef[]
 ): Map<string, WritingAgentOwner[]> {
   const index = new Map<string, WritingAgentOwner[]>();
+  const usersById = new Map(users.map((u) => [u.id, u]));
   for (const user of users) {
     if (!user.active) continue;
-    const owner = ownerFor(user, entities);
+    const owner = ownerFor(user, entities, usersById);
+    if (!owner) continue;
     // A Set avoids listing one person twice when both name orders are identical.
     for (const alias of new Set(writingAgentAliasesFor(user.firstName, user.lastName))) {
       const list = index.get(alias);
@@ -94,7 +113,8 @@ export function withSavedAliases(
   for (const { alias, userId } of saved) {
     const user = usersById.get(userId);
     if (!user?.active) continue;
-    merged.set(normalizeWritingAgentName(alias), [ownerFor(user, entities)]);
+    const owner = ownerFor(user, entities, usersById);
+    if (owner) merged.set(normalizeWritingAgentName(alias), [owner]);
   }
   return merged;
 }

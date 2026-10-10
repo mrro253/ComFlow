@@ -30,10 +30,13 @@ export function UnmatchedAgentRow({
   statementId,
   agent,
   team,
+  principals = [],
 }: {
   statementId: string;
   agent: UnmatchedAgentView;
   team: TeamOption[];
+  /** Who can be the principal if the new agent is captive. */
+  principals?: TeamOption[];
 }) {
   const uid = useId();
   const [creating, setCreating] = useState(false);
@@ -118,6 +121,7 @@ export function UnmatchedAgentRow({
             defaultType={null}
             defaultLevel={null}
             isManager={false}
+            principals={principals}
           />
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={creatingPending}>

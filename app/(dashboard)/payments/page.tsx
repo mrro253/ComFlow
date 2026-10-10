@@ -36,6 +36,9 @@ export default async function PaymentsPage({
   const unassignedCount = inMonth.filter((tx) => tx.userId === null).length;
   const categories = totalsByCategory(inMonth);
   const isOwner = user.role === "owner";
+  const isCaptive = user.agentType === "captive";
+  // Show who really wrote the business when it is credited to someone else (captive agents).
+  const showWriter = user.role !== "agent" && rows.some((tx) => tx.writingUserId !== null);
   const assignable = team
     .filter((u) => u.active)
     .map((u) => ({ id: u.id, name: `${u.firstName} ${u.lastName}` }));
@@ -51,6 +54,13 @@ export default async function PaymentsPage({
           What the carrier actually paid, straight from commission statements.
           {isOwner ? "" : " You only see your own payments."}
         </p>
+        {isCaptive && (
+          <p className="mt-1 text-sm text-muted-foreground">
+            Business you write is credited to{" "}
+            {(user.principalId && nameById.get(user.principalId)) || "your principal agent"}, who pays you
+            directly.
+          </p>
+        )}
       </div>
 
       {months.length > 0 && (
@@ -116,7 +126,8 @@ export default async function PaymentsPage({
                 <TableHead>Member ID</TableHead>
                 <TableHead>Category</TableHead>
                 {isOwner && <TableHead>Writing agent</TableHead>}
-                {user.role !== "agent" && <TableHead>Assigned to</TableHead>}
+                {user.role !== "agent" && <TableHead>Credited to</TableHead>}
+                {showWriter && <TableHead>Written by</TableHead>}
                 <TableHead className="text-right">Amount</TableHead>
                 {isOwner && <TableHead className="text-right">Assign</TableHead>}
               </TableRow>
@@ -124,7 +135,7 @@ export default async function PaymentsPage({
             <TableBody>
               {rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={9} className="py-10 text-center text-sm text-muted-foreground">
                     {isOwner ? "No payments yet. Upload a carrier statement to get started." : "No payments yet."}
                   </TableCell>
                 </TableRow>
@@ -143,6 +154,11 @@ export default async function PaymentsPage({
                       ) : (
                         <Badge variant="secondary">Unassigned</Badge>
                       )}
+                    </TableCell>
+                  )}
+                  {showWriter && (
+                    <TableCell className="text-muted-foreground">
+                      {tx.writingUserId ? (nameById.get(tx.writingUserId) ?? "Captive agent") : "—"}
                     </TableCell>
                   )}
                   <TableCell className={cn("text-right font-medium", tx.amountCents < 0 && "text-destructive")}>

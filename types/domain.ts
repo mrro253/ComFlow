@@ -11,11 +11,12 @@ export const ROLES: Role[] = ["owner", "manager", "agent"];
 /**
  * How a producer is paid. Career Agents are paid by the agency from
  * compensation rules; Independent Agents are paid 100% directly by the
- * carrier and are only tracked.
+ * carrier and are only tracked; Captive (LOA) agents write under a principal
+ * agent, who is credited their production and pays them directly.
  */
-export type AgentType = "career" | "independent";
+export type AgentType = "career" | "independent" | "captive";
 
-export const AGENT_TYPES: AgentType[] = ["career", "independent"];
+export const AGENT_TYPES: AgentType[] = ["career", "independent", "captive"];
 
 /** Career Agent tiers, lowest to highest. */
 export const CAREER_LEVELS = [
@@ -47,6 +48,8 @@ export interface AppUser {
   commissionPlanId: string | null;
   /** The carrier's agent number (e.g. Ultimate W####). Tells apart people who share a name. */
   payeeId: string | null;
+  /** Set if and only if `agentType` is "captive": whose production this agent's business is credited to. */
+  principalId: string | null;
   createdAt: string;
 }
 

@@ -14,6 +14,11 @@ export interface WritingAgentOwner {
   entityType: "agency" | "personal" | null;
   /** The person's carrier agent number, used only to tell apart people who share a name. */
   payeeId?: string | null;
+  /**
+   * Set when `userId` is a principal credited with a captive agent's production:
+   * the captive agent who actually wrote the business.
+   */
+  writingUserId?: string | null;
 }
 
 /** Why a row was not assigned automatically. */

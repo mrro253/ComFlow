@@ -70,3 +70,49 @@ describe("withSavedAliases", () => {
     expect(merged.size).toBe(0);
   });
 });
+
+describe("captive agents", () => {
+  const principal = user({ id: "boss", firstName: "Bo", lastName: "Boss", agentType: "career" });
+  const captive = user({
+    id: "cap",
+    firstName: "Cal",
+    lastName: "Captive",
+    agentType: "captive",
+    principalId: "boss",
+    payeeId: "w9",
+  });
+
+  it("credits a captive agent's production to the principal and records the writer", () => {
+    const owners = buildWritingAgentOwners([principal, captive], entities);
+    expect(owners.get("CAL CAPTIVE")).toEqual([
+      {
+        userId: "boss",
+        agentType: "career",
+        productionEntityId: "ent-agency",
+        entityType: "agency",
+        payeeId: "W9",
+        writingUserId: "cap",
+      },
+    ]);
+  });
+
+  it("uses the owner's personal entity when the owner is the principal", () => {
+    const owner = user({ id: "owner", role: "owner", firstName: "Own", lastName: "Er", agentType: null });
+    const owners = buildWritingAgentOwners([owner, { ...captive, principalId: "owner" }], entities);
+    expect(owners.get("CAL CAPTIVE")?.[0]).toMatchObject({ userId: "owner", entityType: "personal", writingUserId: "cap" });
+  });
+
+  it("leaves the name unmatched when the principal is missing, inactive, or captive", () => {
+    expect(buildWritingAgentOwners([captive], entities).has("CAL CAPTIVE")).toBe(false);
+    expect(buildWritingAgentOwners([{ ...principal, active: false }, captive], entities).has("CAL CAPTIVE")).toBe(false);
+    const chained = [{ ...principal, agentType: "captive" as const, principalId: "x" }, captive];
+    expect(buildWritingAgentOwners(chained, entities).has("CAL CAPTIVE")).toBe(false);
+  });
+
+  it("keeps saved aliases for a captive agent credited to the principal", () => {
+    const users = [principal, captive];
+    const merged = withSavedAliases(new Map(), [{ alias: "captive, c", userId: "cap" }], users, entities);
+    expect(merged.get("CAPTIVE C")?.[0]).toMatchObject({ userId: "boss", writingUserId: "cap" });
+  });
+});
+

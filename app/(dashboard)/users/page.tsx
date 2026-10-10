@@ -6,6 +6,7 @@ import { listPlansForAgency } from "@/lib/repositories/commissionPlanRepository"
 import { StatCard } from "@/components/dashboard/stat-card";
 import { TeamGroup } from "@/components/users/team-group";
 import { AddUserForm } from "@/components/settings/add-user-form";
+import { principalOptions } from "@/lib/auth/principalOptions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +57,7 @@ export default async function UsersPage() {
   // in the "reports to" dropdowns - matches the convention already used
   // in Settings' team management.
   const managerOptions = [user, ...managers];
+  const principals = principalOptions(allUsers);
   const managerIds = new Set(managerOptions.map((m) => m.id));
   const unassignedAgents = agents.filter(
     (a) => !a.managerId || !managerIds.has(a.managerId)
@@ -81,6 +83,7 @@ export default async function UsersPage() {
           editable
           allManagers={managerOptions}
           plans={plans}
+          principals={principals}
         />
       )}
 
@@ -92,6 +95,7 @@ export default async function UsersPage() {
           editable
           allManagers={managerOptions}
           plans={plans}
+          principals={principals}
         />
       ))}
 
@@ -102,6 +106,7 @@ export default async function UsersPage() {
           editable
           allManagers={managerOptions}
           plans={plans}
+          principals={principals}
         />
       )}
 
@@ -112,7 +117,7 @@ export default async function UsersPage() {
             Create a Manager or Agent account. Team structure is managed here, never imported from a CRM.
           </CardDescription>
         </CardHeader>
-        <AddUserForm managers={managerOptions} />
+        <AddUserForm managers={managerOptions} principals={principals} />
       </Card>
     </div>
   );
