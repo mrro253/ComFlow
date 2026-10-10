@@ -18,15 +18,27 @@ export type AgentType = "career" | "independent" | "captive";
 
 export const AGENT_TYPES: AgentType[] = ["career", "independent", "captive"];
 
-/** Career Agent tiers, lowest to highest. */
-export const CAREER_LEVELS = [
-  "Benefit Consultant",
-  "Senior Benefit Consultant",
-  "Client Advisor",
-  "Private Client Advisor",
-] as const;
+/**
+ * A Career Agent tier. Level names are defined per agency (see `CareerLevelRecord`),
+ * never hard-coded.
+ */
+export type CareerLevel = string;
 
-export type CareerLevel = (typeof CAREER_LEVELS)[number];
+/** What a level may see of the people who report to it. */
+export type LevelVisibility = "own" | "direct_reports";
+
+export const LEVEL_VISIBILITIES: LevelVisibility[] = ["own", "direct_reports"];
+
+export interface CareerLevelRecord {
+  id: string;
+  agencyId: string;
+  name: CareerLevel;
+  /** 1 = lowest level. */
+  rank: number;
+  visibility: LevelVisibility;
+  /** Inactive levels cannot be newly assigned but stay on historical rules and locks. */
+  active: boolean;
+}
 
 /** "agency" = a company with its own Career Agents; "individual" = one Independent Agent. */
 export type AccountType = "agency" | "individual";
@@ -59,6 +71,8 @@ export interface Agency {
   accountType: AccountType;
   /** Null until the Owner finishes or dismisses the onboarding checklist (see app/(dashboard)/onboarding). */
   onboardingCompletedAt: string | null;
+  /** Optional per-agency bonuses; off by default. */
+  bonusesEnabled: boolean;
   createdAt: string;
 }
 

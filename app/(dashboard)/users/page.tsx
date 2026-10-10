@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { listDirectReports, listUsersForAgency } from "@/lib/repositories/userRepository";
 import { listPlansForAgency } from "@/lib/repositories/commissionPlanRepository";
+import { listCareerLevels } from "@/lib/repositories/compensationSettingsRepository";
+import { activeLevelNames } from "@/lib/carriers/careerLevels";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { TeamGroup } from "@/components/users/team-group";
 import { AddUserForm } from "@/components/settings/add-user-form";
@@ -30,9 +32,10 @@ export default async function UsersPage() {
   if (user.role === "agent") redirect("/dashboard");
 
   if (user.role === "manager") {
-    const [reports, plans] = await Promise.all([
+    const [reports, plans, levels] = await Promise.all([
       listDirectReports(user.id),
       listPlansForAgency(user.agencyId),
+      listCareerLevels(user.agencyId),
     ]);
     return (
       <div className="flex flex-col gap-6">
@@ -41,15 +44,17 @@ export default async function UsersPage() {
           <StatCard label="Your role" value="Manager" icon={UserCog} />
           <StatCard label="Direct reports" value={String(reports.length)} icon={UsersIcon} />
         </div>
-        <TeamGroup manager={user} agents={reports} plans={plans} />
+        <TeamGroup manager={user} agents={reports} plans={plans} levels={activeLevelNames(levels)} />
       </div>
     );
   }
 
-  const [allUsers, plans] = await Promise.all([
+  const [allUsers, plans, careerLevels] = await Promise.all([
     listUsersForAgency(user.agencyId),
     listPlansForAgency(user.agencyId),
+    listCareerLevels(user.agencyId),
   ]);
+  const levels = activeLevelNames(careerLevels);
   const managers = allUsers.filter((u) => u.role === "manager");
   const agents = allUsers.filter((u) => u.role === "agent");
   // Agents can report directly to the Owner too (small agencies often
@@ -84,6 +89,7 @@ export default async function UsersPage() {
           allManagers={managerOptions}
           plans={plans}
           principals={principals}
+          levels={levels}
         />
       )}
 
@@ -96,6 +102,7 @@ export default async function UsersPage() {
           allManagers={managerOptions}
           plans={plans}
           principals={principals}
+          levels={levels}
         />
       ))}
 
@@ -107,6 +114,7 @@ export default async function UsersPage() {
           allManagers={managerOptions}
           plans={plans}
           principals={principals}
+          levels={levels}
         />
       )}
 
@@ -117,7 +125,7 @@ export default async function UsersPage() {
             Create a Manager or Agent account. Team structure is managed here, never imported from a CRM.
           </CardDescription>
         </CardHeader>
-        <AddUserForm managers={managerOptions} principals={principals} />
+        <AddUserForm managers={managerOptions} principals={principals} levels={levels} />
       </Card>
     </div>
   );

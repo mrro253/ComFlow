@@ -31,12 +31,15 @@ export function UnmatchedAgentRow({
   agent,
   team,
   principals = [],
+  levels = [],
 }: {
   statementId: string;
   agent: UnmatchedAgentView;
   team: TeamOption[];
   /** Who can be the principal if the new agent is captive. */
   principals?: TeamOption[];
+  /** Active career levels for this agency. */
+  levels?: string[];
 }) {
   const uid = useId();
   const [creating, setCreating] = useState(false);
@@ -118,6 +121,7 @@ export function UnmatchedAgentRow({
           </div>
           <AgentTypeFields
             idPrefix={`create-${uid}`}
+            levels={levels}
             defaultType={null}
             defaultLevel={null}
             isManager={false}

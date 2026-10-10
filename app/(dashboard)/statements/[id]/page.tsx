@@ -13,6 +13,8 @@ import {
   listTransactionsForStatement,
 } from "@/lib/repositories/statementRepository";
 import { listUsersForAgency } from "@/lib/repositories/userRepository";
+import { listCareerLevels } from "@/lib/repositories/compensationSettingsRepository";
+import { activeLevelNames } from "@/lib/carriers/careerLevels";
 import { buildPreviewForStatement } from "@/lib/services/statementService";
 import { ApproveImportForm } from "@/components/statements/approve-import-form";
 import { STATEMENT_STATUS_BADGE } from "@/components/statements/status";
@@ -182,8 +184,12 @@ export default async function StatementDetailPage({ params }: { params: Promise<
     );
   }
 
-  const team = await listUsersForAgency(user.agencyId);
+  const [team, careerLevels] = await Promise.all([
+    listUsersForAgency(user.agencyId),
+    listCareerLevels(user.agencyId),
+  ]);
   const nameById = new Map(team.map((u) => [u.id, `${u.firstName} ${u.lastName}`]));
+  const levels = activeLevelNames(careerLevels);
   const shown = preview.rows.slice(0, MAX_ROWS_SHOWN);
 
   const unmatched = summarizeUnmatchedAgents(preview.rows).map((agent) => ({
@@ -268,6 +274,7 @@ export default async function StatementDetailPage({ params }: { params: Promise<
                 agent={agent}
                 team={teamOptions}
                 principals={principalOptions(team)}
+                levels={levels}
               />
             ))}
           </CardContent>

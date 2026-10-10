@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CircleDollarSign, FileText, KeyRound, LayoutDashboard, Settings, Users } from "lucide-react";
+import { Calculator, CircleDollarSign, FileText, KeyRound, LayoutDashboard, Settings, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/types/domain";
@@ -21,6 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/statements", label: "Statements", icon: FileText, roles: ["owner"] },
   { href: "/carriers", label: "Carriers", icon: KeyRound, roles: ["owner", "agent"] },
   { href: "/users", label: "Users", icon: Users, roles: ["owner", "manager"] },
+  { href: "/compensation", label: "Compensation", icon: Calculator, roles: ["owner"] },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

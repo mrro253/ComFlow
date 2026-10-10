@@ -12,5 +12,6 @@ describe("canManageCarrierLogin", () => {
     expect(canManageCarrierLogin({ role: "agent", agentType: "career" })).toBe(false);
     expect(canManageCarrierLogin({ role: "agent", agentType: null })).toBe(false);
     expect(canManageCarrierLogin({ role: "manager", agentType: "independent" })).toBe(false);
+    expect(canManageCarrierLogin({ role: "agent", agentType: "captive" })).toBe(false);
   });
 });

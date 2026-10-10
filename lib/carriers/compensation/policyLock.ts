@@ -1,4 +1,4 @@
-import { CAREER_LEVELS, type AgentType, type CareerLevel } from "@/types/domain";
+import type { AgentType, CareerLevel } from "@/types/domain";
 
 export type SaleCategory = "T65" | "PLAN_CHANGE";
 export type CarrierPaymentCategory = SaleCategory | "RENEWAL";
@@ -127,7 +127,8 @@ export function buildPolicyLock(
   }
   const writtenDate = assertIsoDate(input.writtenDate);
   if (
-    !CAREER_LEVELS.includes(input.careerLevelAtWrite) ||
+    typeof input.careerLevelAtWrite !== "string" ||
+    !input.careerLevelAtWrite.trim() ||
     !["T65", "PLAN_CHANGE"].includes(input.saleCategory)
   ) {
     throw new Error("Unsupported tier or sale category");

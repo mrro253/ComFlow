@@ -30,6 +30,7 @@ export function EditUserRow({
   managers,
   plans,
   principals = [],
+  levels,
   editable,
 }: {
   user: AppUser;
@@ -39,6 +40,8 @@ export function EditUserRow({
   plans: CommissionPlan[];
   /** Teammates who can be this agent's principal if they are captive (never includes `user`). */
   principals?: { id: string; name: string }[];
+  /** Active career levels; the teammate's current level is added if it has been turned off. */
+  levels: string[];
   editable: boolean;
 }) {
   const [editing, setEditing] = useState(false);
@@ -150,6 +153,11 @@ export function EditUserRow({
 
       <AgentTypeFields
         idPrefix={`edit-${user.id}`}
+        levels={
+          user.careerLevel && !levels.includes(user.careerLevel)
+            ? [...levels, user.careerLevel]
+            : levels
+        }
         defaultType={user.agentType}
         defaultLevel={user.careerLevel}
         isManager={role === "manager"}

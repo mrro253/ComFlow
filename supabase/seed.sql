@@ -405,6 +405,14 @@ values
 --   Taylor        - Career, Private Client Advisor
 --   Jordan        - Independent agent
 
+-- Career levels are per agency (demo agency uses TruePlan's titles as example data).
+insert into public.career_levels (agency_id, name, rank, visibility)
+values
+  ('11111111-1111-1111-1111-111111111111', 'Benefit Consultant', 1, 'own'),
+  ('11111111-1111-1111-1111-111111111111', 'Senior Benefit Consultant', 2, 'own'),
+  ('11111111-1111-1111-1111-111111111111', 'Client Advisor', 3, 'own'),
+  ('11111111-1111-1111-1111-111111111111', 'Private Client Advisor', 4, 'own');
+
 update public.users set agent_type = 'independent'
   where id in (
     '22222222-2222-2222-2222-222222222222',

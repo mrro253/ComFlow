@@ -27,9 +27,11 @@ const ROLE_BADGE: Record<Role, "default" | "secondary" | "outline"> = {
 export function UsersCard({
   users,
   editable,
+  levels = [],
 }: {
   users: AppUser[];
   editable: boolean;
+  levels?: string[];
 }) {
   const nameById = new Map(users.map((u) => [u.id, `${u.firstName} ${u.lastName}`]));
   const managers = users.filter((u) => u.role === "manager" || u.role === "owner");
@@ -68,7 +70,9 @@ export function UsersCard({
           </TableBody>
         </Table>
       </CardContent>
-      {editable && <AddUserForm managers={managers} principals={principalOptions(users)} />}
+      {editable && (
+        <AddUserForm managers={managers} principals={principalOptions(users)} levels={levels} />
+      )}
     </Card>
   );
 }

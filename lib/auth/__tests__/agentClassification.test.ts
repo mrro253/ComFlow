@@ -28,9 +28,12 @@ describe("parseAgentClassification", () => {
   });
 
   it("requires a valid level for Career agents", () => {
-    expect(parseAgentClassification("agent", "career", "")).toMatchObject({ ok: false });
-    expect(parseAgentClassification("agent", "career", "Chief Wizard")).toMatchObject({ ok: false });
-    expect(parseAgentClassification("agent", "career", "Client Advisor")).toEqual({
+    const levels = ["Client Advisor"];
+    expect(parseAgentClassification("agent", "career", "", "", [])).toMatchObject({ ok: false });
+    expect(parseAgentClassification("agent", "career", "Chief Wizard", "", levels)).toMatchObject({
+      ok: false,
+    });
+    expect(parseAgentClassification("agent", "career", "Client Advisor", "", levels)).toEqual({
       ok: true,
       agentType: "career",
       careerLevel: "Client Advisor",
@@ -85,7 +88,13 @@ describe("checkPrincipal", () => {
 
 describe("classifyForSave", () => {
   const team = [person("boss"), person("cap", { agentType: "captive", principalId: "boss" })];
-  const base = { role: "agent" as const, rawLevel: "", agencyId: AGENCY, team };
+  const base = {
+    role: "agent" as const,
+    rawLevel: "",
+    validLevels: [] as string[],
+    agencyId: AGENCY,
+    team,
+  };
 
   it("passes non-captive types straight through", () => {
     expect(classifyForSave({ ...base, rawType: "independent", rawPrincipalId: "", agentId: null })).toMatchObject({

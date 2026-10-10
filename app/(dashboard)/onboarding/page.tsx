@@ -1,18 +1,19 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { getAgencyById } from "@/lib/repositories/agencyRepository";
-import { listPlansWithDetails } from "@/lib/repositories/commissionPlanRepository";
+import { listCareerLevels, listCompensationRules } from "@/lib/repositories/compensationSettingsRepository";
 import { listUsersForAgency } from "@/lib/repositories/userRepository";
 import { canAccessOnboarding } from "@/lib/onboarding";
-import { CompPlansSection } from "@/components/settings/comp-plans-section";
+import { BonusesSection, LevelsSection, RulesSection } from "@/components/compensation/sections";
 import { CrmConnectionCard } from "@/components/settings/crm-connection-card";
 import { UsersCard } from "@/components/settings/users-card";
 import { WelcomeAgencyCard } from "@/components/onboarding/welcome-agency-card";
 import { FinishOnboardingCard } from "@/components/onboarding/finish-onboarding-card";
+import { activeLevelNames } from "@/lib/carriers/careerLevels";
 
 const STEPS = [
   { number: 1, label: "Welcome" },
-  { number: 2, label: "Commission plan" },
+  { number: 2, label: "Compensation" },
   { number: 3, label: "Build your team" },
   { number: 4, label: "GoHighLevel (coming soon)" },
   { number: 5, label: "Finish" },
@@ -36,15 +37,15 @@ export default async function OnboardingPage() {
   if (!user) redirect("/login");
   if (!canAccessOnboarding(user.role)) redirect("/dashboard");
 
-  const [agency, plans, users] = await Promise.all([
+  const [agency, users, levels, rules] = await Promise.all([
     getAgencyById(user.agencyId),
-    listPlansWithDetails(user.agencyId),
     listUsersForAgency(user.agencyId),
+    listCareerLevels(user.agencyId),
+    listCompensationRules(user.agencyId),
   ]);
 
-  // Defensive: a valid session/profile always implies a valid agency, but
-  // don't render a broken page if that invariant is ever violated.
   if (!agency) redirect("/dashboard");
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-8">
@@ -65,20 +66,21 @@ export default async function OnboardingPage() {
       <div className="flex flex-col gap-3">
         <StepHeading number={STEPS[1].number} label={STEPS[1].label} />
         <p className="text-sm text-muted-foreground">
-          We&apos;ve set your default plan to the standard 10% agent / 2% manager
-          / 1% owner split. Review and adjust it below - your changes replace
-          these starting defaults.
+          Set this agency&apos;s career levels, what each level is paid, and whether you use
+          bonuses. You can change any of this later on Compensation.
         </p>
-        <CompPlansSection plans={plans} editable />
+        <LevelsSection levels={levels} />
+        <RulesSection rules={rules} levels={levels} today={today} />
+        <BonusesSection enabled={agency.bonusesEnabled} />
       </div>
 
       <div className="flex flex-col gap-3">
         <StepHeading number={STEPS[2].number} label={STEPS[2].label} />
         <p className="text-sm text-muted-foreground">
           Add your Managers and Agents now, or come back to this any time from
-          Settings. Teammates get a temporary password to sign in with.
+          Users. Teammates get a temporary password to sign in with.
         </p>
-        <UsersCard users={users} editable />
+        <UsersCard users={users} editable levels={activeLevelNames(levels)} />
       </div>
 
       <div className="flex flex-col gap-3">
