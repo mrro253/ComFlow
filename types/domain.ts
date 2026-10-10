@@ -45,6 +45,8 @@ export interface AppUser {
   managerId: string | null;
   /** Explicit plan assignment; falls back to the agency's default plan when null. */
   commissionPlanId: string | null;
+  /** The carrier's agent number (e.g. Ultimate W####). Tells apart people who share a name. */
+  payeeId: string | null;
   createdAt: string;
 }
 

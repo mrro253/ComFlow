@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, CircleDollarSign, Copy, FileText, UserX } from "lucide-react";
+import { ArrowLeft, CircleDollarSign, Copy, ExternalLink, FileText, UserX } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { formatCents } from "@/lib/carriers/money";
 import type { StatementPreview } from "@/lib/carriers/buildStatementPreview";
+import { splitWritingAgentName, summarizeUnmatchedAgents } from "@/lib/carriers/unmatchedWritingAgents";
+import { UnmatchedAgentRow } from "@/components/statements/unmatched-agents";
 import {
   getStatement,
+  listStatementsSupersededBy,
   listTransactionsForStatement,
 } from "@/lib/repositories/statementRepository";
 import { listUsersForAgency } from "@/lib/repositories/userRepository";
@@ -48,22 +51,61 @@ export default async function StatementDetailPage({ params }: { params: Promise<
         </h1>
         <Badge variant={status.variant}>{status.label}</Badge>
       </div>
-      <p className="text-sm text-muted-foreground">
-        {statement.carrier} - {statement.source === "portal" ? "pulled from the carrier portal" : "manual upload"} -
-        received {formatDate(statement.createdAt)}
-      </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted-foreground">
+          {statement.carrier} - {statement.source === "portal" ? "pulled from the carrier portal" : "manual upload"} -
+          received {formatDate(statement.createdAt)}
+        </p>
+        {statement.storagePath && (
+          <a
+            href={`/api/statements/${statement.id}/pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+          >
+            <ExternalLink className="h-3.5 w-3.5" /> View PDF
+          </a>
+        )}
+      </div>
     </div>
   );
 
-  if (statement.status === "imported") {
-    const [rows, team] = await Promise.all([
+  if (statement.status === "imported" || statement.status === "superseded") {
+    const [rows, team, replaced] = await Promise.all([
       listTransactionsForStatement(statement.id),
       listUsersForAgency(user.agencyId),
+      listStatementsSupersededBy(statement.id),
     ]);
     const nameById = new Map(team.map((u) => [u.id, `${u.firstName} ${u.lastName}`]));
     return (
       <div className="flex flex-col gap-6">
         {header}
+        {statement.status === "superseded" && (
+          <p className="rounded-md bg-secondary p-3 text-sm">
+            This statement was replaced by a corrected version
+            {statement.supersededBy && (
+              <>
+                {" "}
+                (<Link href={`/statements/${statement.supersededBy}`} className="font-medium underline">view corrected statement</Link>)
+              </>
+            )}
+            . It is kept for reference and is not included in the dashboard or reports.
+          </p>
+        )}
+        {replaced.length > 0 && (
+          <p className="rounded-md bg-secondary p-3 text-sm">
+            This corrected statement replaced{" "}
+            {replaced.map((r, i) => (
+              <span key={r.id}>
+                {i > 0 && ", "}
+                <Link href={`/statements/${r.id}`} className="font-medium underline">
+                  {r.originalFilename ?? "an earlier statement"}
+                </Link>
+              </span>
+            ))}
+            . Only this version is reported.
+          </p>
+        )}
         <div className="grid gap-4 sm:grid-cols-3">
           <StatCard label="Statement month" value={statement.statementMonth ?? "—"} icon={FileText} />
           <StatCard label="Payments imported" value={String(statement.transactionCount ?? 0)} icon={Copy} />
@@ -143,9 +185,47 @@ export default async function StatementDetailPage({ params }: { params: Promise<
   const nameById = new Map(team.map((u) => [u.id, `${u.firstName} ${u.lastName}`]));
   const shown = preview.rows.slice(0, MAX_ROWS_SHOWN);
 
+  const unmatched = summarizeUnmatchedAgents(preview.rows).map((agent) => ({
+    name: agent.name,
+    code: agent.code,
+    writingAgentId: agent.writingAgentId,
+    rowCount: agent.rowCount,
+    amount: formatCents(agent.totalCents),
+    ...splitWritingAgentName(agent.name),
+  }));
+  const teamOptions = team
+    .filter((u) => u.active)
+    .map((u) => ({ id: u.id, name: `${u.firstName} ${u.lastName}` }));
+  const { correction } = preview;
+
   return (
     <div className="flex flex-col gap-6">
       {header}
+
+      {correction.kind === "duplicate" && (
+        <p className="rounded-md bg-secondary p-3 text-sm">
+          This has the same file name and identical payments as{" "}
+          <Link href={`/statements/${correction.of.id}`} className="font-medium underline">
+            {correction.of.filename ?? "an earlier statement"}
+          </Link>
+          , which is already imported. It is a duplicate, so nothing here will be imported again.
+        </p>
+      )}
+      {correction.kind === "supersede" && (
+        <p className="rounded-md bg-secondary p-3 text-sm">
+          This has the same file name as{" "}
+          {correction.replaces.map((r, i) => (
+            <span key={r.id}>
+              {i > 0 && ", "}
+              <Link href={`/statements/${r.id}`} className="font-medium underline">
+                {r.filename ?? "an earlier statement"}
+              </Link>
+            </span>
+          ))}{" "}
+          but different payments, so it is treated as the corrected version. Approving will import this
+          statement and move the earlier one to Superseded (kept for reference, removed from reports).
+        </p>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Statement month" value={preview.statement.statementMonth} icon={FileText} />
@@ -168,6 +248,29 @@ export default async function StatementDetailPage({ params }: { params: Promise<
           hint="Can be assigned after import"
         />
       </div>
+
+      {unmatched.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Writing agents to match</CardTitle>
+            <CardDescription>
+              These names are not matched to anyone yet, so their payments would stay unassigned. Pick
+              the teammate they belong to, or create a new agent. The match is remembered for future
+              statements.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {unmatched.map((agent) => (
+              <UnmatchedAgentRow
+                key={agent.name}
+                statementId={statement.id}
+                agent={agent}
+                team={teamOptions}
+              />
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

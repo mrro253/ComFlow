@@ -3,16 +3,19 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/requireRole";
+import { parseAgentClassification } from "@/lib/auth/agentClassification";
 import { sha256 } from "@/lib/carriers/digest";
+import { normalizePayeeId } from "@/lib/carriers/payeeId";
 import { getStatementParser } from "@/lib/carriers";
 import { assertPdfBytes } from "@/lib/pdf/extractPdfText";
 import {
   findStatementByHash,
   getStatement,
   insertStatement,
+  saveWritingAgentAlias,
   uploadStatementPdf,
 } from "@/lib/repositories/statementRepository";
-import { listUsersForAgency } from "@/lib/repositories/userRepository";
+import { createUserWithAuth, listUsersForAgency } from "@/lib/repositories/userRepository";
 import { importStatement } from "@/lib/services/statementService";
 import type { ActionResult } from "@/app/(auth)/actions";
 
@@ -70,6 +73,90 @@ export async function uploadStatement(
 
   revalidatePath("/statements");
   redirect(`/statements/${statementId}`);
+}
+
+export interface ResolveAgentResult extends ActionResult {
+  temporaryPassword?: string;
+}
+
+function revalidateStatement(statementId: string) {
+  revalidatePath(`/statements/${statementId}`);
+  revalidatePath("/payments");
+  revalidatePath("/users");
+}
+
+/** "Assign to an existing teammate": remembers the name so every future statement matches. */
+export async function matchWritingAgent(
+  _prev: ResolveAgentResult | undefined,
+  formData: FormData
+): Promise<ResolveAgentResult> {
+  try {
+    const user = await requireRole(["owner"]);
+    const statementId = String(formData.get("statementId") ?? "");
+    const name = String(formData.get("name") ?? "").trim();
+    const userId = String(formData.get("userId") ?? "");
+    if (!name || !userId) return { error: "Choose a teammate." };
+
+    const team = await listUsersForAgency(user.agencyId);
+    const target = team.find((u) => u.id === userId && u.active);
+    if (!target) return { error: "Teammate not found." };
+
+    await saveWritingAgentAlias({ agencyId: user.agencyId, actorId: user.id, name, userId });
+    revalidateStatement(statementId);
+    return { info: `${name} will be assigned to ${target.firstName} ${target.lastName}.` };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Could not save the match." };
+  }
+}
+
+/** "Create a new agent" for a writing-agent name nobody on the team has. */
+export async function createWritingAgent(
+  _prev: ResolveAgentResult | undefined,
+  formData: FormData
+): Promise<ResolveAgentResult> {
+  try {
+    const user = await requireRole(["owner"]);
+    const statementId = String(formData.get("statementId") ?? "");
+    const name = String(formData.get("name") ?? "").trim();
+    const firstName = String(formData.get("firstName") ?? "").trim();
+    const lastName = String(formData.get("lastName") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    if (!name || !firstName || !lastName || !email) {
+      return { error: "First name, last name, and email are required." };
+    }
+
+    const classification = parseAgentClassification(
+      "agent",
+      String(formData.get("agentType") ?? ""),
+      String(formData.get("careerLevel") ?? "")
+    );
+    if (!classification.ok) return { error: classification.error };
+
+    const { user: created, temporaryPassword } = await createUserWithAuth({
+      agencyId: user.agencyId,
+      firstName,
+      lastName,
+      email,
+      role: "agent",
+      agentType: classification.agentType,
+      careerLevel: classification.careerLevel,
+      payeeId: normalizePayeeId(String(formData.get("payeeId") ?? "")),
+    });
+    await saveWritingAgentAlias({
+      agencyId: user.agencyId,
+      actorId: user.id,
+      name,
+      userId: created.id,
+    });
+
+    revalidateStatement(statementId);
+    return {
+      info: `${firstName} ${lastName} was added and ${name} will be assigned to them.`,
+      temporaryPassword,
+    };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Could not add the agent." };
+  }
 }
 
 /** Owner approval: re-builds the preview on the server and imports it atomically. */

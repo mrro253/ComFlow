@@ -3,6 +3,7 @@ import {
   writingAgentAliasesFor,
   type WritingAgentOwner,
 } from "@/lib/carriers/classifyWritingAgent";
+import { normalizePayeeId } from "@/lib/carriers/payeeId";
 import type { AgentType, Role } from "@/types/domain";
 
 export interface OwnerCandidate {
@@ -12,6 +13,8 @@ export interface OwnerCandidate {
   role: Role;
   agentType: AgentType | null;
   active: boolean;
+  /** The person's carrier agent number, when known. */
+  payeeId?: string | null;
 }
 
 export interface ProductionEntityRef {
@@ -41,51 +44,57 @@ export function productionEntityFor(
   return null;
 }
 
-/** Statement name (normalized) -> the person it belongs to, for active users only. */
-export function buildWritingAgentOwners(
-  users: readonly OwnerCandidate[],
-  entities: readonly ProductionEntityRef[]
-): Map<string, WritingAgentOwner> {
-  const owners = new Map<string, WritingAgentOwner>();
-  for (const user of users) {
-    if (!user.active) continue;
-    const entity = productionEntityFor(user, entities);
-    const owner: WritingAgentOwner = {
-      userId: user.id,
-      agentType: user.agentType,
-      productionEntityId: entity?.id ?? null,
-      entityType: entity?.entityType ?? null,
-    };
-    for (const alias of writingAgentAliasesFor(user.firstName, user.lastName)) {
-      // First user wins on a name collision; the Owner can disambiguate by assigning manually.
-      if (!owners.has(alias)) owners.set(alias, owner);
-    }
-  }
-  return owners;
+function ownerFor(user: OwnerCandidate, entities: readonly ProductionEntityRef[]): WritingAgentOwner {
+  const entity = productionEntityFor(user, entities);
+  return {
+    userId: user.id,
+    agentType: user.agentType,
+    productionEntityId: entity?.id ?? null,
+    entityType: entity?.entityType ?? null,
+    payeeId: normalizePayeeId(user.payeeId),
+  };
 }
 
 /**
- * Adds explicitly saved aliases (from "remember this name" on manual assignment)
- * on top of the name-derived ones. Saved aliases win over derived ones.
+ * Statement name (normalized) -> everyone who could be that name, active users
+ * only. Two people with the same name both stay in the list: classification then
+ * needs the carrier agent ID instead of guessing which one wrote the business.
+ */
+export function buildWritingAgentOwners(
+  users: readonly OwnerCandidate[],
+  entities: readonly ProductionEntityRef[]
+): Map<string, WritingAgentOwner[]> {
+  const index = new Map<string, WritingAgentOwner[]>();
+  for (const user of users) {
+    if (!user.active) continue;
+    const owner = ownerFor(user, entities);
+    // A Set avoids listing one person twice when both name orders are identical.
+    for (const alias of new Set(writingAgentAliasesFor(user.firstName, user.lastName))) {
+      const list = index.get(alias);
+      if (list) list.push(owner);
+      else index.set(alias, [owner]);
+    }
+  }
+  return index;
+}
+
+/**
+ * Adds explicitly saved aliases (from "remember this name" when the Owner picks
+ * a person for a printed name). A saved alias is a deliberate decision, so it
+ * replaces any name-derived candidates for that name.
  */
 export function withSavedAliases(
-  base: Map<string, WritingAgentOwner>,
+  base: ReadonlyMap<string, readonly WritingAgentOwner[]>,
   saved: readonly { alias: string; userId: string }[],
   users: readonly OwnerCandidate[],
   entities: readonly ProductionEntityRef[]
-): Map<string, WritingAgentOwner> {
+): Map<string, readonly WritingAgentOwner[]> {
   const merged = new Map(base);
   const usersById = new Map(users.map((u) => [u.id, u]));
   for (const { alias, userId } of saved) {
     const user = usersById.get(userId);
     if (!user?.active) continue;
-    const entity = productionEntityFor(user, entities);
-    merged.set(normalizeWritingAgentName(alias), {
-      userId: user.id,
-      agentType: user.agentType,
-      productionEntityId: entity?.id ?? null,
-      entityType: entity?.entityType ?? null,
-    });
+    merged.set(normalizeWritingAgentName(alias), [ownerFor(user, entities)]);
   }
   return merged;
 }

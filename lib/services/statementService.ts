@@ -1,10 +1,13 @@
 import { buildStatementPreview, toImportRows, type StatementPreview } from "@/lib/carriers/buildStatementPreview";
 import { getStatementParser } from "@/lib/carriers";
+import { planCorrection } from "@/lib/carriers/planCorrection";
 import { extractPdfText } from "@/lib/pdf/extractPdfText";
 import { getAgencyById } from "@/lib/repositories/agencyRepository";
 import {
   downloadStatementPdf,
+  findImportedStatementsByFilename,
   importStatementRows,
+  listExistingForStatements,
   listExistingTransactions,
   loadWritingAgentContext,
   type StatementRecord,
@@ -44,10 +47,40 @@ export async function buildPreviewForStatement(
   }
 
   const agency = await getAgencyById(user.agencyId);
-  const [context, existing] = await Promise.all([
+  const [context, liveExisting, sameNamed] = await Promise.all([
     loadWritingAgentContext(user.agencyId, agency?.name ?? "Agency"),
     listExistingTransactions(user.agencyId, parsed.carrier, parsed.statementMonth),
+    findImportedStatementsByFilename({
+      agencyId: user.agencyId,
+      carrier: parsed.carrier,
+      statementMonth: parsed.statementMonth,
+      userId: statement.userId,
+      filename: statement.originalFilename,
+      excludeStatementId: statement.id,
+    }),
   ]);
+
+  // Same file name as an earlier import: identical payments are a duplicate; mostly
+  // the same payments mean this is the corrected version, which replaces the old one.
+  const priorRows = await listExistingForStatements(
+    user.agencyId,
+    sameNamed.map((s) => s.id)
+  );
+  const correction = planCorrection(
+    parsed.transactions,
+    sameNamed.map((s) => ({
+      id: s.id,
+      filename: s.originalFilename,
+      transactions: priorRows.get(s.id) ?? [],
+    }))
+  );
+  // The statements being replaced no longer count when checking for duplicates.
+  const replacedRowIds = new Set(
+    correction.kind === "supersede"
+      ? correction.replaces.flatMap((r) => (priorRows.get(r.id) ?? []).map((t) => t.id))
+      : []
+  );
+  const existing = liveExisting.filter((row) => !replacedRowIds.has(row.id));
 
   // An Independent agent's own statement belongs entirely to them.
   const statementOwner = statement.userId
@@ -57,7 +90,7 @@ export async function buildPreviewForStatement(
     ? { userId: statementOwner.id, agentType: statementOwner.agentType, productionEntityId: null, entityType: null }
     : null;
 
-  return buildStatementPreview(parsed, context.owners, existing, forced);
+  return buildStatementPreview(parsed, context.owners, existing, forced, correction);
 }
 
 /**
@@ -65,7 +98,7 @@ export async function buildPreviewForStatement(
  * it atomically. Returns the number of transactions inserted.
  */
 export async function importStatement(user: CurrentUser, statement: StatementRecord): Promise<number> {
-  if (statement.status === "imported") {
+  if (statement.status === "imported" || statement.status === "superseded") {
     throw new StatementProcessingError("This statement has already been imported");
   }
   const preview = await buildPreviewForStatement(user, statement);
@@ -81,5 +114,7 @@ export async function importStatement(user: CurrentUser, statement: StatementRec
     statementTotalCents: preview.statement.statementTotalCents,
     carriedBalanceCents: preview.statement.carriedBalanceCents,
     rows: toImportRows(preview),
+    supersedes:
+      preview.correction.kind === "supersede" ? preview.correction.replaces.map((r) => r.id) : [],
   });
 }

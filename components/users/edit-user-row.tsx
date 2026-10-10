@@ -149,6 +149,19 @@ export function EditUserRow({
       />
 
       <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`payeeId-${user.id}`}>Carrier payee ID (optional)</Label>
+        <Input
+          id={`payeeId-${user.id}`}
+          name="payeeId"
+          defaultValue={user.payeeId ?? ""}
+          placeholder="e.g. W1234"
+        />
+        <p className="text-xs text-muted-foreground">
+          Used on carrier statements to tell apart teammates who share a name.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
         <Label htmlFor={`commissionPlanId-${user.id}`}>Comp plan</Label>
         <select
           id={`commissionPlanId-${user.id}`}

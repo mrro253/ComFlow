@@ -18,6 +18,7 @@ export function mapUserRow(row: UserRow): AppUser {
     active: row.active,
     managerId: row.manager_id,
     commissionPlanId: row.commission_plan_id,
+    payeeId: row.payee_id,
     createdAt: row.created_at,
   };
 }
@@ -128,6 +129,8 @@ export async function createUserWithAuth(input: {
   managerId?: string | null;
   agentType?: AgentType | null;
   careerLevel?: CareerLevel | null;
+  /** Normalized carrier agent number (see normalizePayeeId). */
+  payeeId?: string | null;
 }): Promise<{ user: AppUser; temporaryPassword: string }> {
   const admin = createAdminClient();
   const temporaryPassword = generateTemporaryPassword();
@@ -155,6 +158,7 @@ export async function createUserWithAuth(input: {
       manager_id: input.managerId ?? null,
       agent_type: input.agentType ?? null,
       career_level: input.careerLevel ?? null,
+      payee_id: input.payeeId ?? null,
     })
     .select("*")
     .single();
@@ -162,7 +166,7 @@ export async function createUserWithAuth(input: {
   if (error || !data) {
     // Roll back the auth user so we don't leave an orphaned account behind.
     await admin.auth.admin.deleteUser(authData.user.id);
-    throw new Error(error?.message ?? "Failed to create user profile");
+    throw new Error(friendlyUserError(error, "Failed to create user profile"));
   }
 
   return { user: mapUserRow(data), temporaryPassword };
@@ -185,6 +189,8 @@ export async function updateUserProfile(
     commissionPlanId?: string | null;
     agentType?: AgentType | null;
     careerLevel?: CareerLevel | null;
+    /** `undefined` leaves it untouched; `null` clears it. Normalized (see normalizePayeeId). */
+    payeeId?: string | null;
   }
 ): Promise<AppUser> {
   const supabase = await createClient();
@@ -198,6 +204,7 @@ export async function updateUserProfile(
       ...(updates.commissionPlanId !== undefined && {
         commission_plan_id: updates.commissionPlanId,
       }),
+      ...(updates.payeeId !== undefined && { payee_id: updates.payeeId }),
       // Set together so the database check (career_level iff career) always holds.
       ...(updates.agentType !== undefined && {
         agent_type: updates.agentType,
@@ -209,9 +216,20 @@ export async function updateUserProfile(
     .single();
 
   if (error || !data) {
-    throw new Error(error?.message ?? "Failed to update teammate");
+    throw new Error(friendlyUserError(error, "Failed to update teammate"));
   }
   return mapUserRow(data);
+}
+
+/** Turns the payee-ID unique violation into a message the Owner can act on. */
+function friendlyUserError(
+  error: { code?: string; message?: string; details?: string } | null,
+  fallback: string
+): string {
+  if (error?.code === "23505" && /payee_id/.test(`${error.message} ${error.details}`)) {
+    return "Another teammate already has that payee ID.";
+  }
+  return error?.message ?? fallback;
 }
 
 function generateTemporaryPassword(): string {

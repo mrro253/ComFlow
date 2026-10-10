@@ -137,6 +137,7 @@ Every table carries agency_id and has Row Level Security.
 Financial tables are written only by server code using the service-role client after a role check; authenticated users get read access scoped by role.
 Use constraints, unique keys, and triggers to enforce immutability and duplicate protection in the database, not only in app code.
 Favor simple schemas. Avoid premature optimization.
+Corrected statements never delete data: the earlier statement and its rows are flagged superseded (superseded_at) in the same transaction as the import, kept viewable, and excluded from every dashboard and report query.
 
 UI PRINCIPLES
 

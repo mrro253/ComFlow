@@ -37,7 +37,7 @@ type AgentTypeDb = "career" | "independent";
 type CompensationStatusDb = "ACTIVE" | "NOT_CONFIGURED";
 type EarningStatusDb = "PENDING" | "APPROVED" | "PAID" | "VOID";
 type PayoutStatusDb = "DRAFT" | "APPROVED" | "PAID";
-type StatementStatusDb = "received" | "previewed" | "imported" | "failed";
+type StatementStatusDb = "received" | "previewed" | "imported" | "failed" | "superseded";
 
 export interface Database {
   __InternalSupabase: {
@@ -82,6 +82,8 @@ export interface Database {
           active: boolean;
           manager_id: string | null;
           commission_plan_id: string | null;
+          /** The carrier's agent number (e.g. Ultimate W####), upper-case; unique per agency (0007). */
+          payee_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -96,6 +98,7 @@ export interface Database {
           active?: boolean;
           manager_id?: string | null;
           commission_plan_id?: string | null;
+          payee_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -110,6 +113,7 @@ export interface Database {
           active?: boolean;
           manager_id?: string | null;
           commission_plan_id?: string | null;
+          payee_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -375,9 +379,14 @@ export interface Database {
           uploaded_by: string | null;
           imported_by: string | null;
           imported_at: string | null;
+          /** Set when a corrected statement replaced this one (0007). */
+          superseded_by: string | null;
+          superseded_at: string | null;
           created_at: string;
         },
         | "id"
+        | "superseded_by"
+        | "superseded_at"
         | "statement_month"
         | "user_id"
         | "connection_id"
@@ -410,6 +419,8 @@ export interface Database {
           writing_agent_verified: boolean;
           user_id: string | null;
           production_entity_id: string | null;
+          /** Set when the statement was superseded; excluded from reporting (0007). */
+          superseded_at: string | null;
           created_at: string;
         },
         | "id"
@@ -417,6 +428,7 @@ export interface Database {
         | "writing_agent_verified"
         | "user_id"
         | "production_entity_id"
+        | "superseded_at"
         | "created_at"
       >;
       compensation_rules: TableShape<
@@ -567,6 +579,8 @@ export interface Database {
           p_statement_total_cents: number;
           p_carried_balance_cents: number;
           p_rows: Json;
+          /** Earlier statements this one corrects; they are marked superseded (0007). */
+          p_supersedes?: string[];
         };
         Returns: number;
       };
