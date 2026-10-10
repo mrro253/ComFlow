@@ -19,6 +19,7 @@ export function mapUserRow(row: UserRow): AppUser {
     managerId: row.manager_id,
     commissionPlanId: row.commission_plan_id,
     payeeId: row.payee_id,
+    principalId: row.principal_id,
     createdAt: row.created_at,
   };
 }
@@ -131,6 +132,8 @@ export async function createUserWithAuth(input: {
   careerLevel?: CareerLevel | null;
   /** Normalized carrier agent number (see normalizePayeeId). */
   payeeId?: string | null;
+  /** Required for captive agents: the principal who is credited their production. */
+  principalId?: string | null;
 }): Promise<{ user: AppUser; temporaryPassword: string }> {
   const admin = createAdminClient();
   const temporaryPassword = generateTemporaryPassword();
@@ -159,6 +162,7 @@ export async function createUserWithAuth(input: {
       agent_type: input.agentType ?? null,
       career_level: input.careerLevel ?? null,
       payee_id: input.payeeId ?? null,
+      principal_id: input.principalId ?? null,
     })
     .select("*")
     .single();
@@ -191,6 +195,8 @@ export async function updateUserProfile(
     careerLevel?: CareerLevel | null;
     /** `undefined` leaves it untouched; `null` clears it. Normalized (see normalizePayeeId). */
     payeeId?: string | null;
+    /** Set together with `agentType`: the principal for captive agents, otherwise null. */
+    principalId?: string | null;
   }
 ): Promise<AppUser> {
   const supabase = await createClient();
@@ -209,6 +215,7 @@ export async function updateUserProfile(
       ...(updates.agentType !== undefined && {
         agent_type: updates.agentType,
         career_level: updates.careerLevel ?? null,
+        principal_id: updates.principalId ?? null,
       }),
     })
     .eq("id", id)

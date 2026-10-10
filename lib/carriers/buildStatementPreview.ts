@@ -114,6 +114,8 @@ export interface ImportRowPayload {
   writing_agent_verified: boolean;
   user_id: string | null;
   production_entity_id: string | null;
+  /** The captive agent who wrote it, when user_id is their principal. */
+  writing_user_id: string | null;
 }
 
 export function toImportRows(preview: StatementPreview): ImportRowPayload[] {
@@ -132,5 +134,6 @@ export function toImportRows(preview: StatementPreview): ImportRowPayload[] {
       user_id: classification.status === "assigned" ? classification.userId : null,
       production_entity_id:
         classification.status === "assigned" ? classification.productionEntityId : null,
+      writing_user_id: classification.status === "assigned" ? (classification.writingUserId ?? null) : null,
     }));
 }

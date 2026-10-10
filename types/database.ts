@@ -33,7 +33,7 @@ type TableShape<Row, Defaulted extends keyof Row = never> = {
   Relationships: [];
 };
 
-type AgentTypeDb = "career" | "independent";
+type AgentTypeDb = "career" | "independent" | "captive";
 type CompensationStatusDb = "ACTIVE" | "NOT_CONFIGURED";
 type EarningStatusDb = "PENDING" | "APPROVED" | "PAID" | "VOID";
 type PayoutStatusDb = "DRAFT" | "APPROVED" | "PAID";
@@ -77,13 +77,15 @@ export interface Database {
           last_name: string;
           email: string;
           role: "owner" | "manager" | "agent";
-          agent_type: "career" | "independent" | null;
+          agent_type: AgentTypeDb | null;
           career_level: CareerLevelDb | null;
           active: boolean;
           manager_id: string | null;
           commission_plan_id: string | null;
           /** The carrier's agent number (e.g. Ultimate W####), upper-case; unique per agency (0007). */
           payee_id: string | null;
+          /** Set exactly when agent_type is "captive": the principal who is credited their production (0008). */
+          principal_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -93,12 +95,13 @@ export interface Database {
           last_name: string;
           email: string;
           role: "owner" | "manager" | "agent";
-          agent_type?: "career" | "independent" | null;
+          agent_type?: AgentTypeDb | null;
           career_level?: CareerLevelDb | null;
           active?: boolean;
           manager_id?: string | null;
           commission_plan_id?: string | null;
           payee_id?: string | null;
+          principal_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -108,12 +111,13 @@ export interface Database {
           last_name?: string;
           email?: string;
           role?: "owner" | "manager" | "agent";
-          agent_type?: "career" | "independent" | null;
+          agent_type?: AgentTypeDb | null;
           career_level?: CareerLevelDb | null;
           active?: boolean;
           manager_id?: string | null;
           commission_plan_id?: string | null;
           payee_id?: string | null;
+          principal_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -421,6 +425,8 @@ export interface Database {
           production_entity_id: string | null;
           /** Set when the statement was superseded; excluded from reporting (0007). */
           superseded_at: string | null;
+          /** The captive agent who wrote the business when user_id is their principal (0008). */
+          writing_user_id: string | null;
           created_at: string;
         },
         | "id"
@@ -429,6 +435,7 @@ export interface Database {
         | "user_id"
         | "production_entity_id"
         | "superseded_at"
+        | "writing_user_id"
         | "created_at"
       >;
       compensation_rules: TableShape<

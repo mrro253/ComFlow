@@ -29,6 +29,7 @@ export function EditUserRow({
   user,
   managers,
   plans,
+  principals = [],
   editable,
 }: {
   user: AppUser;
@@ -36,6 +37,8 @@ export function EditUserRow({
   managers: AppUser[];
   /** Available (active) commission plans for the "comp plan" dropdown. */
   plans: CommissionPlan[];
+  /** Teammates who can be this agent's principal if they are captive (never includes `user`). */
+  principals?: { id: string; name: string }[];
   editable: boolean;
 }) {
   const [editing, setEditing] = useState(false);
@@ -71,7 +74,11 @@ export function EditUserRow({
         <div className="flex items-center gap-2">
           {user.agentType && (
             <span className="text-xs text-muted-foreground">
-              {user.agentType === "career" ? (user.careerLevel ?? "Career") : "Independent"}
+              {user.agentType === "career"
+                ? (user.careerLevel ?? "Career")
+                : user.agentType === "captive"
+                  ? "Captive"
+                  : "Independent"}
             </span>
           )}
           <span className="text-xs text-muted-foreground">{planLabel}</span>
@@ -146,6 +153,8 @@ export function EditUserRow({
         defaultType={user.agentType}
         defaultLevel={user.careerLevel}
         isManager={role === "manager"}
+        principals={principals}
+        defaultPrincipalId={user.principalId}
       />
 
       <div className="flex flex-col gap-1.5">

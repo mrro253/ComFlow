@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/requireRole";
-import { createUserWithAuth } from "@/lib/repositories/userRepository";
-import { parseAgentClassification } from "@/lib/auth/agentClassification";
+import { createUserWithAuth, listUsersForAgency } from "@/lib/repositories/userRepository";
+import { classifyForSave } from "@/lib/auth/agentClassification";
 import { normalizePayeeId } from "@/lib/carriers/payeeId";
 import type { ActionResult } from "@/app/(auth)/actions";
 
@@ -28,11 +28,15 @@ export async function addUser(
       return { error: "First name, last name, and email are required." };
     }
 
-    const classification = parseAgentClassification(
+    const classification = classifyForSave({
       role,
-      String(formData.get("agentType") ?? ""),
-      String(formData.get("careerLevel") ?? "")
-    );
+      rawType: String(formData.get("agentType") ?? ""),
+      rawLevel: String(formData.get("careerLevel") ?? ""),
+      rawPrincipalId: String(formData.get("principalId") ?? ""),
+      agentId: null,
+      agencyId: currentUser.agencyId,
+      team: await listUsersForAgency(currentUser.agencyId),
+    });
     if (!classification.ok) return { error: classification.error };
 
     const { temporaryPassword } = await createUserWithAuth({
@@ -44,6 +48,7 @@ export async function addUser(
       managerId,
       agentType: classification.agentType,
       careerLevel: classification.careerLevel,
+      principalId: classification.principalId,
       payeeId: normalizePayeeId(String(formData.get("payeeId") ?? "")),
     });
 

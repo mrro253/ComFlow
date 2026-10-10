@@ -22,6 +22,7 @@ export function TeamGroup({
   editable = false,
   allManagers = [],
   plans = [],
+  principals = [],
 }: {
   manager: AppUser | null;
   agents: AppUser[];
@@ -31,6 +32,8 @@ export function TeamGroup({
   allManagers?: AppUser[];
   /** Every commission plan in the agency - used to populate the "comp plan" dropdown. */
   plans?: CommissionPlan[];
+  /** Teammates who can be a captive agent's principal. */
+  principals?: { id: string; name: string }[];
 }) {
   return (
     <Card>
@@ -66,6 +69,7 @@ export function TeamGroup({
             user={agent}
             managers={allManagers.filter((m) => m.id !== agent.id)}
             plans={plans}
+            principals={principals.filter((p) => p.id !== agent.id)}
             editable={editable}
           />
         ))}

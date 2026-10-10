@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { formatCents } from "@/lib/carriers/money";
 import type { StatementPreview } from "@/lib/carriers/buildStatementPreview";
 import { splitWritingAgentName, summarizeUnmatchedAgents } from "@/lib/carriers/unmatchedWritingAgents";
+import { principalOptions } from "@/lib/auth/principalOptions";
 import { UnmatchedAgentRow } from "@/components/statements/unmatched-agents";
 import {
   getStatement,
@@ -266,6 +267,7 @@ export default async function StatementDetailPage({ params }: { params: Promise<
                 statementId={statement.id}
                 agent={agent}
                 team={teamOptions}
+                principals={principalOptions(team)}
               />
             ))}
           </CardContent>

@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/requireRole";
-import { getUserById, updateUserProfile } from "@/lib/repositories/userRepository";
-import { parseAgentClassification } from "@/lib/auth/agentClassification";
+import { getUserById, listUsersForAgency, updateUserProfile } from "@/lib/repositories/userRepository";
+import { classifyForSave } from "@/lib/auth/agentClassification";
 import { normalizePayeeId } from "@/lib/carriers/payeeId";
 import type { ActionResult } from "@/app/(auth)/actions";
 
@@ -44,11 +44,15 @@ export async function editUser(
       return { error: "The agency owner's role can't be changed here." };
     }
 
-    const classification = parseAgentClassification(
+    const classification = classifyForSave({
       role,
-      String(formData.get("agentType") ?? ""),
-      String(formData.get("careerLevel") ?? "")
-    );
+      rawType: String(formData.get("agentType") ?? ""),
+      rawLevel: String(formData.get("careerLevel") ?? ""),
+      rawPrincipalId: String(formData.get("principalId") ?? ""),
+      agentId: userId,
+      agencyId: currentUser.agencyId,
+      team: await listUsersForAgency(currentUser.agencyId),
+    });
     if (!classification.ok) return { error: classification.error };
 
     await updateUserProfile(userId, {
@@ -59,6 +63,7 @@ export async function editUser(
       commissionPlanId,
       agentType: classification.agentType,
       careerLevel: classification.careerLevel,
+      principalId: classification.principalId,
       payeeId: normalizePayeeId(String(formData.get("payeeId") ?? "")),
     });
   } catch (err) {

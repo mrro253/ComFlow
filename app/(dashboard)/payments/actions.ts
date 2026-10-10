@@ -28,12 +28,23 @@ export async function assignPayment(
     const target = context.users.find((u) => u.id === userId && u.active);
     if (!target) return { error: "That teammate was not found." };
 
+    // A captive agent's production is credited to their principal.
+    let credited = target;
+    if (target.agentType === "captive") {
+      const principal = context.users.find((u) => u.id === target.principalId && u.active);
+      if (!principal || principal.agentType === "captive") {
+        return { error: "This captive agent has no active principal to credit." };
+      }
+      credited = principal;
+    }
+
     const rows = await assignTransaction({
       agencyId: owner.agencyId,
       actorId: owner.id,
       transactionId,
-      user: target,
-      productionEntityId: productionEntityFor(target, context.entities)?.id ?? null,
+      user: credited,
+      productionEntityId: productionEntityFor(credited, context.entities)?.id ?? null,
+      writingUserId: credited.id === target.id ? null : target.id,
       rememberAlias,
     });
 

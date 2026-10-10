@@ -10,7 +10,13 @@ import { Label } from "@/components/ui/label";
 import { AgentTypeFields } from "@/components/users/agent-type-fields";
 import type { AppUser } from "@/types/domain";
 
-export function AddUserForm({ managers }: { managers: AppUser[] }) {
+export function AddUserForm({
+  managers,
+  principals = [],
+}: {
+  managers: AppUser[];
+  principals?: { id: string; name: string }[];
+}) {
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState<"agent" | "manager">("agent");
   const [state, formAction, isPending] = useActionState(addUser, undefined);
@@ -75,7 +81,13 @@ export function AddUserForm({ managers }: { managers: AppUser[] }) {
           </div>
         </div>
 
-        <AgentTypeFields idPrefix="add" defaultType={null} defaultLevel={null} isManager={role === "manager"} />
+        <AgentTypeFields
+          idPrefix="add"
+          defaultType={null}
+          defaultLevel={null}
+          isManager={role === "manager"}
+          principals={principals}
+        />
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="payeeId">Carrier payee ID (optional)</Label>

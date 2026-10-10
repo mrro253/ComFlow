@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/requireRole";
-import { parseAgentClassification } from "@/lib/auth/agentClassification";
+import { classifyForSave } from "@/lib/auth/agentClassification";
 import { sha256 } from "@/lib/carriers/digest";
 import { normalizePayeeId } from "@/lib/carriers/payeeId";
 import { getStatementParser } from "@/lib/carriers";
@@ -125,11 +125,15 @@ export async function createWritingAgent(
       return { error: "First name, last name, and email are required." };
     }
 
-    const classification = parseAgentClassification(
-      "agent",
-      String(formData.get("agentType") ?? ""),
-      String(formData.get("careerLevel") ?? "")
-    );
+    const classification = classifyForSave({
+      role: "agent",
+      rawType: String(formData.get("agentType") ?? ""),
+      rawLevel: String(formData.get("careerLevel") ?? ""),
+      rawPrincipalId: String(formData.get("principalId") ?? ""),
+      agentId: null,
+      agencyId: user.agencyId,
+      team: await listUsersForAgency(user.agencyId),
+    });
     if (!classification.ok) return { error: classification.error };
 
     const { user: created, temporaryPassword } = await createUserWithAuth({
@@ -140,6 +144,7 @@ export async function createWritingAgent(
       role: "agent",
       agentType: classification.agentType,
       careerLevel: classification.careerLevel,
+      principalId: classification.principalId,
       payeeId: normalizePayeeId(String(formData.get("payeeId") ?? "")),
     });
     await saveWritingAgentAlias({

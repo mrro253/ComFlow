@@ -7,21 +7,28 @@ import { CAREER_LEVELS, type AgentType, type CareerLevel } from "@/types/domain"
 const SELECT_CLASS = "h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm";
 
 /**
- * Agent type (Career / Independent) and, for Career agents, their level.
- * Career agents are paid by the agency; Independent agents are paid directly by
- * the carrier and are only tracked here.
+ * Agent type (Career / Independent / Captive) and, for Career agents, their
+ * level, or for Captive agents, their principal. Career agents are paid by the
+ * agency; Independent agents are paid directly by the carrier and are only
+ * tracked here; a Captive (LOA) agent's production is credited to the principal
+ * agent, who pays them directly.
  */
 export function AgentTypeFields({
   idPrefix,
   defaultType,
   defaultLevel,
   isManager,
+  principals = [],
+  defaultPrincipalId = null,
 }: {
   idPrefix: string;
   defaultType: AgentType | null;
   defaultLevel: CareerLevel | null;
   /** Managers may stay untyped; agents must pick one. */
   isManager: boolean;
+  /** Teammates who can be a captive agent's principal (never captive themselves). */
+  principals?: { id: string; name: string }[];
+  defaultPrincipalId?: string | null;
 }) {
   const [type, setType] = useState<AgentType | "">(defaultType ?? "");
 
@@ -40,6 +47,9 @@ export function AgentTypeFields({
           <option value="">{isManager ? "None" : "Choose..."}</option>
           <option value="career">Career (paid by the agency)</option>
           <option value="independent">Independent (paid by the carrier)</option>
+          {!isManager && (
+            <option value="captive">Captive / LOA (paid by their principal agent)</option>
+          )}
         </select>
       </div>
       {type === "career" && (
@@ -58,6 +68,27 @@ export function AgentTypeFields({
             {CAREER_LEVELS.map((level) => (
               <option key={level} value={level}>
                 {level}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      {type === "captive" && !isManager && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`${idPrefix}-principalId`}>Principal agent</Label>
+          <select
+            id={`${idPrefix}-principalId`}
+            name="principalId"
+            className={SELECT_CLASS}
+            defaultValue={defaultPrincipalId ?? ""}
+            required
+          >
+            <option value="" disabled>
+              Choose...
+            </option>
+            {principals.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
               </option>
             ))}
           </select>

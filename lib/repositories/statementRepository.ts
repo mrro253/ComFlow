@@ -85,7 +85,10 @@ export interface CarrierTransactionRecord {
   amountCents: number;
   writingAgentName: string | null;
   writingAgentVerified: boolean;
+  /** Who is credited with the payment (a captive agent's principal). */
   userId: string | null;
+  /** The captive agent who wrote it, when `userId` is their principal. */
+  writingUserId: string | null;
 }
 
 function mapTransaction(row: TransactionRow): CarrierTransactionRecord {
@@ -101,6 +104,7 @@ function mapTransaction(row: TransactionRow): CarrierTransactionRecord {
     writingAgentName: row.writing_agent_name,
     writingAgentVerified: row.writing_agent_verified,
     userId: row.user_id,
+    writingUserId: row.writing_user_id,
   };
 }
 
@@ -478,8 +482,11 @@ export async function assignTransaction(input: {
   agencyId: string;
   actorId: string;
   transactionId: string;
+  /** Who is credited with the production (a captive agent's principal). */
   user: AppUser;
   productionEntityId: string | null;
+  /** The captive agent who wrote it, when `user` is their principal. */
+  writingUserId?: string | null;
   rememberAlias: boolean;
 }): Promise<number> {
   const admin = createAdminClient();
@@ -513,7 +520,7 @@ export async function assignTransaction(input: {
     await admin.from("writing_agent_aliases").upsert(
       {
         agency_id: input.agencyId,
-        user_id: input.user.id,
+        user_id: input.writingUserId ?? input.user.id,
         alias: normalizeWritingAgentName(tx.writing_agent_name),
       },
       { onConflict: "agency_id,alias", ignoreDuplicates: true }
@@ -522,7 +529,11 @@ export async function assignTransaction(input: {
 
   const { error } = await admin
     .from("carrier_transactions")
-    .update({ user_id: input.user.id, production_entity_id: input.productionEntityId })
+    .update({
+      user_id: input.user.id,
+      production_entity_id: input.productionEntityId,
+      writing_user_id: input.writingUserId ?? null,
+    })
     .in("id", ids)
     .eq("agency_id", input.agencyId);
   if (error) throw new AssignmentError(error.message);
@@ -533,7 +544,12 @@ export async function assignTransaction(input: {
     action: "transaction.assigned",
     entity_type: "carrier_transaction",
     entity_id: tx.id,
-    details: { assigned_to: input.user.id, rows: ids.length, remembered_alias: input.rememberAlias },
+    details: {
+      assigned_to: input.user.id,
+      written_by: input.writingUserId ?? null,
+      rows: ids.length,
+      remembered_alias: input.rememberAlias,
+    },
   });
   return ids.length;
 }

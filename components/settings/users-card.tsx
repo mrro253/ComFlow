@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { AddUserForm } from "@/components/settings/add-user-form";
+import { principalOptions } from "@/lib/auth/principalOptions";
 import type { AppUser, Role } from "@/types/domain";
 
 const ROLE_BADGE: Record<Role, "default" | "secondary" | "outline"> = {
@@ -67,7 +68,7 @@ export function UsersCard({
           </TableBody>
         </Table>
       </CardContent>
-      {editable && <AddUserForm managers={managers} />}
+      {editable && <AddUserForm managers={managers} principals={principalOptions(users)} />}
     </Card>
   );
 }
