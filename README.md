@@ -176,7 +176,7 @@ Important properties:
 1. **Run the manual flow once** on a real Supabase project with `sample-statement.pdf`, then with one of Ryan's real PDFs. Fix whatever breaks. Nothing else is trustworthy until this is done.
 2. **Answer the open decisions** in section 7, especially how Independent agents' production rolls up and how aliases should work.
 3. **Run the worker once** with Ryan's Ultimate login on a machine with a browser; fix selector/flow issues.
-4. **Deploy:** Vercel for the app, a hosted Supabase project, and a small always-on host for the worker. Then add a nightly sync.
+4. **Keep running locally for now. Do not deploy yet.** Run the app, local Supabase and the worker (`npm run start` in `worker/`) on your own machine. Hosting costs money and real client data (PHI) cannot go on any hosted service until HIPAA agreements are in place. Deploy when you are ready to launch, following the roadmap in section 14 (hosted setup, nightly sync, HIPAA).
 5. **Career earnings UI:** show the preview (`buildEarningsPlan`), Owner approval, then payouts. Needs rates and the renewal rules confirmed.
 6. **Second carrier:** write a `StatementParser` and a `CarrierPortal` (see section 9).
 7. **GoHighLevel output** (reshape `lib/crm` around push operations; no inbound payable data).
@@ -236,10 +236,11 @@ Demo logins (all `password123`; created by `supabase/seed.sql`):
 | Agent | `agent4@commissionflow.dev` | Taylor Brooks | Career, Private Client Advisor |
 | Agent | `agent5@commissionflow.dev` | Jordan Lee | Independent |
 
-Going live: create a hosted Supabase project, `npx supabase link --project-ref <ref>`,
-`npx supabase db push`, set the variables above in Vercel, deploy. **Skip
-`seed.sql` in production.** Migration `0006` creates the private `statements`
-storage bucket.
+Going live: see **section 14 (Launch roadmap)** for hosting options, costs, step-by-step
+setup and the HIPAA requirements. In short: create a hosted Supabase project,
+`npx supabase link --project-ref <ref>`, `npx supabase db push`, set the variables
+above in Vercel, deploy. **Skip `seed.sql` in production.** Migration `0006` creates
+the private `statements` storage bucket.
 
 Commands: `npm run dev | build | test | lint | typecheck | sample:statement`.
 
@@ -435,8 +436,148 @@ wanted, open one on GitHub from the branch into `Main`.
 
 ---
 
-## 14. Changelog (newest first)
+## 14. Launch roadmap: local -> small test -> full launch
 
+> **Prices and plan rules** below were looked up on vendors' public pages on
+> 2026-10-10 and change often. Re-check before buying. **None of the hosted setup
+> in this section has been done or run yet** (unverified). **This is not legal advice.**
+> Have a healthcare/privacy attorney confirm the HIPAA section.
+
+### 14.1 The stages
+
+| Stage | Where it runs | Data allowed | Approx. cost | Who |
+| --- | --- | --- | --- | --- |
+| **0. Local dev (now)** | Your laptop: `npm run dev`, local Supabase (Docker), worker in a terminal | Synthetic only | $0 | Marshall |
+| **1. Hosted test** | Free-tier hosting with a shareable URL | **Synthetic only** | $0-35/mo | Marshall + Ryan |
+| **2. Real-data pilot** | Option 2A: Ryan runs it locally. Option 2B: hosted with HIPAA agreements | Real PHI **only** after the 14.5 checklist | 2A: $0. 2B: about $1,500-1,600/mo | Ryan + Marshall |
+| **3. Full launch** | 2B stack, scaled up, plus nightly syncs and monitoring | Real PHI for paying customers | about $1,600-2,500+/mo plus legal/insurance | Everyone |
+
+**Hard rule: no real client data on any hosted service until the 14.5 checklist is complete.**
+A hosted service without a signed agreement (BAA) and the right plan is a HIPAA violation, even for "just testing".
+
+Do not move to the next stage until the exit criteria hold:
+- **0 -> 1:** a real Ultimate PDF imports correctly on a local run, and the worker pulls once with Ryan's login (section 6, steps 1-3).
+- **1 -> 2:** hosted app works end to end with `sample-statement.pdf`; Ryan has answered the section 7 questions.
+- **2 -> 3:** pilot ran for a few statement cycles with matching totals; HIPAA package (14.5) done; the pre-launch engineering list (14.6) is done.
+
+### 14.2 Stage 1: hosted test with synthetic data (cheapest)
+
+| Piece | Service | Plan | Cost |
+| --- | --- | --- | --- |
+| Web app | Vercel | Hobby (free; meant for personal / non-commercial use, check their terms) | $0 |
+| Database, auth, storage | Supabase | Free (500 MB, **pauses after 1 week of inactivity**) or Pro | $0 or $25/mo |
+| Carrier worker | Not hosted. Run `npm run start` on your machine, or skip (upload sample PDFs manually) | | $0 |
+
+Use a Supabase project that only ever holds synthetic data. Because the worker is not
+hosted, never point a hosted app at a real carrier login in this stage.
+
+### 14.3 Stage 2 and 3: hosted with PHI (HIPAA-capable stack)
+
+All three vendors below will sign a BAA, but only on specific paid plans:
+
+| Piece | Service | Plan needed for a BAA | Cost |
+| --- | --- | --- | --- |
+| Database, auth, storage | **Supabase** | Team plan **plus** the HIPAA add-on. Free and Pro cannot hold PHI. Also requires Point-in-Time Recovery (needs at least Small compute), SSL enforcement, network restrictions and Postgres connection logging | Team $599 + HIPAA $350 + PITR $100 (7 days) + Small compute ~$15 (the plan includes $10 of compute credit) = **about $1,060/mo** |
+| Web app | **Vercel** | Pro plan plus the HIPAA BAA add-on (self-serve click-through in Settings -> Billing). Enterprise gets a negotiated, signed BAA | Pro $20 (includes 1 seat and $20 usage credit) + HIPAA $350 = **about $370/mo**, +$20 per extra paid seat |
+| Carrier worker (Chromium) | **Fly.io** | Any paid plan plus the HIPAA package, BAA pre-signed (you sign it to activate) | HIPAA package $99 + machine (`shared-cpu-1x` 1 GB $6.70, 2 GB $12.70) = **about $106-112/mo** |
+| **Total** | | | **about $1,540/mo (about $18,500/yr)** |
+
+Almost all of this is HIPAA-driven, not usage: about $800/mo is the HIPAA add-ons, and
+the $599 Team plan is only needed because Supabase requires it for HIPAA. That fixed
+cost matters when pricing CommissionFlow to customers.
+
+Alternatives considered:
+- **Render** HIPAA workspaces need the Scale plan ($499/mo) plus a 20% usage surcharge. **Railway** needs a $1,000/mo committed-spend tier for a BAA. Both cost more than Fly for the worker.
+- **One AWS account for everything.** AWS's BAA is free to accept (AWS Artifact), and EC2, RDS and S3 are HIPAA-eligible, so this is cheaper at scale. But it means leaving Supabase (auth, storage, RLS, supabase-js) and hosting Postgres yourself, which is a rewrite. Self-hosted Supabase is not covered by Supabase's HIPAA program. Keep as a **future cost-reduction option**, not for the pilot.
+- **Option 2A (cheapest real-data pilot): no cloud at all.** Ryan runs the app, local Supabase and worker on a TruePlan computer with full-disk encryption (FileVault or BitLocker), a login password and no sharing. PHI then stays inside TruePlan's own environment, under their existing carrier agreements. Cost $0, but only Ryan's machine can use it and Marshall never sees real data. Reasonable until Ryan needs remote or multi-user access.
+
+### 14.4 How to set up the hosted stack
+
+Do these in order. Use Stage 1 plans for synthetic testing and the Stage 2 plans (14.3) for real data.
+
+**A. Supabase (database)**
+1. Create an account at supabase.com, then an organization on the plan you need and a project in a US region. Save the database password in a password manager.
+2. `npx supabase login`, then `npx supabase link --project-ref <ref>` and `npx supabase db push`. **Do not run `seed.sql` in production** (it creates demo users with a known password).
+3. Authentication -> URL configuration: set the Site URL to your Vercel URL and add it to the redirect list. Decide whether public sign-up should stay open (it creates a new agency); for a pilot, turn it off and create the Owner account yourself.
+4. Copy the API URL, the publishable (anon) key and the secret (service-role) key from Project Settings -> API.
+5. For PHI: add the HIPAA add-on, get the BAA signed through Supabase (they use a contact form), then turn on **High Compliance** under Project Settings -> General and follow the checks in the Security Advisor.
+6. Confirm migration `0006` created the private `statements` bucket.
+
+**B. Vercel (web app)**
+1. Sign up at vercel.com with GitHub, then Add New -> Project -> import `mrro253/ComFlow`.
+2. Project Settings -> Git: set **Production Branch to `Main`** (capital M; Vercel often defaults to `main`). Merging into `Main` then deploys automatically, and every branch gets a preview URL.
+3. Add environment variables (section 8): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CREDENTIAL_ENCRYPTION_KEY` (generate a **new** one for production; never reuse your local key).
+4. **Scope the variables:** set the Preview environment to a synthetic-data Supabase project. Preview deployments of feature branches must never connect to the project holding PHI.
+5. Add a custom domain when ready, then update the Supabase Auth URLs.
+6. For PHI: Pro plan plus the HIPAA BAA add-on (Settings -> Billing).
+7. Known limit: Vercel caps request bodies at about 4.5 MB (verify), below our 10 MB upload setting. Large statement PDFs will need direct-to-storage uploads (14.6).
+
+**C. Fly.io (carrier worker)**
+1. The worker has **no Dockerfile yet**. Write one based on Microsoft's Playwright image (it includes Chromium), then confirm the worker reads environment variables when there is no `.env.local` (unverified).
+2. Install `flyctl`, `fly auth signup`, then `fly launch` inside `worker/`. Set `[[vm]]` to `shared-cpu-1x` with 1-2 GB (Chromium needs the memory) and make sure one machine is always running (no auto-stop).
+3. `fly secrets set NEXT_PUBLIC_SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... CREDENTIAL_ENCRYPTION_KEY=...` (same encryption key as Vercel, or saved carrier logins will not decrypt), then `fly deploy`.
+4. For PHI: buy the HIPAA package and sign the BAA at fly.io/compliance **before** pointing it at real carrier logins.
+5. Once it is up, "Sync now" works from the web UI with no command line.
+
+**D. Nightly sync (not built)**
+TODO: add a small scheduler to the worker that, once a day, sets `sync_requested_at` for each active connection so the normal polling loop pulls new statements. Only worth building after the worker is hosted.
+
+### 14.5 HIPAA: what we need, with whom, and how
+
+**Why it applies.** Commission statements contain member names, policy details and carrier data, which is PHI. Carriers are HIPAA "covered entities". Agencies and agents who receive PHI from carriers on the carriers' behalf are typically treated as **business associates**, and carrier broker agreements usually include a BAA addendum for this (Medica and Fallon Health publish theirs). A business associate must get a written BAA from any subcontractor that handles that PHI. That includes CommissionFlow, and then every hosting vendor CommissionFlow uses.
+
+**The chain of agreements** (the pattern to confirm with an attorney):
+
+| # | Agreement | Between | Status / how to get it |
+| --- | --- | --- | --- |
+| 1 | Carrier contract + BAA addendum | Each carrier <-> TruePlan (and each Independent agent) | Already exists as part of contracting. **Ryan: read it** for rules on subcontractors and vendors, offshore data, breach-notice timing, and whether automated portal access is allowed |
+| 2 | **BAA** | TruePlan <-> **CommissionFlow** (Marshall's company) | Needed before TruePlan's PHI touches a hosted CommissionFlow. Have the attorney draft a standard BAA you reuse for every customer |
+| 3 | **BAA** | CommissionFlow <-> **Supabase** | Team plan + HIPAA add-on, then sign via Supabase |
+| 4 | **BAA** | CommissionFlow <-> **Vercel** | Pro + HIPAA add-on (click-through) |
+| 5 | **BAA** | CommissionFlow <-> **Fly.io** (or AWS) | Fly HIPAA package, or AWS free BAA through AWS Artifact |
+| 6 | BAA with any other vendor that could ever see PHI | e.g. email, error monitoring, log tools, support tools, analytics | Avoid: do not send PHI to such tools. If one must, get a BAA first |
+| - | No BAA needed | GitHub (code only), as long as no PHI is ever committed | Enforced by the rules in section 13 and 10 |
+
+Each Independent-agent customer is their own business associate of their carriers, so they also need agreement #2 with CommissionFlow.
+
+**Steps, in order**
+1. **Form a legal entity** for CommissionFlow (LLC or similar), so agreements are signed by a company, not you personally. Get business insurance, ideally cyber liability and E&O. Ask an attorney or insurer about it.
+2. **Hire a healthcare/privacy attorney** (one-time review; get a fixed quote). Ask them to: confirm the agreement chain above, draft the customer BAA, review TruePlan's carrier contracts for restrictions, and review Florida's breach-notification law (FIPA), which also applies.
+3. **Ask Ryan for TruePlan's carrier agreements** and check each carrier's portal terms of use for automated (robot) access. Some carriers forbid it.
+4. **Complete the HIPAA Security Rule basics** (a lightweight version is fine at this size), written down:
+   - a **risk assessment** (what PHI we hold, where, and the risks)
+   - written **policies**: access control, encryption, data retention/deletion, incident response and breach notification, backup and recovery
+   - **workforce training** and a signed confidentiality agreement for anyone with access (you, Ryan, any contractors)
+   - an **access review** schedule and a breach-response contact list
+5. **Sign vendor BAAs** (rows 3-5) and enable each vendor's HIPAA settings **before** any real data is uploaded.
+6. **Sign the customer BAA** (row 2) with TruePlan.
+7. **Only then** upload real data, starting with one real PDF and checking nothing leaks (logs, error messages, previews).
+8. Keep records: signed agreements, the risk assessment, and the training log, for at least 6 years (HIPAA documentation rule).
+
+**Ways to reduce risk and scope** (design ideas, not built):
+- Store less PHI: if the app does not need full member names or IDs for reports, keep initials or a short ID and drop the rest. Needs Ryan's answer on what he actually needs.
+- Require MFA for all users (Supabase Auth supports it), plus an idle-session timeout.
+- Keep PHI out of logs and error messages. The worker and app already avoid logging statement contents; keep it that way.
+
+### 14.6 Pre-launch engineering checklist (before Stage 2B and 3)
+
+- [ ] Worker Dockerfile; worker runs on its host with env variables only
+- [ ] Nightly sync scheduler (14.4 D)
+- [ ] Direct-to-storage PDF upload (avoids Vercel's body limit)
+- [ ] MFA and session timeout for users
+- [ ] Decide on public sign-up (off for pilot)
+- [ ] Monitoring and alerts for the worker and failed syncs (without PHI in the alert text)
+- [ ] Backup and restore drill (restore into a scratch project and check totals)
+- [ ] Rotate Ryan's old Ultimate password (it was in his prototype) and use new production keys
+- [ ] Remove demo seed users, retire the legacy CRM-driven code
+- [ ] Error pages and logs checked for PHI leaks
+- [ ] Real Ultimate PDF and worker pull verified locally (section 6 steps 1-3)
+
+---
+
+## 15. Changelog (newest first)
+
+- **2026-10-10** - Added section 14 "Launch roadmap" (stages local -> hosted test -> real-data pilot -> launch, hosting options and prices, setup steps for Supabase/Vercel/Fly.io, HIPAA agreements and steps, pre-launch checklist). Reworded next step #4: keep running locally, deploy only when ready to launch.
 - **2026-10-10** - Added section 13 "Contributing" (branch workflow, merge rules, what needs Marshall's approval) and a matching "GIT WORKFLOW" block in `.cursorrules`.
 - **2026-10-10** - GoHighLevel is output-only: removed the inbound CRM webhook route (`/api/webhooks/crm`) and the stub "Connect GoHighLevel" action; CRM card is now an informational "Coming soon" card. tsc, eslint and vitest (113) pass.
 - **2026-10-08** - MVP statement flow: upload/preview/approve import, Payments, Carriers (encrypted logins + Sync now), carrier-based dashboard, agent type/level in Users, carrier worker (unverified), `import_statement` + storage bucket migration (`0006`), sample statement generator, README rewritten as a living handoff document.
