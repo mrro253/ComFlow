@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { getAgencyById } from "@/lib/repositories/agencyRepository";
 import { listPlansWithDetails } from "@/lib/repositories/commissionPlanRepository";
-import { getConnectionForAgency } from "@/lib/repositories/crmConnectionRepository";
 import { listUsersForAgency } from "@/lib/repositories/userRepository";
 import { canAccessOnboarding } from "@/lib/onboarding";
 import { CompPlansSection } from "@/components/settings/comp-plans-section";
@@ -15,7 +14,7 @@ const STEPS = [
   { number: 1, label: "Welcome" },
   { number: 2, label: "Commission plan" },
   { number: 3, label: "Build your team" },
-  { number: 4, label: "Connect GoHighLevel" },
+  { number: 4, label: "GoHighLevel (coming soon)" },
   { number: 5, label: "Finish" },
 ] as const;
 
@@ -37,10 +36,9 @@ export default async function OnboardingPage() {
   if (!user) redirect("/login");
   if (!canAccessOnboarding(user.role)) redirect("/dashboard");
 
-  const [agency, plans, connection, users] = await Promise.all([
+  const [agency, plans, users] = await Promise.all([
     getAgencyById(user.agencyId),
     listPlansWithDetails(user.agencyId),
-    getConnectionForAgency(user.agencyId),
     listUsersForAgency(user.agencyId),
   ]);
 
@@ -85,7 +83,7 @@ export default async function OnboardingPage() {
 
       <div className="flex flex-col gap-3">
         <StepHeading number={STEPS[3].number} label={STEPS[3].label} />
-        <CrmConnectionCard connection={connection} editable />
+        <CrmConnectionCard />
       </div>
 
       <div className="flex flex-col gap-3">

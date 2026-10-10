@@ -20,9 +20,8 @@ import type { AppUser } from "@/types/domain";
  * only ever see their own commissions - so they're redirected to
  * /dashboard.
  *
- * Team structure lives entirely in CommissionFlow, not the CRM -
- * GoHighLevel only supplies sales opportunities, so this page (plus the
- * "Team" list in Settings) is the only way to populate it.
+ * Team structure lives entirely in CommissionFlow, not the CRM, so this
+ * page (plus the "Team" list in Settings) is the only way to populate it.
  */
 export default async function UsersPage() {
   const user = await getCurrentUser();
@@ -110,8 +109,7 @@ export default async function UsersPage() {
         <CardHeader>
           <CardTitle>Add teammate</CardTitle>
           <CardDescription>
-            Create a Manager or Agent account. This never comes from your CRM - GoHighLevel
-            only supplies sales opportunities.
+            Create a Manager or Agent account. Team structure is managed here, never imported from a CRM.
           </CardDescription>
         </CardHeader>
         <AddUserForm managers={managerOptions} />

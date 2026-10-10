@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { listPlansWithDetails } from "@/lib/repositories/commissionPlanRepository";
-import { getConnectionForAgency } from "@/lib/repositories/crmConnectionRepository";
 import { listUsersForAgency } from "@/lib/repositories/userRepository";
 import { buildBonusProgressRows } from "@/lib/reporting/bonusProgress";
 import { CompPlansSection } from "@/components/settings/comp-plans-section";
@@ -16,9 +15,8 @@ export default async function SettingsPage() {
 
   const isOwner = user.role === "owner";
 
-  const [plans, connection, users] = await Promise.all([
+  const [plans, users] = await Promise.all([
     listPlansWithDetails(user.agencyId),
-    getConnectionForAgency(user.agencyId),
     listUsersForAgency(user.agencyId),
   ]);
 
@@ -34,7 +32,7 @@ export default async function SettingsPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
           <p className="text-sm text-muted-foreground">
             {isOwner
-              ? "Manage your commission plans, CRM connection, and team."
+              ? "Manage your commission plans and team."
               : "View-only. Ask an Owner to make changes here."}
           </p>
         </div>
@@ -50,7 +48,7 @@ export default async function SettingsPage() {
 
       <CompPlansSection plans={plans} editable={isOwner} />
       {isOwner && <BonusProgressCard rows={bonusProgressRows} />}
-      <CrmConnectionCard connection={connection} editable={isOwner} />
+      <CrmConnectionCard />
       <UsersCard users={users} editable={isOwner} />
     </div>
   );

@@ -9,8 +9,7 @@ import type { ActionResult } from "@/app/(auth)/actions";
 /**
  * Owner-only hierarchy edit: rename a teammate, promote/demote between
  * Agent and Manager, and reassign who they report to. This - not a CRM -
- * is the source of truth for org structure; GoHighLevel only supplies
- * sales opportunities, not agency staff/role data.
+ * is the source of truth for org structure and roles.
  */
 export async function editUser(
   _prevState: ActionResult | undefined,

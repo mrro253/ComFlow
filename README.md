@@ -150,7 +150,7 @@ Important properties:
 ## 5. What's missing
 
 **Not built yet**
-- GoHighLevel **output** (pushing results to the CRM). Only the old input scaffold exists.
+- GoHighLevel **output** (match contacts, push statuses). Not built: Settings/Onboarding show an informational "Coming soon" card only. GHL is never a source of payable amounts.
 - Career-agent **earnings / payout screens**: the rules, rate locks and approval logic exist in `lib/carriers/compensation`, with tables, but no UI and no job that creates earnings. Needs Ryan's rate decisions first (section 7).
 - Carriers other than **Ultimate Health Plans** (parser and portal).
 - **Scheduled** syncing. The worker only handles "Sync now" requests.
@@ -160,7 +160,7 @@ Important properties:
 - Hosted deployment of the worker.
 
 **Legacy code still present (CRM-driven model)**
-- `commission_plans`, `commission_plan_rates`, bonuses, `commission_transactions`, `lib/commission-engine`, `/commissions`, Settings plan/bonus screens, GoHighLevel webhook, `/onboarding`. They still work but no longer feed the dashboard. The signup function `create_agency_with_owner` still seeds the old 10% / 2% / 1% plan. Retire these once nothing needs them.
+- `commission_plans`, `commission_plan_rates`, bonuses, `commission_transactions`, `lib/commission-engine`, `/commissions`, Settings plan/bonus screens, `/onboarding`, and the inbound GoHighLevel adapter in `lib/crm` (its webhook route and fake "Connect" button were removed 2026-10-10; `crm_connections` table stays). They still work but no longer feed the dashboard. The signup function `create_agency_with_owner` still seeds the old 10% / 2% / 1% plan. Retire these once nothing needs them.
 
 **Known limits**
 - Ultimate parser only recognizes the writing-agent layouts proven in Ryan's prototype (`ADV`, `MCC`, `PFS`, `BRP` codes). Other layouts leave the writing agent unverified -> Unassigned.
@@ -177,7 +177,7 @@ Important properties:
 4. **Deploy:** Vercel for the app, a hosted Supabase project, and a small always-on host for the worker. Then add a nightly sync.
 5. **Career earnings UI:** show the preview (`buildEarningsPlan`), Owner approval, then payouts. Needs rates and the renewal rules confirmed.
 6. **Second carrier:** write a `StatementParser` and a `CarrierPortal` (see section 9).
-7. **GoHighLevel output.**
+7. **GoHighLevel output** (reshape `lib/crm` around push operations; no inbound payable data).
 8. Retire the legacy CRM-driven code and the old seed data.
 
 ---
@@ -336,6 +336,7 @@ offset bug). Real statements are much larger; only hand-made test PDFs are affec
 
 ## 13. Changelog (newest first)
 
+- **2026-10-10** - GoHighLevel is output-only: removed the inbound CRM webhook route (`/api/webhooks/crm`) and the stub "Connect GoHighLevel" action; CRM card is now an informational "Coming soon" card. tsc, eslint and vitest (113) pass.
 - **2026-10-08** - MVP statement flow: upload/preview/approve import, Payments, Carriers (encrypted logins + Sync now), carrier-based dashboard, agent type/level in Users, carrier worker (unverified), `import_statement` + storage bucket migration (`0006`), sample statement generator, README rewritten as a living handoff document.
 - **2026-10-08** - Merged Ryan's carrier-statement logic: Ultimate parser, duplicate planning, writing-agent classification, rate locks and earnings plan (pure logic + tests), migration `0005`, `.cursorrules` rewritten for the statement-driven model.
 - Earlier - CRM-driven MVP (auth, roles, comp plans, bonuses, GoHighLevel scaffold). Now legacy.
