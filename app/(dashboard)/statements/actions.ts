@@ -4,7 +4,9 @@ import { activeLevelNames } from "@/lib/carriers/careerLevels";
 import { listCareerLevels } from "@/lib/repositories/compensationSettingsRepository";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireRole } from "@/lib/auth/requireRole";
+import { requireRole, UnauthorizedError } from "@/lib/auth/requireRole";
+import { getCurrentUser } from "@/lib/auth/getCurrentUser";
+import { canAccessStatement, canManageStatements } from "@/lib/auth/statementAccess";
 import { classifyForSave } from "@/lib/auth/agentClassification";
 import { sha256 } from "@/lib/carriers/digest";
 import { normalizePayeeId } from "@/lib/carriers/payeeId";
@@ -31,7 +33,10 @@ export async function uploadStatement(
 ): Promise<ActionResult> {
   let statementId: string;
   try {
-    const user = await requireRole(["owner"]);
+    const user = await getCurrentUser();
+    if (!user || !canManageStatements(user)) {
+      throw new UnauthorizedError("You cannot upload statements.");
+    }
 
     const file = formData.get("file");
     if (!(file instanceof File) || file.size === 0) return { error: "Choose a PDF to upload." };
@@ -43,9 +48,12 @@ export async function uploadStatement(
     assertPdfBytes(bytes);
     const fileHash = sha256(Buffer.from(bytes));
 
-    // Optional: the statement belongs to an Independent agent rather than the agency.
-    const ownerUserId = String(formData.get("ownerUserId") ?? "") || null;
-    if (ownerUserId) {
+    // Agency Owner may attribute a statement to an Independent. An Independent
+    // with an owner-level profile can only upload to their own book.
+    let ownerUserId = String(formData.get("ownerUserId") ?? "") || null;
+    if (user.role !== "owner") {
+      ownerUserId = user.id;
+    } else if (ownerUserId) {
       const team = await listUsersForAgency(user.agencyId);
       const target = team.find((u) => u.id === ownerUserId);
       if (!target || target.agentType !== "independent" || target.role === "owner") {
@@ -173,9 +181,13 @@ export async function approveStatementImport(
   formData: FormData
 ): Promise<ActionResult> {
   try {
-    const user = await requireRole(["owner"]);
+    const user = await getCurrentUser();
+    if (!user || !canManageStatements(user)) {
+      throw new UnauthorizedError("You cannot import statements.");
+    }
     const statement = await getStatement(String(formData.get("statementId") ?? ""));
     if (!statement) return { error: "Statement not found." };
+    if (!canAccessStatement(user, statement)) return { error: "Statement not found." };
 
     const inserted = await importStatement(user, statement);
 

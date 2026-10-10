@@ -35,6 +35,7 @@ export const sampleOwner: AppUser = {
   commissionPlanId: null,
   payeeId: null,
   principalId: null,
+  independentOwner: false,
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
@@ -52,6 +53,7 @@ export const sampleManager: AppUser = {
   commissionPlanId: null,
   payeeId: null,
   principalId: null,
+  independentOwner: false,
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
@@ -69,6 +71,7 @@ export const sampleAgent: AppUser = {
   commissionPlanId: null,
   payeeId: null,
   principalId: null,
+  independentOwner: false,
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 

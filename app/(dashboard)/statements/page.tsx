@@ -11,16 +11,20 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
+import { canManageStatements } from "@/lib/auth/statementAccess";
 
 export default async function StatementsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (user.role !== "owner") redirect("/dashboard");
+  if (!canManageStatements(user)) redirect("/dashboard");
 
   const [statements, team] = await Promise.all([listStatements(), listUsersForAgency(user.agencyId)]);
-  const independents = team
-    .filter((u) => u.agentType === "independent" && u.role !== "owner" && u.active)
-    .map((u) => ({ id: u.id, name: `${u.firstName} ${u.lastName}` }));
+  const independents =
+    user.role === "owner"
+      ? team
+          .filter((u) => u.agentType === "independent" && u.role !== "owner" && u.active)
+          .map((u) => ({ id: u.id, name: `${u.firstName} ${u.lastName}` }))
+      : [];
   const nameById = new Map(team.map((u) => [u.id, `${u.firstName} ${u.lastName}`]));
 
   return (
@@ -40,7 +44,11 @@ export default async function StatementsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <UploadStatementForm carriers={listSupportedCarriers()} independents={independents} />
+          <UploadStatementForm
+            carriers={listSupportedCarriers()}
+            independents={independents}
+            ownBookOnly={user.role !== "owner"}
+          />
         </CardContent>
       </Card>
 

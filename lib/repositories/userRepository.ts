@@ -20,6 +20,7 @@ export function mapUserRow(row: UserRow): AppUser {
     commissionPlanId: row.commission_plan_id,
     payeeId: row.payee_id,
     principalId: row.principal_id,
+    independentOwner: row.independent_owner,
     createdAt: row.created_at,
   };
 }
@@ -134,6 +135,8 @@ export async function createUserWithAuth(input: {
   payeeId?: string | null;
   /** Required for captive agents: the principal who is credited their production. */
   principalId?: string | null;
+  /** Independent only. */
+  independentOwner?: boolean;
 }): Promise<{ user: AppUser; temporaryPassword: string }> {
   const admin = createAdminClient();
   const temporaryPassword = generateTemporaryPassword();
@@ -163,6 +166,7 @@ export async function createUserWithAuth(input: {
       career_level: input.careerLevel ?? null,
       payee_id: input.payeeId ?? null,
       principal_id: input.principalId ?? null,
+      independent_owner: input.agentType === "independent" && Boolean(input.independentOwner),
     })
     .select("*")
     .single();
@@ -197,6 +201,7 @@ export async function updateUserProfile(
     payeeId?: string | null;
     /** Set together with `agentType`: the principal for captive agents, otherwise null. */
     principalId?: string | null;
+    independentOwner?: boolean;
   }
 ): Promise<AppUser> {
   const supabase = await createClient();
@@ -216,6 +221,8 @@ export async function updateUserProfile(
         agent_type: updates.agentType,
         career_level: updates.careerLevel ?? null,
         principal_id: updates.principalId ?? null,
+        independent_owner:
+          updates.agentType === "independent" && Boolean(updates.independentOwner),
       }),
     })
     .eq("id", id)

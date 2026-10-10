@@ -418,6 +418,10 @@ update public.users set agent_type = 'independent'
     '22222222-2222-2222-2222-222222222222',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
   );
+-- Jordan can run their own book (upload/approve their statements) as a demo of
+-- the Independent owner-level profile. Jane is already the agency Owner.
+update public.users set independent_owner = true
+  where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 update public.users set agent_type = 'career', career_level = 'Benefit Consultant'
   where id = '44444444-4444-4444-4444-444444444444';

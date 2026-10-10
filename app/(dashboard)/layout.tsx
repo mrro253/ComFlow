@@ -28,7 +28,7 @@ export default async function DashboardLayout({
             {agency?.name ?? "CommissionFlow"}
           </span>
         </div>
-        <SidebarNav role={user.role} />
+        <SidebarNav user={user} />
       </aside>
 
       <div className="flex flex-1 flex-col">

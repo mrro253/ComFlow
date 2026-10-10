@@ -72,6 +72,8 @@ export async function editUser(
       careerLevel: classification.careerLevel,
       principalId: classification.principalId,
       payeeId: normalizePayeeId(String(formData.get("payeeId") ?? "")),
+      independentOwner:
+        classification.agentType === "independent" && formData.get("independentOwner") === "true",
     });
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Failed to update teammate." };

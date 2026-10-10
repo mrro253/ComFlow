@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
+import { canAccessStatement } from "@/lib/auth/statementAccess";
 import {
   downloadStatementPdf,
   getStatement,
@@ -6,18 +7,19 @@ import {
 } from "@/lib/repositories/statementRepository";
 
 /**
- * Streams the stored statement PDF so the Owner can check the numbers against
- * the original. The PDF is PHI: Owner-only, never cached, and every view is audited.
+ * Streams the stored statement PDF so the viewer can check the numbers against
+ * the original. The PDF is PHI: never cached, every view is audited, and only
+ * the agency Owner or the Independent whose book it is may open it.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
-  if (user.role !== "owner") return new Response("Forbidden", { status: 403 });
 
   const { id } = await params;
-  // RLS scopes this to the Owner's own agency.
   const statement = await getStatement(id);
-  if (!statement?.storagePath) return new Response("Not found", { status: 404 });
+  if (!statement?.storagePath || !canAccessStatement(user, statement)) {
+    return new Response("Not found", { status: 404 });
+  }
 
   let bytes: Uint8Array;
   try {

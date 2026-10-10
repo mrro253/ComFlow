@@ -163,6 +163,7 @@ export function EditUserRow({
         isManager={role === "manager"}
         principals={principals}
         defaultPrincipalId={user.principalId}
+        defaultIndependentOwner={user.independentOwner}
       />
 
       <div className="flex flex-col gap-1.5">

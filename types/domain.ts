@@ -62,6 +62,11 @@ export interface AppUser {
   payeeId: string | null;
   /** Set if and only if `agentType` is "captive": whose production this agent's business is credited to. */
   principalId: string | null;
+  /**
+   * Independent only: they can upload and approve statements attributed to
+   * themselves (their own book). Never grants agency-wide Owner access.
+   */
+  independentOwner: boolean;
   createdAt: string;
 }
 

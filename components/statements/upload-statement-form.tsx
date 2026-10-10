@@ -12,9 +12,12 @@ const SELECT_CLASS = "h-9 rounded-md border border-input bg-background px-3 text
 export function UploadStatementForm({
   carriers,
   independents,
+  ownBookOnly = false,
 }: {
   carriers: string[];
   independents: { id: string; name: string }[];
+  /** Independent owner-level profile: uploads always go to their own book. */
+  ownBookOnly?: boolean;
 }) {
   const [state, formAction, isPending] = useActionState(uploadStatement, undefined);
 
@@ -31,17 +34,19 @@ export function UploadStatementForm({
             ))}
           </select>
         </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="ownerUserId">Statement belongs to</Label>
-          <select id="ownerUserId" name="ownerUserId" className={SELECT_CLASS} defaultValue="">
-            <option value="">The agency</option>
-            {independents.map((agent) => (
-              <option key={agent.id} value={agent.id}>
-                {agent.name} (independent)
-              </option>
-            ))}
-          </select>
-        </div>
+        {!ownBookOnly && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="ownerUserId">Statement belongs to</Label>
+            <select id="ownerUserId" name="ownerUserId" className={SELECT_CLASS} defaultValue="">
+              <option value="">The agency</option>
+              {independents.map((agent) => (
+                <option key={agent.id} value={agent.id}>
+                  {agent.name} (independent)
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="flex flex-col gap-2">
           <Label htmlFor="file">Statement PDF</Label>
           <Input id="file" name="file" type="file" accept="application/pdf,.pdf" required />
