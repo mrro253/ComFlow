@@ -11,7 +11,7 @@ what the agency owes them).
 > The business rules live in `.cursorrules`; this file describes the system as
 > it is *right now*.
 
-Last updated: 2026-10-10
+Last updated: 2026-10-20
 
 > **Changing code? Read section 13 (Contributing) first.** Work on a branch, never directly on `Main`.
 
@@ -21,7 +21,8 @@ Last updated: 2026-10-10
 
 | Area | State | How it was checked |
 | --- | --- | --- |
-| Statement PDF parsing (Ultimate) + reconciliation | Built | 133 unit tests (whole suite) on **synthetic** statements. **Not yet run on a real Ultimate PDF.** |
+| Statement PDF parsing (Ultimate) + reconciliation | Built | 181 unit tests (whole suite), synthetic fixtures only. Nine real Ultimate PDFs parsed and imported locally on 2026-10-20; other carrier layouts remain unverified. |
+| Payment client names and full statement details | Locally verified | All 94 imported rows matched to saved PDFs; synthetic extraction and access tests. Other layouts unverified |
 | Duplicate protection, writing-agent assignment, import preview | Built | Unit tests |
 | Atomic import into the database (`import_statement`) | Built | SQL run on a throwaway Postgres 14: success, double import blocked, duplicate rolls back, wrong agency rejected, normal users denied |
 | Database schema, RLS, immutability triggers | Built | Same throwaway Postgres run |
@@ -31,13 +32,11 @@ Last updated: 2026-10-10
 | Independent collective report + owner-level profile (2026-10-10) | Built | Unit tests for the report/CSV and statement-access rules; migration `0010`. **UI never run against live Supabase** |
 | Upload -> preview -> approve -> payments UI | Built | Compiles, lints, `next build` passes. **Never run in a browser against a live Supabase project** (no Docker/Supabase CLI was available while building) |
 | Carrier login screen (encrypted credentials) | Built | Encryption unit-tested. UI **unverified** against live Supabase |
-| Carrier worker (auto-pull from the portal) | Built, **unverified** | Typechecks. Ported from Ryan's working prototype but **never run** against the live Ultimate portal |
+| Carrier worker (auto-pull from the portal) | Locally verified | One live Ultimate sync downloaded nine statements with zero failures on 2026-10-20. Scheduling and hosted worker remain unverified |
 | Career-agent earnings, rate locks | Logic built, **no UI** | Unit tests. Payout batches removed. Intentionally not in the MVP screens |
 | GoHighLevel output | Not started | |
 
-**Bottom line:** the whole manual-upload path should work end to end the first
-time someone runs it with Supabase, but nobody has done that yet. Treat the
-first run as the real test, starting with `sample-statement.pdf` (section 2).
+The live Ultimate download, saved-PDF preview and approval/import path have now been exercised locally with nine statements (94 payments). Manual upload, other layouts and all role-specific browser flows still need their own verification.
 
 ---
 
@@ -177,6 +176,8 @@ See section 7 for the full list. The ones that still need an answer:
 ## 3. Current functionality
 
 **Everyone signed in**
+- **Payment statement details**: client name appears in Payment detail. Expand **View statement details** for all 13 printed Ultimate columns, including first/last name, Medicare identifier as printed, carrier member ID, effective date, writing agent, UCAIN, payee ID/name, amount/category, prior plan and notes, plus source filename/row. Blank fields say "Not provided"; unsupported or unverifiable source rows say "Source details unavailable". All 94 locally imported payments were checked against their saved sources on 2026-10-20.
+- Details are read from the saved private PDF after session/RLS authorization and exact source-hash, transaction-key, member, date, amount and category checks. Only the authorized payment's row is returned, even if its PDF contains other clients. No carrier connection, reimport, database migration or financial-record update is required by this feature. Existing imports gain details immediately.
 - Dashboard of carrier payments in their own scope (Owner: agency; Manager: self + direct reports; Agent: self).
 - **Payments**: carrier-paid transactions by month, with totals by payment category (chargebacks are negative).
 - **Reports**: a collective production report (totals by category + a downloadable CSV) of whatever they are allowed to see. Independents use this to send a report upstream externally; nothing is sent automatically.
@@ -270,6 +271,7 @@ Important properties:
 - `commission_plans`, `commission_plan_rates`, bonuses, `commission_transactions`, `lib/commission-engine`, `/commissions`, Settings plan/bonus screens, `/onboarding`, and the inbound GoHighLevel adapter in `lib/crm` (its webhook route and fake "Connect" button were removed 2026-10-10; `crm_connections` table stays). They still work but no longer feed the dashboard. The signup function `create_agency_with_owner` still seeds the old 10% / 2% / 1% plan. Retire these once nothing needs them.
 
 **Known limits**
+- Client detail extraction currently supports the verified 13-column Ultimate layout only. It reads each relevant saved PDF once per Payments request (up to the 300 displayed rows); details are not stored in the financial tables or a shared cross-user cache. Other layouts need synthetic fixtures and verification. Saved PDFs must remain available and unchanged.
 - **Unverified:** the payee ID is read from the `W####` code right after the `ADV/MCC/PFS/BRP` marker on Ultimate rows (assumed to be the writer's carrier number). Confirm with Ryan against a real statement. Until then the payee ID only breaks ties between same-name teammates.
 - Ultimate parser only recognizes the writing-agent layouts proven in Ryan's prototype (`ADV`, `MCC`, `PFS`, `BRP` codes). Other layouts leave the writing agent unverified -> Unassigned.
 - Statement tables show at most 300 rows per page (all rows still import).
@@ -313,7 +315,11 @@ Ryan's answers from 2026-10-10 are marked **Ryan:**.
 
 ## 8. Setup and environment variables
 
+Payment details use the existing `pdf-parse` dependency and private local/Supabase statement storage; no new environment variables or migration are needed. Never copy the real PDFs into this repository. The synthetic PDF fixture pads beyond `Buffer.poolSize` so the existing parser test also runs on Node versions with a larger shared buffer pool.
+
 Prerequisites: Node 20+, Docker Desktop, the [Supabase CLI](https://supabase.com/docs/guides/cli).
+
+For an existing local installation, back up first and use `npx supabase migration up --local` to apply pending migrations from Main. The `db reset` command below is for a new disposable demo database only; it deletes existing local records.
 
 ```bash
 npm install
@@ -708,6 +714,8 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-20** - Add client names and expandable, source-verified Ultimate payment details from saved PDFs, including all 13 printed columns and source row/filename. Preserve ledger amounts, assignment rules, RLS and imports. Add synthetic extraction/integrity/access tests and adapt synthetic PDF padding to runtime buffer-pool size. All 94 local payments have verified details; TypeScript, ESLint, Vitest and build validation recorded with this change.
 
 - **2026-10-10** - Independent collective report and owner-level profile (Phase 4): Reports page + CSV download (RLS-scoped); Independents can be given an owner-level profile to upload/approve their own statements only. Migration `0010`. README section 2 is the next-session test plan for Marshall and Ryan. tsc, eslint, vitest (170) pass.
 - **2026-10-10** - Per-agency compensation settings (Phase 3): Owner-editable career levels (name, order, visibility), effective-dated rates (fixed dollars or percent of annual premium), bonuses on/off, payout batches removed. Compensation page + the same forms in onboarding. Migration `0009` (apply with `npx supabase migration up`; refuses to run if payout data exists). Git workflow is a standing instruction (do not wait to be asked). tsc, eslint, vitest (161) pass.

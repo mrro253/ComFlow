@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { loadPaymentDetails } from "@/lib/services/paymentDetailsService";
 
 const MAX_ROWS_SHOWN = 300;
 
@@ -33,6 +34,8 @@ export default async function PaymentsPage({
 
   const inMonth = month ? all.filter((tx) => tx.statementMonth === month) : all;
   const rows = unassignedOnly ? inMonth.filter((tx) => tx.userId === null) : inMonth;
+  const shown = rows.slice(0, MAX_ROWS_SHOWN);
+  const statementDetails = await loadPaymentDetails(shown.map((tx) => tx.id), user.agencyId);
   const unassignedCount = inMonth.filter((tx) => tx.userId === null).length;
   const categories = totalsByCategory(inMonth);
   const isOwner = user.role === "owner";
@@ -123,27 +126,30 @@ export default async function PaymentsPage({
               <TableRow>
                 <TableHead>Effective</TableHead>
                 <TableHead>Month</TableHead>
+                <TableHead>Client</TableHead>
                 <TableHead>Member ID</TableHead>
                 <TableHead>Category</TableHead>
                 {isOwner && <TableHead>Writing agent</TableHead>}
                 {user.role !== "agent" && <TableHead>Credited to</TableHead>}
                 {showWriter && <TableHead>Written by</TableHead>}
                 <TableHead className="text-right">Amount</TableHead>
+                <TableHead>Statement details</TableHead>
                 {isOwner && <TableHead className="text-right">Assign</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="py-10 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={11} className="py-10 text-center text-sm text-muted-foreground">
                     {isOwner ? "No payments yet. Upload a carrier statement to get started." : "No payments yet."}
                   </TableCell>
                 </TableRow>
               )}
-              {rows.slice(0, MAX_ROWS_SHOWN).map((tx) => (
+              {shown.map((tx) => (
                 <TableRow key={tx.id}>
                   <TableCell>{tx.effectiveDate}</TableCell>
                   <TableCell className="text-muted-foreground">{tx.statementMonth}</TableCell>
+                  <TableCell>{statementDetails.get(tx.id)?.clientName || "Not available"}</TableCell>
                   <TableCell className="text-muted-foreground">{tx.memberId}</TableCell>
                   <TableCell>{tx.commissionType}</TableCell>
                   {isOwner && <TableCell className="text-muted-foreground">{tx.writingAgentName ?? "—"}</TableCell>}
@@ -163,6 +169,25 @@ export default async function PaymentsPage({
                   )}
                   <TableCell className={cn("text-right font-medium", tx.amountCents < 0 && "text-destructive")}>
                     {formatCents(tx.amountCents)}
+                  </TableCell>
+                  <TableCell className="min-w-52 max-w-md whitespace-normal align-top">
+                    {statementDetails.has(tx.id) ? (
+                      <details>
+                        <summary className="cursor-pointer text-sm font-medium">View statement details</summary>
+                        <p className="mt-2 break-words text-xs text-muted-foreground">
+                          {statementDetails.get(tx.id)!.statementFilename} · Row {statementDetails.get(tx.id)!.sourceRow}
+                        </p>
+                        <dl className="mt-3 grid gap-2 text-sm">
+                          {statementDetails.get(tx.id)!.fields.map((field, index) => (
+                            <div key={index}>
+                              <dt className="text-xs text-muted-foreground">{field.label}</dt>
+                              <dd className="break-words">{field.value || "Not provided"}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                        {isOwner && <Link className="mt-3 block text-sm underline" href={`/statements/${tx.statementId}`}>View source statement</Link>}
+                      </details>
+                    ) : <span className="text-xs text-muted-foreground">Source details unavailable</span>}
                   </TableCell>
                   {isOwner && (
                     <TableCell className="text-right">

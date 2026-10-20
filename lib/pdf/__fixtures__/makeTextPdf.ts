@@ -3,8 +3,8 @@
  * (Helvetica, one line per row). Test-only: lets us exercise the real PDF text
  * extraction path with 100% synthetic content.
  *
- * The file is padded past 8 KB on purpose: pdf-parse 1.1.1 (pdf.js 1.10) copies
- * inputs under ~4 KB through Node's shared buffer pool and then mis-reads every
+ * The file is padded beyond the runtime buffer pool on purpose: pdf-parse 1.1.1 (pdf.js 1.10) copies
+ * small inputs through Node's shared buffer pool and then mis-reads every
  * offset ("bad XRef entry"). Real statements are far larger, so this only
  * affects tiny hand-made test files.
  */
@@ -27,7 +27,7 @@ export function makeTextPdf(lines: string[]): Buffer {
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
   ];
 
-  let pdf = `%PDF-1.4\n%${"padding ".repeat(1200)}\n`;
+  let pdf = `%PDF-1.4\n%${"padding ".repeat(Math.max(1200, Buffer.poolSize))}\n`;
   const offsets: number[] = [];
   objects.forEach((body, index) => {
     offsets.push(Buffer.byteLength(pdf, "latin1"));
