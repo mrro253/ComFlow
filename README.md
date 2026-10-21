@@ -385,6 +385,8 @@ Commands: `npm run dev | build | test | lint | typecheck | sample:statement`.
 
 ## 9. Carrier worker (`worker/`)
 
+UnitedHealthcare has a separate development downloader; see [UHC worker status](docs/uhc-integration.md). Live collection remains unverified after account-header validation failed. Eight 2026 PDF/text pairs are preserved privately; August and October remain outstanding. Recoverable failures now pause with the browser open for retries; no UHC dashboard import is implemented.
+
 Devoted has a separate, explicit period/year local download command; see [Devoted integration status](docs/devoted-integration.md). It uses interactive sign-in and preserves PDF/workbook pairs outside Git. It is not registered for polling, upload/import, or scheduled sync. Ultimate remains unchanged.
 
 
@@ -738,6 +740,8 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Add isolated UHC PDF/text year downloads with account-scoped cache validation and in-memory browser retries. Correct overly strict payee-header parsing. Worker TypeScript and 273 synthetic tests pass; retry interaction and live collection remain unverified. No database changes or imports.
 
 - **2026-10-21** - Expand GHL planning with the supplied contact/product field inventory, unresolved key/type checks, per-agency setup worksheet, synthetic history-note example and pilot acceptance cases. Documentation only; no API connection, schema, new rules or contact writes authorized or implemented.
 
