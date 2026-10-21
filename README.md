@@ -35,6 +35,7 @@ Last updated: 2026-10-21
 | Independent collective report + owner-level profile (2026-10-10) | Built | Unit tests for the report/CSV and statement-access rules; migration `0010`. **UI never run against live Supabase** |
 | Upload -> preview -> approve -> payments UI | Built | Compiles, lints, `next build` passes. **Never run in a browser against a live Supabase project** (no Docker/Supabase CLI was available while building) |
 | Carrier login screen (encrypted credentials) | Built | Encryption unit-tested. UI **unverified** against live Supabase |
+| Devoted Health | Download-only development; import unavailable | [Source findings and separate worker command](docs/devoted-integration.md). One approved PDF/workbook pair inspected locally; new worker live run and paired parser unverified. |
 | Carrier worker (auto-pull from the portal) | Locally verified | One live Ultimate sync downloaded nine statements with zero failures on 2026-10-20. Scheduling and hosted worker remain unverified |
 | Career-agent earnings, rate locks | Logic built, **no UI** | Unit tests. Payout batches removed. Intentionally not in the MVP screens |
 | GoHighLevel output | Plan documented; integration not built | [Field mapping and review plan](docs/ghl-integration-plan.md); no API access or live GHL changes |
@@ -377,6 +378,9 @@ Commands: `npm run dev | build | test | lint | typecheck | sample:statement`.
 ---
 
 ## 9. Carrier worker (`worker/`)
+
+Devoted has a separate, explicit one-period local download command; see [Devoted integration status](docs/devoted-integration.md). It uses interactive sign-in and preserves PDF/workbook pairs outside Git. It is not registered for polling, upload/import, or scheduled sync. Ultimate remains unchanged.
+
 
 Logging into a carrier portal needs a real browser, so it **cannot run on
 Vercel**. It is a separate small Node package that talks to the same Supabase
@@ -728,6 +732,9 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Add a separate Devoted download-only worker command with explicit pay date, interactive authentication, private paired-file preservation, pagination, unsafe-link/file rejection and duplicate/overwrite checks. Approved sample PDF/workbook inspected locally; PDF lacks carrier Member ID while workbook supplies 22 columns, so no placeholder parser or imports enabled. New worker live run remains unverified. Document paired-source parsing/storage decisions requiring Marshall review; no dependencies, schema, financial records or Ultimate changes.
+
 
 - **2026-10-21** - Document Ryan's agreed GHL current-field/history-note and evidence-based policy-status behavior, screenshot field keys/dropdown choices, proposed matching safeguards, and Marshall's pending connection/design decisions. Plan only: no API access, credentials, schema, financial rules or GHL contact changes.
 
