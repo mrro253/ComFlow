@@ -365,8 +365,18 @@ export interface Database {
         },
         "updated_at"
       >;
+      commission_statement_sources: TableShape<{
+        agency_id: string; statement_id: string; source_kind: "pdf" | "workbook";
+        storage_path: string; sha256: string; byte_size: number; media_type: string; created_at: string;
+      }, "created_at">;
       commission_statements: TableShape<
         {
+          source_pair_hash: string | null;
+          statement_pay_date: string | null;
+          devoted_payee_hash: string | null;
+          payment_period_start: string | null;
+          payment_period_end: string | null;
+          parser_version: string | null;
           id: string;
           agency_id: string;
           user_id: string | null;
@@ -393,6 +403,12 @@ export interface Database {
           created_at: string;
         },
         | "id"
+        | "source_pair_hash"
+        | "statement_pay_date"
+        | "devoted_payee_hash"
+        | "payment_period_start"
+        | "payment_period_end"
+        | "parser_version"
         | "superseded_by"
         | "superseded_at"
         | "statement_month"
@@ -580,6 +596,15 @@ export interface Database {
           user_id: string;
           commission_plan_id: string | null;
         }[];
+      };
+      import_devoted_pair: {
+        Args: {
+          p_agency_id: string; p_actor: string; p_pdf_hash: string; p_workbook_hash: string;
+          p_pair_hash: string; p_pdf_size: number; p_workbook_size: number;
+          p_pay_date: string; p_payee_hash: string; p_period_start: string; p_period_end: string;
+          p_total_cents: number; p_rows: Json; p_expected_existing: string[]; p_supersedes: string[]; p_parser_version: string;
+        };
+        Returns: string;
       };
       import_statement: {
         Args: {

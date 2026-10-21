@@ -43,6 +43,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
         </p>
       </div>
 
+      {user.role === "owner" && process.env.DEVOTED_REVIEW_ENABLED === "true" && <Link href="/statements/devoted" className="text-sm font-medium underline">Review a Devoted PDF/workbook pair</Link>}
       <Card>
         <CardHeader>
           <CardTitle>Upload a statement</CardTitle>

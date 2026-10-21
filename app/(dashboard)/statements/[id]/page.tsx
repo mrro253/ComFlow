@@ -60,6 +60,7 @@ export default async function StatementDetailPage({ params }: { params: Promise<
           {statement.carrier} - {statement.source === "portal" ? "pulled from the carrier portal" : "manual upload"} -
           received {formatDate(statement.createdAt)}
         </p>
+        {statement.payDate && <p className="text-sm text-muted-foreground">Pay date: {statement.payDate} · Payment period: {statement.paymentPeriodStart} through {statement.paymentPeriodEnd}</p>}
         {statement.storagePath && (
           <a
             href={`/api/statements/${statement.id}/pdf`}

@@ -78,6 +78,7 @@ export async function storeStatement(db: Db, input: StoredStatement): Promise<"s
     .select("id, carrier_statement_id")
     .eq("agency_id", input.agencyId)
     .eq("file_hash", fileHash)
+    .neq("carrier", "Devoted Health")
     .maybeSingle();
 
   if (existing) {

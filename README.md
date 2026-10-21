@@ -35,7 +35,7 @@ Last updated: 2026-10-21
 | Independent collective report + owner-level profile (2026-10-10) | Built | Unit tests for the report/CSV and statement-access rules; migration `0010`. **UI never run against live Supabase** |
 | Upload -> preview -> approve -> payments UI | Built | Compiles, lints, `next build` passes. **Never run in a browser against a live Supabase project** (no Docker/Supabase CLI was available while building) |
 | Carrier login screen (encrypted credentials) | Built | Encryption unit-tested. UI **unverified** against live Supabase |
-| Devoted Health | Download-only development; import unavailable | [Source findings and separate worker command](docs/devoted-integration.md). All nine available 2026 pairs downloaded successfully by the separate worker after interactive sign-in; manifests and file hashes verified. Paired parser, unattended login and import remain unbuilt/unverified. |
+| Devoted Health | Review branch only; real import disabled pending approval | [Implementation and review checklist](docs/devoted-import-review.md). Paired single-renewal parser, owner preview, private storage, atomic import/correction and entry details tested with synthetic data. Nine saved real pairs reconciled read-only; zero real imports. Broader layouts, unattended login and scheduling remain unavailable. |
 | Carrier worker (auto-pull from the portal) | Locally verified | One live Ultimate sync downloaded nine statements with zero failures on 2026-10-20. Scheduling and hosted worker remain unverified |
 | Career-agent earnings, rate locks | Logic built, **no UI** | Unit tests. Payout batches removed. Intentionally not in the MVP screens |
 | GoHighLevel output | Expanded field inventory and pilot plan documented; integration not built | [Field mapping and review plan](docs/ghl-integration-plan.md); no API access or live GHL changes |
@@ -179,6 +179,9 @@ See section 7 for the full list. The ones that still need an answer:
 
 ## 3. Current functionality
 
+**Devoted review branch (not merged):** `/statements/devoted` requires the owner and an explicit preview flag; import has a separate default-off flag. Preview does not save anything. Verified single-page/single-row monthly-renewal pairs reconcile both sources and retain all 22 workbook fields, pay date and payment period. Atomic source registration/import preserves duplicates/correction history and adds no earnings. After an approved import, entry details reverify both sources behind session/RLS checks. All other layouts/categories block for review. See [Marshall review notes](docs/devoted-import-review.md) before applying any migration. Existing working Main and real ledger are unchanged.
+
+
 Clarity/mobile follow-up: dashboard production groups explicitly show carrier commissions, not Career take-home earnings. Activity table headings distinguish policy effective date, statement month and carrier commission. Mobile selectors have larger touch targets, pagination wraps, details use smaller phone padding and long client/field values wrap. Automated checks cover compilation; owner statement cards and activity filters were reviewed at 390px width; dashboard production heading verified. Long-value dialogs and pagination wrapping remain browser-unverified.
 
 
@@ -269,6 +272,9 @@ Important properties:
 
 ## 5. What's missing
 
+Devoted still needs Marshall's dependency/schema/security review and merge/deployment approval, then Ryan's specific real-import approval. The adapter supports only the verified single-row renewal layout; multi-row and other payment categories, Independent owner-profile upload, bulk registration, normal worker polling and unattended/MFA scheduling remain unbuilt. No real Devoted records have been imported.
+
+
 **Not built yet**
 - GoHighLevel **output** (match contacts, push verified policy information). Agreed behavior and pending design decisions are in [the GHL integration plan](docs/ghl-integration-plan.md). Not built: Settings/Onboarding show an informational "Coming soon" card only. GHL is never a source of payable amounts.
 - Career-agent **earnings screens**: the rules, rate locks and approval logic exist in `lib/carriers/compensation`, with tables, but no UI and no job that creates earnings. Payout batches have been removed.
@@ -299,6 +305,9 @@ Important properties:
 ---
 
 ## 6. Recommended next steps (in order)
+
+For this unmerged Devoted branch: Marshall reviews [the implementation and deviations](docs/devoted-import-review.md), dependency audit and migration 0011 in an isolated synthetic environment. Recheck migration numbering before merge. Keep real import disabled until a fresh owner preview and specific approval; reuse the nine private saved pairs, with no new downloads.
+
 
 As of 2026-10-21, payment search/filter/pagination is locally verified. Next validate duplicate protection using already-saved PDFs, then consider the next carrier. Gmail/Outlook MFA-code retrieval is planned separately for Marshall's integration/security review; no mailbox access is enabled by this feature.
 
@@ -335,6 +344,9 @@ Ryan's answers from 2026-10-10 are marked **Ryan:**.
 ---
 
 ## 8. Setup and environment variables
+
+Devoted review settings are **off by default**: `DEVOTED_REVIEW_ENABLED=false`, `DEVOTED_IMPORT_REVIEW_ENABLED=false`. Use the separate synthetic setup in [the review guide](docs/devoted-import-review.md); never apply 0011 or enable import against the working database before approval. Both files have 15 MiB input limits; the Server Action body limit is 32 MiB for paired uploads. No new Python production dependency is required. App and worker install separately as before.
+
 
 Payment details use the existing `pdf-parse` dependency and private local/Supabase statement storage; no new environment variables or migration are needed. Never copy the real PDFs into this repository. The synthetic PDF fixture pads beyond `Buffer.poolSize` so the existing parser test also runs on Node versions with a larger shared buffer pool.
 
@@ -385,7 +397,7 @@ Commands: `npm run dev | build | test | lint | typecheck | sample:statement`.
 
 ## 9. Carrier worker (`worker/`)
 
-Devoted has a separate, explicit period/year local download command; see [Devoted integration status](docs/devoted-integration.md). It uses interactive sign-in and preserves PDF/workbook pairs outside Git. It is not registered for polling, upload/import, or scheduled sync. Ultimate remains unchanged.
+Devoted has a separate, explicit period/year local download command; see [Devoted integration status](docs/devoted-integration.md). It uses interactive sign-in and preserves PDF/workbook pairs outside Git. It is not registered for polling or scheduled sync. This review branch adds a separate, default-off paired upload/review route; the normal worker does not register/import its local downloads. Ultimate remains unchanged.
 
 
 Logging into a carrier portal needs a real browser, so it **cannot run on
@@ -738,6 +750,9 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Prepare `feature/devoted-import-review` in an isolated checkout, unmerged for Marshall. Add exact workbook reader, bounded archive validation, strict paired renewal parsing, read-only owner preview, separate default-off approval, private source preservation, migration 0011 with atomic paired import/corrections and owner source RLS, and authorized 22-field entry details/pay dates. All 299 tests, app/worker TypeScript, ESLint and production build pass. Migration and rollback regressions ran only on a new synthetic Supabase project; competing approvals produced one success and one stale rejection. Synthetic browser preview/import/activity/details/personal production and agent denial verified. All nine saved real pairs reconciled read-only (9 entries / 26,019 cents), no real imports/downloads. Working ledger unchanged at 94 / 1,110,416 cents. Default flags restored off after testing; schema/libraries/audit findings and narrower first-layout scope await Marshall review.
+
 
 - **2026-10-21** - Expand GHL planning with the supplied contact/product field inventory, unresolved key/type checks, per-agency setup worksheet, synthetic history-note example and pilot acceptance cases. Documentation only; no API connection, schema, new rules or contact writes authorized or implemented.
 
