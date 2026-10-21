@@ -746,6 +746,8 @@ Each Independent-agent customer is their own business associate of their carrier
 
 ## 15. Changelog (newest first)
 
+- **2026-10-21** - Complete the carrier chart palette so UHC and future series have visible colors; render stacked segments immediately. All three live carrier legend colors and stacked bars verified; production build passes.
+
 - **2026-10-21** - Stack monthly commission bars by carrier with a legend, per-carrier tooltip/month total and accessible amount table. Preserve signed integer-cent aggregation and show negative contributions below zero. 335 tests, TypeScript, ESLint and production build pass. Desktop stack, legend, keyboard tooltip and amount table browser-verified; phone viewport remains unverified. No migration, dependency or import changes.
 
 - **2026-10-21** - Explain statement totals using commission entries plus amounts added/deducted from previous statements. Add the breakdown to preview and imported statements and replace accounting jargon in dashboard/activity explanations. Presentation only; 331 tests, TypeScript, ESLint and production build pass; negative and zero-balance imported summaries browser-verified. Positive balance and preview browser cases remain unverified.

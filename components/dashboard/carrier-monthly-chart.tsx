@@ -43,7 +43,7 @@ export function CarrierMonthlyChart({ carriers, data }: { carriers: CarrierSerie
               <YAxis tickLine={false} axisLine={false} fontSize={12} stroke="hsl(var(--muted-foreground))" tickFormatter={(value: number) => formatCents(value)} width={90} />
               <Tooltip cursor={{ fill: "hsl(var(--muted))" }} content={<CarrierTooltip carriers={carriers} />} />
               <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" />
-              {carriers.map((carrier, index) => <Bar key={carrier.key} dataKey={`values.${carrier.key}`} name={carrier.name} stackId="carriers" fill={color(index)} />)}
+              {carriers.map((carrier, index) => <Bar key={carrier.key} dataKey={`values.${carrier.key}`} name={carrier.name} stackId="carriers" fill={color(index)} isAnimationActive={false} />)}
             </BarChart>
           </ResponsiveContainer>
         </div>
