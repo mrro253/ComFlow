@@ -25,6 +25,7 @@ Last updated: 2026-10-21
 | Payment client names and full statement details | Locally verified | All 94 imported rows matched to saved PDFs; synthetic extraction and access tests. Other layouts unverified |
 | Payment product types | Locally verified | Confirmed Ultimate MAPD mapping: 94 payments; product/month/category filtering, Unknown/no-match state and evidence label checked. 230-test synthetic suite; other carrier product adapters remain unverified |
 | Payment search, filters and pagination | Locally verified | Owner browser flow: combined filters, name/member lookup, no matches, all 94 rows across pages, 50-row size, unchanged totals and 13-field dialog. Other role browser flows unverified; access and query rules unit-tested |
+| Dashboard clarity and mobile navigation | Locally verified | Owner dashboard reviewed at desktop and phone widths; month, totals, production breakdown and mobile links checked. Empty and error screens compile but their browser failure flows remain unverified. |
 | Duplicate protection, writing-agent assignment, import preview | Built | Unit tests |
 | Atomic import into the database (`import_statement`) | Built | SQL run on a throwaway Postgres 14: success, double import blocked, duplicate rolls back, wrong agency rejected, normal users denied |
 | Database schema, RLS, immutability triggers | Built | Same throwaway Postgres run |
@@ -176,6 +177,9 @@ See section 7 for the full list. The ones that still need an answer:
 ---
 
 ## 3. Current functionality
+
+The dashboard identifies the latest available statement month, explains commission-entry totals versus bank deposits and carried balances, and separates production groups. The recent-review card covers only the five most recent statements. A Menu on small screens provides the same role-filtered navigation as the desktop sidebar. Dashboard load errors offer a read-only retry and a link to commission activity.
+
 
 **Everyone signed in**
 - **Commission terminology:** `/payments` is labeled **Commission activity**. Counts on this page, Dashboard, Reports and statement review mean **commission entries** (client-level statement lines), not bank deposits. **Commission total** is the signed sum of matching entries; it can differ from the carrier's statement total because of filters or carried balances. Statement totals retain their original label. One carrier payment can cover several entries; the app does not verify bank deposits. No calculations or financial records changed.
@@ -721,6 +725,9 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Clarify dashboard month, entry counts, total meaning and production breakdown; label the five-statement review scope accurately. Add small-screen navigation, constrained content width, active-page semantics and a safe dashboard load-error screen. Presentation only; queries, permissions, financial rules and records unchanged. TypeScript, ESLint, 230 synthetic tests and production build pass; owner dashboard and mobile navigation reviewed in the browser. Contain chart tooltip overflow on narrow screens. Empty/error browser flows and other role-specific browser flows remain unverified.
+
 
 - **2026-10-21** - Clarify commission entries versus bank payments: rename the ledger/navigation to Commission activity; label row counts and category/page/import counts as commission entries across ledger, dashboard, reports and statement review. Label row sums Commission total and explain statement totals/carried balances and bank comparison. Copy only; all calculations, URLs, records and permissions remain unchanged. Required checks and local browser wording review completed with this change.
 
