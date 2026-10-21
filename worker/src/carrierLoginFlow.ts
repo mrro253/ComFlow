@@ -14,6 +14,15 @@ export function trustedLoginUrl(carrier: LoginCarrier, value: string): boolean {
 async function uniqueVisible(locator: Locator) { return await locator.count() === 1 && await locator.isVisible(); }
 /** Submit a username/password at most once per request. Never submit codes or challenge forms. */
 export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, login: CarrierLogin, ready: () => Promise<boolean>, needsUser: () => Promise<void>) {
+  const enter = async (field: Locator, value: string) => {
+    if (carrier === "UnitedHealthcare") {
+      // One Healthcare ID updates validation on typing and blur, not only input replacement.
+      await field.fill("");
+      await field.pressSequentially(value, { delay: 30 });
+      await field.press("Tab");
+      if (await field.inputValue() !== value) throw new SafePortalError("The carrier changed a login field before submission. Saved credentials were not submitted.");
+    } else await field.fill(value);
+  };
   let usernameSubmitted = false, passwordSubmitted = false, entryClicked = false, notified = false;
   const started = Date.now();
   let destinationOpened = false;
@@ -50,10 +59,10 @@ export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, l
       if (await uniqueVisible(password) && await uniqueVisible(submit)) {
         if (await uniqueVisible(username) && await username.isEditable()) {
           if (!trustedLoginUrl(carrier, page.url())) throw new SafePortalError("Sign-in destination changed");
-          await username.fill(login.username);
+          await enter(username, login.username);
         }
         if (!trustedLoginUrl(carrier, page.url())) throw new SafePortalError("Sign-in destination changed");
-        try { await password.fill(login.password); }
+        try { await enter(password, login.password); }
         catch { throw new SafePortalError("The carrier password field could not be filled. The saved password was not submitted."); }
         if (!trustedLoginUrl(carrier, page.url())) throw new SafePortalError("Sign-in destination changed");
         try { await submit.click(); }
@@ -62,7 +71,7 @@ export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, l
       }
       if (carrier === "UnitedHealthcare" && !usernameSubmitted && await uniqueVisible(username) && await uniqueVisible(submit)) {
         if (!trustedLoginUrl(carrier, page.url())) throw new SafePortalError("Sign-in destination changed");
-        await username.fill(login.username);
+        await enter(username, login.username);
         if (!trustedLoginUrl(carrier, page.url())) throw new SafePortalError("Sign-in destination changed");
         await submit.click(); usernameSubmitted = true; continue;
       }

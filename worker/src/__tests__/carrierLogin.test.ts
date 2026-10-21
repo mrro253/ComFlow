@@ -4,12 +4,13 @@ import { automaticCarrierLogin, trustedLoginUrl, type LoginCarrier } from "../ca
 function fixture(carrier: LoginCarrier, initial?: string, callbackFlow = false, reject = false) {
   let state = initial ?? (carrier === "Devoted Health" ? "entry" : carrier === "UnitedHealthcare" ? "username" : "password");
   let closed = false;
-  const fills: string[] = [], clicks: string[] = [], destinations: string[] = [];
+  const fills: string[] = [], clicks: string[] = [], destinations: string[] = [], events: string[] = [];
+  const values = new Map<string, string>();
   const url = () => state === "untrusted" ? "https://example.invalid/" : state === "reset" ? "https://devoted.auth0.com/reset" : carrier === "Devoted Health" ? state === "callback" ? "https://agent.devoted.com/callback" : state === "home" ? "https://agent.devoted.com/home" : state === "entry" || state === "ready" ? "https://agent.devoted.com/commissions" : "https://devoted.auth0.com/login" : carrier === "UnitedHealthcare" ? state === "ready" ? "https://www.uhcjarvis.com/content/jarvis/en/secure/commissions/statements.html" : "https://identity.onehealthcareid.com/login" : "https://enroll.myultimatehp.com/agportal/#/login";
   const needs = vi.fn(async () => { if (state === "challenge") state = "ready"; else closed = true; });
   const locator = (selector: string) => {
     const count = () => selector.includes('new-password') ? state === "reset" ? 1 : 0 : selector.includes('one-time-code') ? state === "challenge" ? 1 : 0 : selector.includes('type="password"') ? ["password", "reset"].includes(state) ? 1 : 0 : ["username", "password"].includes(state) ? 1 : 0;
-    return { count: async () => count(), isVisible: async () => count() > 0, isEditable: async () => !(carrier === "UnitedHealthcare" && state === "password" && !selector.includes('password')), fill: async (_value: string) => { fills.push(selector.includes('password') ? "password" : "username"); } };
+    return { count: async () => count(), isVisible: async () => count() > 0, isEditable: async () => !(carrier === "UnitedHealthcare" && state === "password" && !selector.includes('password')), fill: async (value: string) => { values.set(selector, value); if (value) fills.push(selector.includes('password') ? "password" : "username"); else events.push("clear"); }, pressSequentially: async (value: string) => { values.set(selector, value); fills.push(selector.includes('password') ? "password" : "username"); events.push("type"); }, press: async () => { events.push("blur"); }, inputValue: async () => values.get(selector) ?? "" };
   };
   const page = { url, isClosed: () => closed, locator, goto: async () => { destinations.push(state); state = "ready"; }, waitForTimeout: async () => { if (state === "callback") state = "home"; }, getByText: (text: string | RegExp) => ({ count: async () => reject && state === "bad" && text instanceof RegExp && text.test("Wrong username or password") ? 1 : 0, first: () => ({ isVisible: async () => state === "home" || (reject && state === "bad") }) }), getByRole: (role: string, options?: {name: string | RegExp}) => {
     if (role === "alert") return { count: async () => state === "bad" ? 1 : 0, first: () => ({ isVisible: async () => state === "bad" }) };
@@ -17,7 +18,7 @@ function fixture(carrier: LoginCarrier, initial?: string, callbackFlow = false, 
     const visible = () => ["entry", "username", "password"].includes(state) && (typeof options?.name === "string" ? options.name === name : options?.name.test(name));
     return { count: async () => visible() ? 1 : 0, isVisible: async () => Boolean(visible()), click: async () => { clicks.push(name); state = state === "entry" || state === "username" ? "password" : initial === "password" ? "bad" : carrier === "UnitedHealthcare" ? "challenge" : callbackFlow ? "callback" : "ready"; } };
   } } as unknown as Page;
-  return { page, fills, clicks, destinations, needs, ready: async () => state === "ready" };
+  return { page, fills, clicks, destinations, events, needs, ready: async () => state === "ready" };
 }
 const login = { username: "synthetic-user", password: "synthetic-password" };
 describe("automatic carrier login", () => {
@@ -37,6 +38,11 @@ describe("automatic carrier login", () => {
     await automaticCarrierLogin(f.page, "UnitedHealthcare", login, f.ready, f.needs);
     expect(f.fills.filter(value => value === "username")).toHaveLength(1);
     expect(f.fills.filter(value => value === "password")).toHaveLength(1);
+  });
+  it("uses typing and blur events for One Healthcare ID fields", async () => {
+    const f = fixture("UnitedHealthcare");
+    await automaticCarrierLogin(f.page, "UnitedHealthcare", login, f.ready, f.needs);
+    expect(f.events).toEqual(["clear", "type", "blur", "clear", "type", "blur"]);
   });
   it("does not resubmit credentials for an already authenticated session", async () => {
     const f = fixture("Devoted Health", "ready"); await automaticCarrierLogin(f.page, "Devoted Health", login, f.ready, f.needs);
