@@ -48,6 +48,9 @@ describe("Devoted preview and approval boundary", () => {
     mocks.context.mockResolvedValue({ owners: new Map(), prior: [{ id: "old-id", pairHash: "d".repeat(64), payDate: pair.payDate, payeeHash: pair.payeeHash }] });
     const p = await devotedPreview(user, f.pdf, f.workbook);
     await expect(approveDevoted(user, f.pdf, f.workbook, p.digest, false)).rejects.toThrow("correction approval");
+    await expect(approveDevoted(user, f.pdf, f.workbook, p.digest, true)).resolves.toBe("synthetic-id");
+    expect(mocks.importPair).toHaveBeenLastCalledWith(user, expect.anything(), f.pdf, f.workbook, expect.any(Array), ["old-id"], ["old-id"]);
+    mocks.importPair.mockClear();
     mocks.context.mockResolvedValue({ owners: new Map(), prior: [] });
     await expect(approveDevoted(user, f.pdf, f.workbook, p.digest, true)).rejects.toThrow("Preview has changed");
     expect(mocks.importPair).not.toHaveBeenCalled();

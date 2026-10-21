@@ -183,6 +183,8 @@ See section 7 for the full list. The ones that still need an answer:
 Clarity/mobile follow-up: dashboard production groups explicitly show carrier commissions, not Career take-home earnings. Activity table headings distinguish policy effective date, statement month and carrier commission. Mobile selectors have larger touch targets, pagination wraps, details use smaller phone padding and long client/field values wrap. Automated checks cover compilation; owner statement cards and activity filters were reviewed at 390px width; dashboard production heading verified. Long-value dialogs and pagination wrapping remain browser-unverified.
 
 
+Repeat/correction testing: [synthetic three-carrier regressions](docs/import-regression-tests.md) verify exact repeats, regenerated sources, recognized corrections, retained original entries and failure rollback in a separate synthetic database. Before/after working-table fingerprints match. These tests do not change imported records or correction rules; browser correction/retrieval remains unverified.
+
 Monthly chart: each month is stacked by the carriers visible to the signed-in user, with a color legend, signed carrier amounts and a month total in the tooltip. Negative contributions plot below zero. An expandable amounts table distinguishes no imported entries from a zero net total. This is presentation/reporting only; selected-month cards and ledger totals are unchanged. Desktop chart, keyboard tooltip (including a negative contribution), and amount table were browser-verified. Phone viewport verification remains pending.
 
 Statement total wording: preview and imported statement pages now show commission entries this month, an amount added/deducted from a previous statement (or a zero previous statement balance), and the statement total. Dashboard/activity explanations use the same plain language. This changes presentation only; ledger amounts and import rules stay unchanged. Negative/positive/zero presentation and safe-cent validation have synthetic coverage. Imported negative and zero-balance statements were browser-verified; positive balances and the unimported preview path remain browser-unverified. No setup, dependency or migration changes.
@@ -745,6 +747,8 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Test repeat imports and recognized corrections for Ultimate, UHC and Devoted using synthetic parser/preview cases and isolated database rollback regressions. Verify originals/history, active corrected totals, explicit Devoted approval and atomic failure rollback. All 347 tests, TypeScript and ESLint pass; working statement/ledger/source/audit/assignment fingerprints match. No production behavior or imported-record changes.
 
 - **2026-10-21** - Complete the carrier chart palette so UHC and future series have visible colors; render stacked segments immediately. All three live carrier legend colors and stacked bars verified; production build passes.
 
