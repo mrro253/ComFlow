@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { loadPaymentLedger } from "@/lib/services/paymentLedgerService";
+import { PaymentFilterError } from "@/lib/reporting/paymentQuery";
 import { requireRole } from "@/lib/auth/requireRole";
 import { productionEntityFor } from "@/lib/carriers/writingAgentOwners";
 import { getAgencyById } from "@/lib/repositories/agencyRepository";
@@ -54,5 +56,15 @@ export async function assignPayment(
   } catch (err) {
     if (err instanceof AssignmentError) return { error: err.message };
     return { error: err instanceof Error ? err.message : "Could not assign the payment." };
+  }
+}
+
+/** Search is a POST action so client names/member IDs never enter URLs or access logs. */
+export async function queryPayments(input: unknown) {
+  try {
+    const user = await requireRole();
+    return { data: await loadPaymentLedger(user, input) };
+  } catch (error) {
+    return { error: error instanceof PaymentFilterError ? error.message : "Could not load payments. Check your connection and sign-in, then try again." };
   }
 }

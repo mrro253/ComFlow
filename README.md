@@ -11,7 +11,7 @@ what the agency owes them).
 > The business rules live in `.cursorrules`; this file describes the system as
 > it is *right now*.
 
-Last updated: 2026-10-20
+Last updated: 2026-10-21
 
 > **Changing code? Read section 13 (Contributing) first.** Work on a branch, never directly on `Main`.
 
@@ -21,8 +21,9 @@ Last updated: 2026-10-20
 
 | Area | State | How it was checked |
 | --- | --- | --- |
-| Statement PDF parsing (Ultimate) + reconciliation | Built | 181 unit tests (whole suite), synthetic fixtures only. Nine real Ultimate PDFs parsed and imported locally on 2026-10-20; other carrier layouts remain unverified. |
+| Statement PDF parsing (Ultimate) + reconciliation | Built | 201 unit tests (whole suite), synthetic fixtures only. Nine real Ultimate PDFs parsed and imported locally on 2026-10-20; other carrier layouts remain unverified. |
 | Payment client names and full statement details | Locally verified | All 94 imported rows matched to saved PDFs; synthetic extraction and access tests. Other layouts unverified |
+| Payment search, filters and pagination | Locally verified | Owner browser flow: combined filters, name/member lookup, no matches, all 94 rows across pages, 50-row size, unchanged totals and 13-field dialog. Other role browser flows unverified; access and query rules unit-tested |
 | Duplicate protection, writing-agent assignment, import preview | Built | Unit tests |
 | Atomic import into the database (`import_statement`) | Built | SQL run on a throwaway Postgres 14: success, double import blocked, duplicate rolls back, wrong agency rejected, normal users denied |
 | Database schema, RLS, immutability triggers | Built | Same throwaway Postgres run |
@@ -176,10 +177,10 @@ See section 7 for the full list. The ones that still need an answer:
 ## 3. Current functionality
 
 **Everyone signed in**
-- **Payment statement details**: client name appears in Payment detail. Expand **View statement details** for all 13 printed Ultimate columns, including first/last name, Medicare identifier as printed, carrier member ID, effective date, writing agent, UCAIN, payee ID/name, amount/category, prior plan and notes, plus source filename/row. Blank fields say "Not provided"; unsupported or unverifiable source rows say "Source details unavailable". All 94 locally imported payments were checked against their saved sources on 2026-10-20.
+- **Payment statement details**: client name appears in Payment detail. Click the client name to open a keyboard-accessible details dialog containing all 13 printed Ultimate columns, including first/last name, Medicare identifier as printed, carrier member ID, effective date, writing agent, UCAIN, payee ID/name, amount/category, prior plan and notes, plus source filename/row. Blank fields say "Not provided"; unsupported or unverifiable source rows say "Source details unavailable". All 94 locally imported payments were checked against their saved sources on 2026-10-20.
 - Details are read from the saved private PDF after session/RLS authorization and exact source-hash, transaction-key, member, date, amount and category checks. Only the authorized payment's row is returned, even if its PDF contains other clients. No carrier connection, reimport, database migration or financial-record update is required by this feature. Existing imports gain details immediately.
 - Dashboard of carrier payments in their own scope (Owner: agency; Manager: self + direct reports; Agent: self).
-- **Payments**: carrier-paid transactions by month, with totals by payment category (chargebacks are negative).
+- **Payments**: search by client name or member ID; combine statement month, carrier, credited/writing agent, payment category and inclusive policy-effective-date filters. Owner can also select Unassigned only. Apply filters resets to page 1; Clear filters selects all months. Page sizes are 25, 50 or 100, with Previous/Next controls and matching-record counts. Signed totals and category totals cover every matching payment, not only the displayed page. Free-text searches use a POST server action; names and IDs stay out of URLs and ordinary access logs. Filters and searches are not saved across refreshes; existing `?month=YYYY-MM` links still work. The default view is all months.
 - **Reports**: a collective production report (totals by category + a downloadable CSV) of whatever they are allowed to see. Independents use this to send a report upstream externally; nothing is sent automatically.
 
 **Owner**
@@ -271,15 +272,17 @@ Important properties:
 - `commission_plans`, `commission_plan_rates`, bonuses, `commission_transactions`, `lib/commission-engine`, `/commissions`, Settings plan/bonus screens, `/onboarding`, and the inbound GoHighLevel adapter in `lib/crm` (its webhook route and fake "Connect" button were removed 2026-10-10; `crm_connections` table stays). They still work but no longer feed the dashboard. The signup function `create_agency_with_owner` still seeds the old 10% / 2% / 1% plan. Retire these once nothing needs them.
 
 **Known limits**
-- Client detail extraction currently supports the verified 13-column Ultimate layout only. It reads each relevant saved PDF once per Payments request (up to the 300 displayed rows); details are not stored in the financial tables or a shared cross-user cache. Other layouts need synthetic fixtures and verification. Saved PDFs must remain available and unchanged.
+- Client detail extraction currently supports the verified 13-column Ultimate layout only. It reads each relevant saved PDF once per request for the displayed page. A client-name search reads candidate statements after metadata filtering; a member-ID search does not need to scan every client name; details are not stored in the financial tables or a shared cross-user cache. Other layouts need synthetic fixtures and verification. Saved PDFs must remain available and unchanged.
 - **Unverified:** the payee ID is read from the `W####` code right after the `ADV/MCC/PFS/BRP` marker on Ultimate rows (assumed to be the writer's carrier number). Confirm with Ryan against a real statement. Until then the payee ID only breaks ties between same-name teammates.
 - Ultimate parser only recognizes the writing-agent layouts proven in Ryan's prototype (`ADV`, `MCC`, `PFS`, `BRP` codes). Other layouts leave the writing agent unverified -> Unassigned.
 - Statement tables show at most 300 rows per page (all rows still import).
-- No pagination or search on Payments yet. Dashboard/Payments load up to 50,000 payments into memory (read in 1,000-row pages because Supabase caps responses); move the totals into SQL before volumes get near that.
+- Payments returns only the selected 25/50/100-row page to the browser, but still reads up to 50,000 RLS-visible ledger rows into server memory to calculate full matching totals; Dashboard retains the same cap. This is display pagination, not a database-scale solution. Move filtering/totals to indexed SQL and design a protected client-name index before large agency volumes. Source lookup IDs are batched at 100 to avoid URL/response limits. No new dependencies, schema migrations, carrier downloads or commission updates are introduced.
 
 ---
 
 ## 6. Recommended next steps (in order)
+
+As of 2026-10-21, payment search/filter/pagination is locally verified. Next validate duplicate protection using already-saved PDFs, then consider the next carrier. Gmail/Outlook MFA-code retrieval is planned separately for Marshall's integration/security review; no mailbox access is enabled by this feature.
 
 1. **Run the manual flow once** on a real Supabase project with `sample-statement.pdf`, then with one of Ryan's real PDFs. Fix whatever breaks. Nothing else is trustworthy until this is done.
 2. **Answer the open decisions** in section 7, especially how Independent agents' production rolls up and how aliases should work.
@@ -714,6 +717,8 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Add private client/member search, combined payment filters, full-matching-set totals, 25/50/100-row pages and an accessible client-details dialog. Preserve session/RLS scope and ledger records; batch PDF source lookups. 201 synthetic tests plus TypeScript/ESLint checks pass; owner browser checks cover all 94 saved payments. Production build checked with this change. Document the remaining 50,000-row server-memory limit and separate email-MFA review.
 
 - **2026-10-20** - Add client names and expandable, source-verified Ultimate payment details from saved PDFs, including all 13 printed columns and source row/filename. Preserve ledger amounts, assignment rules, RLS and imports. Add synthetic extraction/integrity/access tests and adapt synthetic PDF padding to runtime buffer-pool size. All 94 local payments have verified details; TypeScript, ESLint, Vitest and build validation recorded with this change.
 
