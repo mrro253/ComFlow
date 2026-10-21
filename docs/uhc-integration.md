@@ -11,3 +11,5 @@ Recoverable failures pause and retain the browser context. Enter `retry` in the 
 Live status: eight private pairs exist for January–July and September 2026. August and October remain outstanding. The live worker rejected the account header; the check now permits a separate writing ID while requiring exactly one explicit payee ID. That correction and the retained-session retry interaction are not live-verified. No claim of successful automated UHC collection or financial reconciliation is made.
 
 Validation: worker TypeScript and 273 synthetic tests pass. Tests cover source integrity, period/account matching, ambiguous headers, unavailable months, cache isolation and partial failures. They do not prove portal compatibility. No client data or credentials belong in fixtures, logs or Git.
+
+Account lookup now reads the nearest shared header container so a PID in a sibling span can be verified. Synthetic regression checks pass; live verification remains blocked by the reported portal issue.

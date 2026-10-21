@@ -62,7 +62,10 @@ export async function downloadUhcMonth(page: Page, month: string, directory: str
 }
 
 async function currentParty(page: Page) {
-  const header = await page.getByText(/You are now accessing/).first().innerText();
+  // Jarvis can render the account label and PID in separate sibling spans.
+  // Read their nearest shared account container instead of just the label span.
+  const header = await page.getByText(/You are now accessing/).first()
+    .locator("xpath=ancestor-or-self::*[contains(., 'PID')][1]").innerText();
   const matches = [...header.matchAll(/\bPID\s*:\s*(\d+)(?=\s|[,;)\]]|$)/g)];
   const match = matches.length === 1 ? matches[0] : null;
   if (!match) throw new SafePortalError("UnitedHealthcare signed-in payee could not be verified");

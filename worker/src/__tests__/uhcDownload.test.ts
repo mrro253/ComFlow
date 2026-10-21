@@ -18,7 +18,7 @@ async function fixture(options: { months?: string[]; party?: string; invalidText
   const combo = (name:string) => ({innerText:async()=>selected[name],press:async(key:string)=>{if(key==="Home")cursor=0;else if(key==="ArrowDown")cursor++;else if(key==="Enter"){selected[name]=menus[name][cursor];opened="";}else if(key==="Escape")opened="";}});
   const page = {
     url:()=>options.wrongHost ? "https://example.invalid/" : UHC_STATEMENTS_URL,
-    getByText:()=>({first:()=>({innerText:async()=>options.header ?? `You are now accessing JARVIS as Medicare User: SYNTHETIC ( PID: ${options.party ?? "999001"} )`})}),
+    getByText:()=>({first:()=>({locator:()=>({innerText:async()=>options.header ?? `You are now accessing JARVIS as Medicare User: SYNTHETIC ( PID: ${options.party ?? "999001"} )`})})}),
     locator:()=>({allTextContents:async()=>menus[opened]}),
     getByRole:(role:string,opts:{name:string})=>role==="combobox" ? combo(opts.name) : {click:async()=>{if(opts.name!=="DOWNLOAD"){opened=opts.name;cursor=menus[opts.name].indexOf(selected[opts.name]);}else downloads.push(`${selected.Year}-${names.indexOf(selected.Month)+1}:${selected.Format}`);}},
     waitForEvent:async()=>{

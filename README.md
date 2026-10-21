@@ -741,6 +741,8 @@ Each Independent-agent customer is their own business associate of their carrier
 
 ## 15. Changelog (newest first)
 
+- **2026-10-21** - Read the UHC account header across sibling spans; live retry remains unverified while the portal is unavailable. Synthetic worker checks pass.
+
 - **2026-10-21** - Add isolated UHC PDF/text year downloads with account-scoped cache validation and in-memory browser retries. Correct overly strict payee-header parsing. Worker TypeScript and 273 synthetic tests pass; retry interaction and live collection remain unverified. No database changes or imports.
 
 - **2026-10-21** - Expand GHL planning with the supplied contact/product field inventory, unresolved key/type checks, per-agency setup worksheet, synthetic history-note example and pilot acceptance cases. Documentation only; no API connection, schema, new rules or contact writes authorized or implemented.
