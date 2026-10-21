@@ -8,7 +8,7 @@ import { UHC_STATEMENTS_URL, UHC_TEXT_HEADER } from "../carriers/uhcMetadata";
 const roots: string[] = [];
 async function directory() { const root = await mkdtemp(path.join(os.tmpdir(),"comflow-uhc-test-")); roots.push(root); return root; }
 afterEach(async () => { for(const root of roots.splice(0)) { if(path.dirname(root)!==path.resolve(os.tmpdir()) || !path.basename(root).startsWith("comflow-uhc-test-")) throw new Error("Unsafe test cleanup"); await rm(root,{recursive:true,force:true}); } });
-async function fixture(options: { months?: string[]; party?: string; invalidText?: boolean; mismatch?: boolean; wrongHost?: boolean; header?: string; hiddenMenus?: boolean; failedMonth?: string } = {}) {
+async function fixture(options: { months?: string[]; party?: string; invalidText?: boolean; mismatch?: boolean; wrongHost?: boolean; header?: string; selectedCheckIcon?: boolean; hiddenMenus?: boolean; failedMonth?: string } = {}) {
   const root = await directory(), pdf = path.join(root,"source.pdf"), text = path.join(root,"source.txt");
   await writeFile(pdf,"%PDF-synthetic"); await writeFile(text, options.invalidText ? "<html>Error</html>" : UHC_TEXT_HEADER.join(",")+"\n");
   const names = ["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
@@ -19,7 +19,7 @@ async function fixture(options: { months?: string[]; party?: string; invalidText
   const page = {
     url:()=>options.wrongHost ? "https://example.invalid/" : UHC_STATEMENTS_URL,
     getByText:()=>({first:()=>({locator:()=>({innerText:async()=>options.header ?? `You are now accessing JARVIS as Medicare User: SYNTHETIC ( PID: ${options.party ?? "999001"} )`})})}),
-    locator:(selector:string)=>({first:()=>({waitFor:async()=>undefined}),nth:(index:number)=>({click:async()=>{selected[opened]=menus[opened][index];opened="";}}),allTextContents:async()=> options.hiddenMenus && !selector.includes(":visible") ? Object.values(menus).flat() : menus[opened]}),
+    locator:(selector:string)=>({first:()=>({waitFor:async()=>undefined}),nth:(index:number)=>({click:async()=>{selected[opened]=menus[opened][index];opened="";}}),evaluateAll:async()=>menus[opened],allTextContents:async()=> options.selectedCheckIcon ? menus[opened].map((label)=>label === selected[opened] ? label + "check" : label) : options.hiddenMenus && !selector.includes(":visible") ? Object.values(menus).flat() : menus[opened]}),
     getByRole:(role:string,opts:{name:string})=>role==="combobox" ? combo(opts.name) : {click:async()=>{if(opts.name!=="DOWNLOAD"){opened=opts.name;cursor=menus[opts.name].indexOf(selected[opts.name]);}else downloads.push(`${selected.Year}-${names.indexOf(selected.Month.toUpperCase().trim())+1}:${selected.Format}`);}},
     waitForEvent:async()=>{
       const kind = selected.Format==="PDF" ? "pdf" : "txt", month=`${selected.Year}-${String(names.indexOf(selected.Month.toUpperCase().trim())+1).padStart(2,"0")}`;
@@ -90,6 +90,10 @@ describe("UHC app-requested sync", () => {
   });
   it("ignores a selection prompt without treating it as an available month", async () => {
     const f = await fixture({ months: ["Select Month", "JANUARY", "FEBRUARY"] });
+    expect(await syncUhcYear(f.page, 2026, async () => "stored")).toEqual({ found: 2, downloaded: 2, skipped: 0, failed: 0 });
+  });
+  it("uses text excluding the selected-option check icon", async () => {
+    const f = await fixture({ months: ["JANUARY", "OCTOBER"], selectedCheckIcon: true });
     expect(await syncUhcYear(f.page, 2026, async () => "stored")).toEqual({ found: 2, downloaded: 2, skipped: 0, failed: 0 });
   });
   it("does not register incomplete pairs", async () => {

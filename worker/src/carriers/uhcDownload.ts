@@ -22,7 +22,13 @@ async function menuOptions(page: Page) {
   // Downshift leaves closed menus mounted. Read only the currently visible popup.
   const items = page.locator(VISIBLE_MENU_ITEMS);
   await items.first().waitFor({ state: "visible", timeout: 15000 });
-  return (await items.allTextContents()).map(labelText);
+  const labels = await items.evaluateAll((elements) => elements.map((element) => {
+    const label = element.cloneNode(true) as HTMLElement;
+    // SVG title text (for example "check") is not part of a report option's label.
+    label.querySelectorAll('svg, [role="img"], [aria-hidden="true"], .material-icons').forEach((icon) => icon.remove());
+    return label.textContent ?? "";
+  }));
+  return labels.map(labelText);
 }
 async function selectControl(page: Page, name: string, value: string) {
   const control = page.getByRole("combobox", { name, exact: true });
