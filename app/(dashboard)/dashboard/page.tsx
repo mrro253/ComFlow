@@ -8,7 +8,6 @@ import { listStatements, listVisibleTransactions } from "@/lib/repositories/stat
 import { listUsersForAgency } from "@/lib/repositories/userRepository";
 import { formatCents } from "@/lib/carriers/money";
 import {
-  latestMonth,
   monthLabel,
   monthlyPaidSeries,
   PRODUCER_GROUP_LABELS,
@@ -16,6 +15,7 @@ import {
   totalsByCategory,
   totalsByProducerGroup,
 } from "@/lib/reporting/carrierMetrics";
+import { selectDashboardMonth } from "@/lib/reporting/dashboardMonth";
 import { isOnboardingIncomplete } from "@/lib/onboarding";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { BarChartCard } from "@/components/dashboard/bar-chart-card";
@@ -31,7 +31,11 @@ const SCOPE_LABEL = {
   agent: "Your carrier commission activity.",
 } as const;
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string | string[] }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -49,7 +53,10 @@ export default async function DashboardPage() {
     : [null, [], [], []];
   const showChecklist = isOwner && agency !== null && isOnboardingIncomplete(agency);
 
-  const month = latestMonth(transactions);
+  const params = await searchParams;
+  const { months, month, unavailable } = selectDashboardMonth(
+    transactions.map((tx) => tx.statementMonth), params.month
+  );
   const periodLabel = month ? monthLabel(month) : null;
   const inMonth = month ? transactions.filter((tx) => tx.statementMonth === month) : [];
   const usersById = new Map(team.map((u) => [u.id, u]));
@@ -65,7 +72,7 @@ export default async function DashboardPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
           <p className="text-sm text-muted-foreground">{SCOPE_LABEL[user.role]}</p>
         </div>
-        <Button asChild variant="outline"><Link href="/payments">View commission activity</Link></Button>
+        <Button asChild variant="outline"><Link href={month ? `/payments?month=${month}` : "/payments"}>View commission activity</Link></Button>
       </div>
 
       {showChecklist && (
@@ -98,9 +105,20 @@ export default async function DashboardPage() {
       ) : (
         <>
           <div className="rounded-lg border border-border bg-card p-4 text-sm">
-            <p className="font-medium">Latest statement month: {periodLabel}</p>
+            <form method="get" className="flex flex-wrap items-end gap-3">
+              <label className="flex min-w-0 flex-col gap-1.5 font-medium">
+                Statement month
+                <select name="month" defaultValue={month ?? ""} key={month} className="h-9 max-w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm">
+                  {months.map((option) => <option key={option} value={option}>{monthLabel(option)}</option>)}
+                </select>
+              </label>
+              <Button type="submit" size="sm">Show month</Button>
+              <Link href="/dashboard" className="py-2 text-sm underline underline-offset-4">Latest month</Link>
+            </form>
+            <p className="mt-3 font-medium">Showing statement month: {periodLabel}</p>
+            {unavailable && <p role="status" className="mt-1 text-muted-foreground">That month is not available in your commission activity. Showing your latest available month instead.</p>}
             <p className="mt-1 text-muted-foreground">
-              The summary and production breakdown below show this month. The monthly chart shows all imported months.
+              The commission totals, categories and production breakdown show the selected month. The monthly chart shows all imported months; the recent-review count covers the five most recent statements across months.
               One carrier payment can cover several commission entries. These totals are statement activity; bank deposits are not verified here.
               Carried balances can make a statement total different from its commission entries.
             </p>
