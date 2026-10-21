@@ -33,6 +33,10 @@ export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, l
     const accountChange = /reset|recover|change.password|signup|register/.test(current.pathname.toLowerCase()) || await page.locator('input[autocomplete="new-password"]:visible').count() > 0;
     const challenge = page.locator('input[autocomplete="one-time-code"]:visible, input[name="code"]:visible, input[name="otp"]:visible, iframe[title*="challenge" i]:visible, iframe[title*="captcha" i]:visible');
     const alert = page.getByRole("alert");
+    const rejected = page.getByText(/wrong (?:username|email|user id).*password|incorrect (?:username|email|user id).*password|invalid (?:username|email|user id).*password|username or password.*incorrect|credentials.*(?:invalid|incorrect)/i);
+    if ((usernameSubmitted || passwordSubmitted) && await rejected.count() > 0 && await rejected.first().isVisible()) {
+      throw new SafePortalError("The carrier rejected the saved login. Replace the saved username/password in Carrier connections, then retry Sync now. No automatic repeat attempt was made.");
+    }
     if (accountChange || await challenge.count() > 0 || ((usernameSubmitted || passwordSubmitted) && await alert.count() > 0 && await alert.first().isVisible())) {
       if (!notified) { await needsUser(); notified = true; }
     } else if (!passwordSubmitted) {

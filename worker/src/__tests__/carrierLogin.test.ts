@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Page } from "playwright";
 import { automaticCarrierLogin, trustedLoginUrl, type LoginCarrier } from "../carrierLoginFlow";
-function fixture(carrier: LoginCarrier, initial?: string, callbackFlow = false) {
+function fixture(carrier: LoginCarrier, initial?: string, callbackFlow = false, reject = false) {
   let state = initial ?? (carrier === "Devoted Health" ? "entry" : carrier === "UnitedHealthcare" ? "username" : "password");
   let closed = false;
   const fills: string[] = [], clicks: string[] = [], destinations: string[] = [];
@@ -11,7 +11,7 @@ function fixture(carrier: LoginCarrier, initial?: string, callbackFlow = false) 
     const count = () => selector.includes('new-password') ? state === "reset" ? 1 : 0 : selector.includes('one-time-code') ? state === "challenge" ? 1 : 0 : selector.includes('type="password"') ? ["password", "reset"].includes(state) ? 1 : 0 : ["username", "password"].includes(state) ? 1 : 0;
     return { count: async () => count(), isVisible: async () => count() > 0, fill: async (_value: string) => { fills.push(selector.includes('password') ? "password" : "username"); } };
   };
-  const page = { url, isClosed: () => closed, locator, goto: async () => { destinations.push(state); state = "ready"; }, waitForTimeout: async () => { if (state === "callback") state = "home"; }, getByText: () => ({ count: async () => 0, first: () => ({ isVisible: async () => state === "home" }) }), getByRole: (role: string, options?: {name: string | RegExp}) => {
+  const page = { url, isClosed: () => closed, locator, goto: async () => { destinations.push(state); state = "ready"; }, waitForTimeout: async () => { if (state === "callback") state = "home"; }, getByText: (text: string | RegExp) => ({ count: async () => reject && state === "bad" && text instanceof RegExp && text.test("Wrong username or password") ? 1 : 0, first: () => ({ isVisible: async () => state === "home" || (reject && state === "bad") }) }), getByRole: (role: string, options?: {name: string | RegExp}) => {
     if (role === "alert") return { count: async () => state === "bad" ? 1 : 0, first: () => ({ isVisible: async () => state === "bad" }) };
     const name = state === "entry" ? "Login" : carrier === "Devoted Health" ? "Log In" : carrier === "UnitedHealthcare" ? state === "username" ? "Continue" : "Sign In" : "LOGIN";
     const visible = () => ["entry", "username", "password"].includes(state) && (typeof options?.name === "string" ? options.name === name : options?.name.test(name));
@@ -47,6 +47,11 @@ describe("automatic carrier login", () => {
     const f = fixture("Devoted Health", "password");
     await expect(automaticCarrierLogin(f.page, "Devoted Health", login, f.ready, f.needs)).rejects.toThrow();
     expect(f.clicks).toHaveLength(1); expect(f.fills.filter(v => v === "password")).toHaveLength(1); expect(f.needs).toHaveBeenCalledOnce();
+  });
+  it("returns a rejected login immediately without submitting it again", async () => {
+    const f = fixture("Devoted Health", "password", false, true);
+    await expect(automaticCarrierLogin(f.page, "Devoted Health", login, f.ready, f.needs)).rejects.toThrow("carrier rejected the saved login");
+    expect(f.clicks).toHaveLength(1); expect(f.needs).not.toHaveBeenCalled();
   });
   it("requires exact HTTPS hosts and rejects lookalike domains", () => {
     expect(trustedLoginUrl("Devoted Health", "https://devoted.auth0.com/login")).toBe(true);
