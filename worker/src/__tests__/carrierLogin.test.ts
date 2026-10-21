@@ -9,7 +9,7 @@ function fixture(carrier: LoginCarrier, initial?: string, callbackFlow = false, 
   const needs = vi.fn(async () => { if (state === "challenge") state = "ready"; else closed = true; });
   const locator = (selector: string) => {
     const count = () => selector.includes('new-password') ? state === "reset" ? 1 : 0 : selector.includes('one-time-code') ? state === "challenge" ? 1 : 0 : selector.includes('type="password"') ? ["password", "reset"].includes(state) ? 1 : 0 : ["username", "password"].includes(state) ? 1 : 0;
-    return { count: async () => count(), isVisible: async () => count() > 0, fill: async (_value: string) => { fills.push(selector.includes('password') ? "password" : "username"); } };
+    return { count: async () => count(), isVisible: async () => count() > 0, isEditable: async () => !(carrier === "UnitedHealthcare" && state === "password" && !selector.includes('password')), fill: async (_value: string) => { fills.push(selector.includes('password') ? "password" : "username"); } };
   };
   const page = { url, isClosed: () => closed, locator, goto: async () => { destinations.push(state); state = "ready"; }, waitForTimeout: async () => { if (state === "callback") state = "home"; }, getByText: (text: string | RegExp) => ({ count: async () => reject && state === "bad" && text instanceof RegExp && text.test("Wrong username or password") ? 1 : 0, first: () => ({ isVisible: async () => state === "home" || (reject && state === "bad") }) }), getByRole: (role: string, options?: {name: string | RegExp}) => {
     if (role === "alert") return { count: async () => state === "bad" ? 1 : 0, first: () => ({ isVisible: async () => state === "bad" }) };
@@ -31,6 +31,12 @@ describe("automatic carrier login", () => {
     const f = fixture("Devoted Health", undefined, true);
     await automaticCarrierLogin(f.page, "Devoted Health", login, f.ready, f.needs);
     expect(f.destinations).toEqual(["home"]);
+  });
+  it("leaves the read-only UHC username alone on the password step", async () => {
+    const f = fixture("UnitedHealthcare");
+    await automaticCarrierLogin(f.page, "UnitedHealthcare", login, f.ready, f.needs);
+    expect(f.fills.filter(value => value === "username")).toHaveLength(1);
+    expect(f.fills.filter(value => value === "password")).toHaveLength(1);
   });
   it("does not resubmit credentials for an already authenticated session", async () => {
     const f = fixture("Devoted Health", "ready"); await automaticCarrierLogin(f.page, "Devoted Health", login, f.ready, f.needs);
