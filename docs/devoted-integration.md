@@ -4,7 +4,7 @@ Updated 2026-10-21. Download-only development phase; not enabled for import, sch
 
 ## Observed source flow
 
-Ryan signed in to `https://agent.devoted.com/` using its Devoted Auth0 flow. My Commissions is at `/commissions`. It lists pay-period dates, Credits, Debits, Balance, Total Paid, PDF links and spreadsheet links, with 25-row pages and next-page controls. The inspected account showed 55 periods. Only one approved PDF/spreadsheet pair was downloaded for local format inspection, using the authenticated browser. No other periods were downloaded and no financial records were imported.
+Ryan signed in to `https://agent.devoted.com/` using its Devoted Auth0 flow. My Commissions is at `/commissions`. It lists pay-period dates, Credits, Debits, Balance, Total Paid, PDF links and spreadsheet links, with 25-row pages and next-page controls. The inspected account showed 55 periods. An initial approved PDF/spreadsheet pair was downloaded for local format inspection using the authenticated browser. A later authorized worker run downloaded all nine available 2026 periods; see validation below. No financial records were imported.
 
 The independent Playwright worker implementation is in `worker/src/carriers/devotedDownload.ts`, with the explicit one-period command in `worker/src/devotedDownloadOnce.ts`. It does not import or call the Ultimate adapter, use the polling sync registry, or access Supabase. Authentication is interactive in a fresh worker browser; complete login/MFA normally. It does not save credentials, cookies or sessions. Unattended login and scheduling remain unbuilt.
 
@@ -21,7 +21,7 @@ The worker scans visible table pages, requires exactly one requested pay-date ro
 
 No statement parser is registered yet. Import must remain unavailable until the paired-source parsing, reconciliation, duplicate/correction identities and storage provenance are implemented and tested. Do not map Devoted automatically to Ultimate's product or commission categories.
 
-## Local command (explicitly approved periods only)
+## Local commands (explicitly approved periods or years only)
 
 From `worker/`, with existing worker dependencies and Chromium installed:
 
@@ -29,11 +29,19 @@ From `worker/`, with existing worker dependencies and Chromium installed:
 npm.cmd run devoted:download -- --date YYYY-MM-DD --output "C:\Users\ryan\Documents\Devoted-Private-Downloads"
 ```
 
-Use a real requested pay date instead of the placeholder. Output must be an absolute directory outside the repository. The command opens a worker browser; sign in and open My Commissions within three minutes. Only the specified pay period is fetched, and ambiguous dates require review. Obtain explicit download authorization before running against a real account. Keep all source files private and out of Git, issues, fixtures and shared logs.
+For all available periods in one explicitly authorized year, use `--year` instead of `--date`:
+
+```powershell
+npm.cmd run devoted:download -- --year 2026 --output "C:\Users\ryan\Documents\Devoted-Private-Downloads"
+```
+
+The year command scans all table pages, downloads only matching-year sources, rejects ambiguous pay dates, and reports successful/failed pairs separately. It does not assume that every calendar month already has an available statement. Completed pairs survive a later download failure. Both modes verify and reuse identical existing local files without overwriting changed or corrupt content. No database imports occur.
+
+Use a real requested pay date instead of the placeholder. Output must be an absolute directory outside the repository. The command opens a worker browser; sign in and open My Commissions within three minutes. Only the specified period or year is fetched, and ambiguous dates require review. Obtain explicit download authorization before running against a real account. Keep all source files private and out of Git, issues, fixtures and shared logs.
 
 ## Validation and next phase
 
-Public/signed-in navigation and the approved sample downloads were inspected in the app browser. The new worker command was run end to end against the live portal on 2026-10-21 for one explicitly approved pay period. After Ryan completed interactive sign-in, it scanned the commission pages, saved the PDF/workbook and complete-pair manifest outside Git, exited successfully, and closed its browser. Both stored file hashes matched the manifest. No database writes or imports occurred. Unattended login and other periods remain unverified. Synthetic tests cover source validation, signed-token-independent link identity, pagination, missing/ambiguous dates, paired-file failures, and local duplicate/overwrite handling. App and worker TypeScript checks, ESLint and all 250 Vitest tests pass (including 12 new Devoted tests). Live verification is limited to the one approved period and interactive authentication.
+Public/signed-in navigation and the approved sample downloads were inspected in the app browser. The new worker command was run end to end against the live portal on 2026-10-21 for one explicitly approved pay period. After Ryan completed interactive sign-in, it scanned the commission pages, saved the PDF/workbook and complete-pair manifest outside Git, exited successfully, and closed its browser. Both stored file hashes matched the manifest. No database writes or imports occurred. Unattended login and other periods remain unverified. Synthetic tests cover source validation, signed-token-independent link identity, pagination, missing/ambiguous dates, paired-file failures, and local duplicate/overwrite handling. App and worker TypeScript checks, ESLint and all 254 Vitest tests pass (including year-scope and partial-failure regression tests). A subsequent explicitly authorized 2026 year run completed with 9/9 available pairs (January through September), zero failures, and all stored hashes verified against their manifests. No October-December statements were available in the observed list. The main ledger remains 94 entries / 1,110,416 cents. Live verification covers these available 2026 periods and interactive authentication; unattended login remains unbuilt.
 
 Marshall review is required before adding a workbook-reading library or changing source-storage/schema/audit meaning. Prepare paired-source persistence and parser design for that review; do not register a placeholder parser or treat an unsupported source as zero commissions. Later work includes encrypted unattended login, approved MFA handling, full statement-details display and scheduling after explicit authorization.
 

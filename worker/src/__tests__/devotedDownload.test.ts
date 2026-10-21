@@ -3,7 +3,7 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import type { Page } from "playwright";
-import { downloadDevotedPeriod } from "../carriers/devotedDownload";
+import { downloadDevotedPeriod, downloadDevotedYear } from "../carriers/devotedDownload";
 const roots: string[] = [];
 async function directory() { const root = await mkdtemp(path.join(os.tmpdir(), "comflow-devoted-test-")); roots.push(root); return root; }
 afterEach(async () => {
@@ -52,5 +52,33 @@ describe("Devoted paired local downloads", () => {
     await writeFile(path.join(root, first.pdf.file), "synthetic corrupted file");
     await expect(downloadDevotedPeriod(mock.page, "2026-09-25", root)).rejects.toThrow("integrity");
     expect(await readFile(path.join(root, first.pdf.file), "utf8")).toBe("synthetic corrupted file");
+  });
+});
+
+describe("Devoted explicit year downloads", () => {
+  it("downloads every matching period across pages, excluding other years", async () => {
+    const root = await directory(); const mock = fixture([["Sep 25, 2026", "Aug 28, 2026"], ["Dec 12, 2025"]]);
+    const result = await downloadDevotedYear(mock.page, 2026, root);
+    expect(result.found).toBe(2); expect(result.saved).toHaveLength(2); expect(result.failed).toEqual([]);
+    expect(result.saved.map((row) => row.payDate)).toEqual(["2026-09-25", "2026-08-28"]);
+    expect(mock.get).toHaveBeenCalledTimes(4);
+    expect(mock.get.mock.calls.every(([url]) => !url.includes("page1"))).toBe(true);
+  });
+  it("refuses ambiguous dates before downloading any files", async () => {
+    const root = await directory(); const mock = fixture([["Sep 25, 2026"], ["Sep 25, 2026"]]);
+    await expect(downloadDevotedYear(mock.page, 2026, root)).rejects.toThrow("manual review");
+    expect(mock.get).not.toHaveBeenCalled();
+  });
+  it("reports failed pairs without claiming success", async () => {
+    const root = await directory(); const mock = fixture([["Sep 25, 2026"]], true);
+    const result = await downloadDevotedYear(mock.page, 2026, root);
+    expect(result.saved).toEqual([]); expect(result.failed).toEqual(["2026-09-25"]);
+    expect(await readdir(root)).toEqual([]);
+  });
+  it("rejects an invalid year or a year without statements", async () => {
+    const root = await directory(); const mock = fixture([["Sep 25, 2026"]]);
+    await expect(downloadDevotedYear(mock.page, 2025, root)).rejects.toThrow("No Devoted");
+    await expect(downloadDevotedYear(mock.page, 2026.5, root)).rejects.toThrow("Invalid");
+    expect(mock.get).not.toHaveBeenCalled();
   });
 });

@@ -36,18 +36,18 @@ async function preserve(directory: string, bytes: Buffer, extension: string) {
 }
 
 /** Download-only operation on an already authenticated worker page. No database writes or imports. */
-export async function downloadDevotedPeriod(page: Page, payDate: string, directory: string) {
-  const matches: { pdfUrl: string; sheetUrl: string }[] = [];
+async function listPeriods(page: Page) {
+  const matches: { payDate: string; pdfUrl: string; sheetUrl: string }[] = [];
   const rows = page.getByRole("row").filter({ has: page.getByRole("link", { name: "file-pdf View PDF", exact: true }) });
   for (let pageNumber = 0; pageNumber < 100; pageNumber++) {
     await rows.first().waitFor({ state: "visible", timeout: 30000 });
     for (let i = 0; i < await rows.count(); i++) {
       const row = rows.nth(i);
-      if (devotedPayDate(await row.getByRole("cell").first().innerText()) !== payDate) continue;
+      const payDate = devotedPayDate(await row.getByRole("cell").first().innerText());
       const pdfUrl = await row.getByRole("link", { name: "file-pdf View PDF", exact: true }).getAttribute("href");
       const sheetUrl = await row.getByRole("link", { name: "file-excel View Spreadsheet", exact: true }).getAttribute("href");
       if (!pdfUrl || !sheetUrl) throw new SafePortalError("Devoted statement is missing one of its source files");
-      matches.push({ pdfUrl, sheetUrl });
+      matches.push({ payDate, pdfUrl, sheetUrl });
     }
     const next = page.getByRole("button", { name: "right", exact: true }).first();
     if (await next.count() === 0 || !await next.isEnabled()) break;
@@ -60,15 +60,42 @@ export async function downloadDevotedPeriod(page: Page, payDate: string, directo
     }
     if (await rows.first().innerText() === previous) throw new SafePortalError("Devoted next statement page did not load");
   }
-  if (matches.length !== 1) throw new SafePortalError(matches.length === 0
-    ? "Requested Devoted statement was not found; no complete pair was recorded"
-    : "Multiple Devoted statements share this pay date; manual review is required");
+  return matches;
+}
+
+async function savePair(page: Page, source: { payDate: string; pdfUrl: string; sheetUrl: string }, directory: string) {
   // Fetch both before recording a complete pair. No source filename or signed URL is logged.
-  const pdf = await fetchFile(page.context().request, matches[0].pdfUrl, "pdf");
-  const sheet = await fetchFile(page.context().request, matches[0].sheetUrl, "xlsx");
+  const pdf = await fetchFile(page.context().request, source.pdfUrl, "pdf");
+  const sheet = await fetchFile(page.context().request, source.sheetUrl, "xlsx");
   await mkdir(directory, { recursive: true });
-  const record = { carrier: "Devoted Health", payDate, pdf: await preserve(directory, pdf, "pdf"),
+  const record = { carrier: "Devoted Health", payDate: source.payDate, pdf: await preserve(directory, pdf, "pdf"),
     spreadsheet: await preserve(directory, sheet, "xlsx") };
   await preserve(directory, Buffer.from(JSON.stringify(record, null, 2)), "json");
   return record;
+}
+
+/** Explicit single-period download, preserving the original command behavior. */
+export async function downloadDevotedPeriod(page: Page, payDate: string, directory: string) {
+  const matches = (await listPeriods(page)).filter((row) => row.payDate === payDate);
+  if (matches.length !== 1) throw new SafePortalError(matches.length === 0
+    ? "Requested Devoted statement was not found; no complete pair was recorded"
+    : "Multiple Devoted statements share this pay date; manual review is required");
+  return savePair(page, matches[0], directory);
+}
+
+/** All available periods in exactly the approved year. No imports or other-year downloads. */
+export async function downloadDevotedYear(page: Page, year: number, directory: string) {
+  if (!Number.isInteger(year) || year < 2000 || year > 2099) throw new SafePortalError("Invalid Devoted statement year");
+  const matches = (await listPeriods(page)).filter((row) => row.payDate.startsWith(`${year}-`));
+  if (!matches.length) throw new SafePortalError("No Devoted statements are available for the requested year");
+  if (new Set(matches.map((row) => row.payDate)).size !== matches.length) {
+    throw new SafePortalError("Multiple Devoted statements share a pay date; manual review is required");
+  }
+  const saved: Awaited<ReturnType<typeof savePair>>[] = [];
+  const failed: string[] = [];
+  for (const row of matches) {
+    try { saved.push(await savePair(page, row, directory)); }
+    catch { failed.push(row.payDate); }
+  }
+  return { year, found: matches.length, saved, failed };
 }

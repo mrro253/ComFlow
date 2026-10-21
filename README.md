@@ -35,7 +35,7 @@ Last updated: 2026-10-21
 | Independent collective report + owner-level profile (2026-10-10) | Built | Unit tests for the report/CSV and statement-access rules; migration `0010`. **UI never run against live Supabase** |
 | Upload -> preview -> approve -> payments UI | Built | Compiles, lints, `next build` passes. **Never run in a browser against a live Supabase project** (no Docker/Supabase CLI was available while building) |
 | Carrier login screen (encrypted credentials) | Built | Encryption unit-tested. UI **unverified** against live Supabase |
-| Devoted Health | Download-only development; import unavailable | [Source findings and separate worker command](docs/devoted-integration.md). One approved pair downloaded successfully by the separate worker after interactive sign-in; manifest and file hashes verified. Paired parser, unattended login and import remain unbuilt/unverified. |
+| Devoted Health | Download-only development; import unavailable | [Source findings and separate worker command](docs/devoted-integration.md). All nine available 2026 pairs downloaded successfully by the separate worker after interactive sign-in; manifests and file hashes verified. Paired parser, unattended login and import remain unbuilt/unverified. |
 | Carrier worker (auto-pull from the portal) | Locally verified | One live Ultimate sync downloaded nine statements with zero failures on 2026-10-20. Scheduling and hosted worker remain unverified |
 | Career-agent earnings, rate locks | Logic built, **no UI** | Unit tests. Payout batches removed. Intentionally not in the MVP screens |
 | GoHighLevel output | Plan documented; integration not built | [Field mapping and review plan](docs/ghl-integration-plan.md); no API access or live GHL changes |
@@ -379,7 +379,7 @@ Commands: `npm run dev | build | test | lint | typecheck | sample:statement`.
 
 ## 9. Carrier worker (`worker/`)
 
-Devoted has a separate, explicit one-period local download command; see [Devoted integration status](docs/devoted-integration.md). It uses interactive sign-in and preserves PDF/workbook pairs outside Git. It is not registered for polling, upload/import, or scheduled sync. Ultimate remains unchanged.
+Devoted has a separate, explicit period/year local download command; see [Devoted integration status](docs/devoted-integration.md). It uses interactive sign-in and preserves PDF/workbook pairs outside Git. It is not registered for polling, upload/import, or scheduled sync. Ultimate remains unchanged.
 
 
 Logging into a carrier portal needs a real browser, so it **cannot run on
@@ -732,6 +732,9 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Extend the separate Devoted downloader with explicit `--year` scope, one interactive sign-in, all-page discovery, per-pair failure reporting and unchanged content-hash preservation. Tests cover other-year exclusion, ambiguous dates and missing/failed pairs; all 254 tests plus app/worker TypeScript and ESLint pass. Live 2026 run completed: 9/9 available pairs (January-September), zero failures, all manifest/file hashes verified, and existing local content reused. The main ledger remains 94 entries / 1,110,416 cents. No imports, schema, dependencies or Ultimate changes.
+
 
 - **2026-10-21** - Verify the separate Devoted worker live for one approved pay period after interactive sign-in: successful PDF/workbook/manifest preservation, clean exit and automatic browser close, and matching stored-file hashes. Main ledger remains 94 entries / 1,110,416 cents. No imports or additional periods downloaded; unattended login, paired parser and scheduled sync remain unavailable.
 
