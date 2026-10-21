@@ -178,7 +178,7 @@ See section 7 for the full list. The ones that still need an answer:
 
 ## 3. Current functionality
 
-Local row-access regression: `supabase/tests/role_access.sql` uses synthetic users in two agencies inside a rollback-only transaction. It asserts exact commission-entry visibility for the owner, manager, Independent/principal, Career agents, captive writer and Career direct-report visibility, then checks the ledger fingerprint is unchanged. Run locally with `psql -U postgres -d postgres -f supabase/tests/role_access.sql` against the local development database (migrations through 0010). Verified locally on 2026-10-21; this checks database enforcement, not browser sign-in flows. Fixtures are rolled back; no real records are edited.
+Local row-access regression: `supabase/tests/role_access.sql` uses synthetic users in two agencies inside a rollback-only transaction. It asserts exact commission-entry visibility for the owner, manager, Independent/principal, Career agents, captive writer and Career direct-report visibility, then checks the ledger fingerprint is unchanged. Run locally with `psql -U postgres -d postgres -f supabase/tests/role_access.sql` against the local development database (migrations through 0010). Verified locally on 2026-10-21; this checks database enforcement. Existing Career, Independent and Manager demo browser sign-ins and empty states were also checked; populated role-specific client-detail browser flows remain unverified. Fixtures are rolled back; no real records are edited.
 
 
 The dashboard offers a statement-month selector (automated checks pass; owner browser flow verified) using only months visible to the signed-in user, defaults to the latest month and keeps the selected month when opening Commission activity. It updates monthly totals, counts, categories and production groups together while retaining the all-month chart and recent-review scope. Invalid or unavailable month links fall back to the latest available month with a notice. The dashboard explains commission-entry totals versus bank deposits and carried balances, and separates production groups. The recent-review card covers only the five most recent statements. A Menu on small screens provides the same role-filtered navigation as the desktop sidebar. Dashboard load errors offer a read-only retry and a link to commission activity.
@@ -728,6 +728,9 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Browser smoke checks with existing demo Career (Priya), Independent (Jordan) and Manager (Mike) sign-ins: expected navigation, empty dashboard/commission activity/report states, Career agency-managed carrier message, Independent private credential form, Manager team menu. Career direct access to Statements redirects to Dashboard. Owner sign-in and dashboard restored; 94 entries totaling 1,110,416 cents unchanged. No imports, credentials saved, syncs or commission changes. Demo roles have no imported entries: populated client-detail/role browser flows, captive browser login and Independent owner-profile browser flow remain unverified; the separate synthetic RLS regression covers populated-row enforcement.
+
 
 - **2026-10-21** - Add a rollback-only synthetic database access regression: nine users, two agencies, exact visible commission-entry sets for each role, direct-report configuration, captive/principal attribution and cross-agency isolation. Ran successfully against local Supabase; ledger fingerprint unchanged after rollback. Existing 238 synthetic unit tests pass. No permission policies, schema or real records changed; role-specific browser sign-in flows remain unverified.
 
