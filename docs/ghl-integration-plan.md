@@ -66,3 +66,43 @@ These are proposed implementation safeguards, not an implemented synchronization
 4. Separately authorized real-contact preview and controlled pilot. No automatic live writes or background GHL synchronization enabled by this plan.
 
 Not yet built or verified: API access, connection setup, ID resolution, contact matching, note writes, policy updates, retries, GHL commission fields and synchronization scheduling.
+
+
+## Expanded field inventory for setup review
+
+Transcribed from Ryan's supplied screenshots, not from API discovery. Keys are labels for later verification, not usable API IDs. These fields remain outside the first Medicare pilot unless explicitly approved. No existing GHL field needs to be renamed for this plan.
+
+| Folder | Visible keys | Handling proposed for review |
+| --- | --- | --- |
+| Contact | `contact.middle_initial`, `contact.nick_name`, `contact.email`, `contact.phone`, `contact.date_of_birth`, `contact.gender`, `contact.source`, `contact.type`, `contact.poa_name` | Matching/display only when needed and authorized; no automatic demographic or ownership changes. One of the 12 screenshot fields is outside the visible area and remains unknown. |
+| General Info | `contact.address1`, `contact.city`, `contact.state`, `contact.postal_code`, `contact.county`, `contact.timezone`, `contact.country`, `contact.company_name`, `contact.website` | Existing CRM information; no proposed writes from commission statements. |
+| ACA | `contact.aca_member_id`, `contact.aca_policy_name`, `contact.aca_policy_type`, `contact.aca_policy_status` | Candidate current-policy snapshot only after carrier evidence and product mapping approval. Effective-date key is truncated; discover it during setup. Screenshot status type is multi-select; do not reuse Medicare single-select handling. |
+| Indemnity | `contact.indemnity_member_id`, `contact.2_policy_name`, `contact.2_policy_type`, `contact.2_policy_status` | Candidate current-policy snapshot. Effective-date key is truncated. Dropdown choices remain unknown. |
+| Dental Vision Hearing | `contact.dvh_member_id`, `contact.dvh_policy_name`, `contact.dvh_policy_type`, `contact.dvh_policy_status` | Candidate snapshot for the verified policy/bundle, not proof of three separate policies. Effective-date key is truncated. Type/status are free text in the screenshot. Concurrent policies need review. |
+| Life Insurance | `contact.life_member_id`, `contact.3_policy_name`, `contact.3_policy_type`, `contact.3_policy_status`, `contact.smoker_status` | Candidate policy snapshot only; smoker status has no proposed commission-driven write. Effective-date key is truncated; dropdown choices remain unknown. |
+| Additional Info | `contact.ss`, `contact.medicaid_`, `contact.medicaid_status`, `contact.vet_status` | No synchronization proposed. Power of Attorney key is truncated and excluded from mapping until verified. |
+
+Medicare Part A/Part B effective-date keys are also truncated. Those entitlement dates are distinct from a policy effective date and are not derivable from commission dates. No annuity or separate final-expense field set was supplied; do not create or invent one automatically.
+
+## Setup worksheet and pilot contract
+
+| Item | Current state | Needed before implementation/pilot |
+| --- | --- | --- |
+| Agency/location | Screenshot reference supplied privately | Verify destination with Ryan; store configuration per agency without committing IDs. |
+| Ryan's GHL user | User reference supplied privately | Map as an agent/user only; never use it as a contact ID. |
+| Connection | Not selected | Marshall chooses method and least required access; secure token setup follows approval. |
+| Field definitions | Screenshot inventory above | Read authorized location definitions and verify exact IDs, full keys, types and allowed values. Record missing/changed fields as blockers. |
+| Carrier identity | No dedicated field shown | Approve where carrier/product context lives before exact member-ID matching. |
+| Current policy | User preference confirmed | Approve explicit evidence and precedence rules; a recent payment is insufficient. |
+| Synthetic contact | Not selected/created | Select one after connection approval; do not reuse a real client's record. |
+| Commission destinations | Not agreed | Keep commission amount/category output disabled until destination and meaning are agreed. |
+
+Proposed history note (synthetic example only; format subject to review):
+
+> ComFlow policy update review: Medicare policy snapshot. Previous member ID: SYNTH-OLD; proposed member ID: SYNTH-NEW. Previous effective date: 2026-01-01; proposed effective date: 2027-01-01. Coverage status: unchanged. Evidence: synthetic carrier confirmation, verified 2026-10-21. Statement reference: synthetic-example; statement month: 2026-09. Update time: recorded at execution. Operation reference: stable retry identifier.
+
+Preview must show matched contact, policy/carrier context, field-by-field old/new values, evidence date, source reference, history note and blockers. It must allow leaving a field unchanged. Avoid duplicating unrelated sensitive values in notes; the example is not approval to copy full client records or identifiers into logs.
+
+Synthetic acceptance scenarios: exact established policy link; ambiguous member ID across carriers; duplicate contacts; partial MBI; newer verified policy versus older statement; simultaneous policies; unknown status; blank source values; wrong location; note failure; field-update failure after a successful note; retry without duplicate history. Status remains unchanged for renewal, chargeback and absent commission alone.
+
+This inventory finishes the planning available from the supplied screenshots. API discovery, unresolved key verification and real connection testing remain pending Marshall's implementation review and authorized access.

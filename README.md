@@ -38,7 +38,7 @@ Last updated: 2026-10-21
 | Devoted Health | Download-only development; import unavailable | [Source findings and separate worker command](docs/devoted-integration.md). All nine available 2026 pairs downloaded successfully by the separate worker after interactive sign-in; manifests and file hashes verified. Paired parser, unattended login and import remain unbuilt/unverified. |
 | Carrier worker (auto-pull from the portal) | Locally verified | One live Ultimate sync downloaded nine statements with zero failures on 2026-10-20. Scheduling and hosted worker remain unverified |
 | Career-agent earnings, rate locks | Logic built, **no UI** | Unit tests. Payout batches removed. Intentionally not in the MVP screens |
-| GoHighLevel output | Plan documented; integration not built | [Field mapping and review plan](docs/ghl-integration-plan.md); no API access or live GHL changes |
+| GoHighLevel output | Expanded field inventory and pilot plan documented; integration not built | [Field mapping and review plan](docs/ghl-integration-plan.md); no API access or live GHL changes |
 
 The live Ultimate download, saved-PDF preview and approval/import path have now been exercised locally with nine statements (94 payments). Manual upload, other layouts and all role-specific browser flows still need their own verification.
 
@@ -738,6 +738,9 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Expand GHL planning with the supplied contact/product field inventory, unresolved key/type checks, per-agency setup worksheet, synthetic history-note example and pilot acceptance cases. Documentation only; no API connection, schema, new rules or contact writes authorized or implemented.
+
 
 - **2026-10-21** - Clarify carrier commission totals versus agent earnings and bank deposits; improve phone selector targets, pagination wrapping and long detail values. Presentation only; no calculations, data, permissions or dependencies changed. Statement coverage phase passed 256 tests, TypeScript, ESLint and production build. All 256 tests, TypeScript, ESLint and production build pass. Owner statement coverage (January–September imported, October–December none on file) and 390px month cards/activity filters reviewed; dashboard heading verified. Dialog/pagination edge cases remain browser-unverified.
 
