@@ -8,7 +8,7 @@ import { UHC_STATEMENTS_URL, UHC_TEXT_HEADER } from "../carriers/uhcMetadata";
 const roots: string[] = [];
 async function directory() { const root = await mkdtemp(path.join(os.tmpdir(),"comflow-uhc-test-")); roots.push(root); return root; }
 afterEach(async () => { for(const root of roots.splice(0)) { if(path.dirname(root)!==path.resolve(os.tmpdir()) || !path.basename(root).startsWith("comflow-uhc-test-")) throw new Error("Unsafe test cleanup"); await rm(root,{recursive:true,force:true}); } });
-async function fixture(options: { months?: string[]; party?: string; invalidText?: boolean; mismatch?: boolean; wrongHost?: boolean; header?: string; failedMonth?: string } = {}) {
+async function fixture(options: { months?: string[]; party?: string; invalidText?: boolean; mismatch?: boolean; wrongHost?: boolean; header?: string; hiddenMenus?: boolean; failedMonth?: string } = {}) {
   const root = await directory(), pdf = path.join(root,"source.pdf"), text = path.join(root,"source.txt");
   await writeFile(pdf,"%PDF-synthetic"); await writeFile(text, options.invalidText ? "<html>Error</html>" : UHC_TEXT_HEADER.join(",")+"\n");
   const names = ["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
@@ -19,10 +19,10 @@ async function fixture(options: { months?: string[]; party?: string; invalidText
   const page = {
     url:()=>options.wrongHost ? "https://example.invalid/" : UHC_STATEMENTS_URL,
     getByText:()=>({first:()=>({locator:()=>({innerText:async()=>options.header ?? `You are now accessing JARVIS as Medicare User: SYNTHETIC ( PID: ${options.party ?? "999001"} )`})})}),
-    locator:()=>({allTextContents:async()=>menus[opened]}),
-    getByRole:(role:string,opts:{name:string})=>role==="combobox" ? combo(opts.name) : {click:async()=>{if(opts.name!=="DOWNLOAD"){opened=opts.name;cursor=menus[opts.name].indexOf(selected[opts.name]);}else downloads.push(`${selected.Year}-${names.indexOf(selected.Month)+1}:${selected.Format}`);}},
+    locator:(selector:string)=>({first:()=>({waitFor:async()=>undefined}),allTextContents:async()=> options.hiddenMenus && !selector.includes(":visible") ? Object.values(menus).flat() : menus[opened]}),
+    getByRole:(role:string,opts:{name:string})=>role==="combobox" ? combo(opts.name) : {click:async()=>{if(opts.name!=="DOWNLOAD"){opened=opts.name;cursor=menus[opts.name].indexOf(selected[opts.name]);}else downloads.push(`${selected.Year}-${names.indexOf(selected.Month.toUpperCase().trim())+1}:${selected.Format}`);}},
     waitForEvent:async()=>{
-      const kind = selected.Format==="PDF" ? "pdf" : "txt", month=`${selected.Year}-${String(names.indexOf(selected.Month)+1).padStart(2,"0")}`;
+      const kind = selected.Format==="PDF" ? "pdf" : "txt", month=`${selected.Year}-${String(names.indexOf(selected.Month.toUpperCase().trim())+1).padStart(2,"0")}`;
       return {url:()=>"blob:https://www.uhcjarvis.com/synthetic",failure:async()=>options.failedMonth===month ? "synthetic failure" : null,
         suggestedFilename:()=>`commission_statement_${options.mismatch && kind==="txt" ? "999002" : options.party ?? "999001"}_${month}-01.${kind}`,
         path:async()=>kind==="pdf" ? pdf : text};
@@ -82,6 +82,11 @@ describe("UHC app-requested sync", () => {
     const result = await syncUhcYear(f.page, 2026, async (pair) => { outcomes.push(pair.statementMonth); return pair.statementMonth === "2026-01" ? "duplicate" : "stored"; });
     expect(result).toEqual({ found: 2, downloaded: 1, skipped: 1, failed: 0 });
     expect(outcomes).toEqual(["2026-01", "2026-02"]); expect(f.downloads).toHaveLength(4);
+  });
+  it("reads only the visible popup and normalizes month label capitalization", async () => {
+    const f = await fixture({ months: ["January", "February"], hiddenMenus: true });
+    const result = await syncUhcYear(f.page, 2026, async () => "stored");
+    expect(result).toEqual({ found: 2, downloaded: 2, skipped: 0, failed: 0 });
   });
   it("does not register incomplete pairs", async () => {
     const f = await fixture({ invalidText: true }); let called = false;

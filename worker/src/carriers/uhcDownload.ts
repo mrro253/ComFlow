@@ -15,17 +15,24 @@ async function preserve(directory: string, bytes: Buffer, extension: string) {
   }
   return { sha256: hash, file: path.basename(target) };
 }
+const labelText = (text: string) => text.replace(/\s+/g, " ").trim().toUpperCase();
+async function menuOptions(page: Page) {
+  // Downshift leaves closed menus mounted. Read only the currently visible popup.
+  const items = page.locator('[id^="downshift-"][id$="-menu"]:visible [id*="-item-"]');
+  await items.first().waitFor({ state: "visible", timeout: 15000 });
+  return (await items.allTextContents()).map(labelText);
+}
 async function selectControl(page: Page, name: string, value: string) {
   const control = page.getByRole("combobox", { name, exact: true });
-  if ((await control.innerText()).trim() === value) return;
+  if (labelText(await control.innerText()) === value) return;
   await page.getByRole("button", { name, exact: true }).click();
-  const options = (await page.locator('[id^="downshift-"][id$="-menu"] [id*="-item-"]').allTextContents()).map((text) => text.trim());
+  const options = await menuOptions(page);
   const index = options.indexOf(value);
   if (index < 0 || options.filter((option) => option === value).length !== 1) throw new SafePortalError("Requested UnitedHealthcare report option is unavailable");
   await control.press("Home");
   for (let i = 0; i < index; i++) await control.press("ArrowDown");
   await control.press("Enter");
-  if ((await control.innerText()).trim() !== value) throw new SafePortalError("UnitedHealthcare report selection did not update");
+  if (labelText(await control.innerText()) !== value) throw new SafePortalError("UnitedHealthcare report selection did not update");
 }
 async function source(page: Page, month: string, kind: "pdf" | "txt") {
   assertUhcPage(page.url());
@@ -105,10 +112,13 @@ export async function downloadUhcYear(page: Page, year: number, directory: strin
   const payeeHash = createHash("sha256").update(await currentParty(page)).digest("hex");
   await selectControl(page, "Year", String(year));
   await page.getByRole("button", { name: "Month", exact: true }).click();
-  const options = (await page.locator('[id^="downshift-"][id$="-menu"] [id*="-item-"]').allTextContents()).map((text) => text.trim());
+  const options = await menuOptions(page);
   await page.getByRole("combobox", { name: "Month", exact: true }).press("Escape");
   const all = Array.from({ length: 12 }, (_, i) => `${year}-${String(i+1).padStart(2,"0")}`);
-  if (!options.length || new Set(options).size !== options.length || options.some((label) => !all.some((month) => uhcMonth(month).month === label))) throw new SafePortalError("Unsupported UnitedHealthcare available-month list");
+  if (!options.length || new Set(options).size !== options.length || options.some((label) => !all.some((month) => uhcMonth(month).month === label))) {
+    const recognized = options.filter((label) => all.some((month) => uhcMonth(month).month === label)).length;
+    throw new SafePortalError(`Unsupported UnitedHealthcare available-month list (${options.length} options, ${recognized} recognized months)`);
+  }
   const months = all.filter((month) => options.includes(uhcMonth(month).month));
   const saved: string[] = [], reused: string[] = [], failed: string[] = [];
   for (const month of months) {
@@ -126,10 +136,13 @@ export async function syncUhcYear(page: Page, year: number, save: (pair: Awaited
   assertUhcPage(page.url());
   await selectControl(page, "Year", String(year));
   await page.getByRole("button", { name: "Month", exact: true }).click();
-  const options = (await page.locator('[id^="downshift-"][id$="-menu"] [id*="-item-"]').allTextContents()).map((text) => text.trim());
+  const options = await menuOptions(page);
   await page.getByRole("combobox", { name: "Month", exact: true }).press("Escape");
   const all = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, "0")}`);
-  if (!options.length || new Set(options).size !== options.length || options.some((label) => !all.some((month) => uhcMonth(month).month === label))) throw new SafePortalError("Unsupported UnitedHealthcare available-month list");
+  if (!options.length || new Set(options).size !== options.length || options.some((label) => !all.some((month) => uhcMonth(month).month === label))) {
+    const recognized = options.filter((label) => all.some((month) => uhcMonth(month).month === label)).length;
+    throw new SafePortalError(`Unsupported UnitedHealthcare available-month list (${options.length} options, ${recognized} recognized months)`);
+  }
   const months = all.filter((month) => options.includes(uhcMonth(month).month));
   const summary = { found: months.length, downloaded: 0, skipped: 0, failed: 0 };
   for (const month of months) {

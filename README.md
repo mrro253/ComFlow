@@ -755,6 +755,9 @@ Each Independent-agent customer is their own business associate of their carrier
 
 ## 15. Changelog (newest first)
 
+- **2026-10-21** - Address the live UHC available-month-list rejection: wait for visible Downshift menu items, exclude mounted hidden menus and normalize label case/whitespace while retaining strict month validation. Add a synthetic hidden-menu/mixed-case regression and safe option-count diagnostics. Live retry pending; the existing signed-in worker will reload this downloader without restart. No imported records changed.
+
+
 - **2026-10-21** - Improve UHC sync diagnostics with safe failing-stage/validation reasons and per-month failure messages. Avoid navigating away from an already-open statement page; reload downloader code on retry while retaining its authenticated browser. Existing running workers require one restart to acquire this capability; no credentials, cookies or source data are persisted for session transfer. All 379 synthetic tests, app/worker TypeScript and ESLint pass; downloader reload verified through the installed worker runtime. Live failure cause remains unverified; manual PDF download succeeded, automatic sync has not completed. No imported records changed.
 
 
