@@ -35,7 +35,7 @@ Last updated: 2026-10-21
 | Independent collective report + owner-level profile (2026-10-10) | Built | Unit tests for the report/CSV and statement-access rules; migration `0010`. **UI never run against live Supabase** |
 | Upload -> preview -> approve -> payments UI | Built | Compiles, lints, `next build` passes. **Never run in a browser against a live Supabase project** (no Docker/Supabase CLI was available while building) |
 | Carrier login screen (encrypted credentials) | Built | Encryption unit-tested. UI **unverified** against live Supabase |
-| Devoted Health | Download-only development; import unavailable | [Source findings and separate worker command](docs/devoted-integration.md). One approved PDF/workbook pair inspected locally; new worker live run and paired parser unverified. |
+| Devoted Health | Download-only development; import unavailable | [Source findings and separate worker command](docs/devoted-integration.md). One approved pair downloaded successfully by the separate worker after interactive sign-in; manifest and file hashes verified. Paired parser, unattended login and import remain unbuilt/unverified. |
 | Carrier worker (auto-pull from the portal) | Locally verified | One live Ultimate sync downloaded nine statements with zero failures on 2026-10-20. Scheduling and hosted worker remain unverified |
 | Career-agent earnings, rate locks | Logic built, **no UI** | Unit tests. Payout batches removed. Intentionally not in the MVP screens |
 | GoHighLevel output | Plan documented; integration not built | [Field mapping and review plan](docs/ghl-integration-plan.md); no API access or live GHL changes |
@@ -732,6 +732,9 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Verify the separate Devoted worker live for one approved pay period after interactive sign-in: successful PDF/workbook/manifest preservation, clean exit and automatic browser close, and matching stored-file hashes. Main ledger remains 94 entries / 1,110,416 cents. No imports or additional periods downloaded; unattended login, paired parser and scheduled sync remain unavailable.
+
 
 - **2026-10-21** - Add a separate Devoted download-only worker command with explicit pay date, interactive authentication, private paired-file preservation, pagination, unsafe-link/file rejection and duplicate/overwrite checks. Approved sample PDF/workbook inspected locally; PDF lacks carrier Member ID while workbook supplies 22 columns, so no placeholder parser or imports enabled. New worker live run remains unverified. Document paired-source parsing/storage decisions requiring Marshall review; no dependencies, schema, financial records or Ultimate changes.
 
