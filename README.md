@@ -37,7 +37,7 @@ Last updated: 2026-10-21
 | Carrier login screen (encrypted credentials) | Built | Encryption unit-tested. UI **unverified** against live Supabase |
 | Carrier worker (auto-pull from the portal) | Locally verified | One live Ultimate sync downloaded nine statements with zero failures on 2026-10-20. Scheduling and hosted worker remain unverified |
 | Career-agent earnings, rate locks | Logic built, **no UI** | Unit tests. Payout batches removed. Intentionally not in the MVP screens |
-| GoHighLevel output | Not started | |
+| GoHighLevel output | Plan documented; integration not built | [Field mapping and review plan](docs/ghl-integration-plan.md); no API access or live GHL changes |
 
 The live Ultimate download, saved-PDF preview and approval/import path have now been exercised locally with nine statements (94 payments). Manual upload, other layouts and all role-specific browser flows still need their own verification.
 
@@ -263,7 +263,7 @@ Important properties:
 ## 5. What's missing
 
 **Not built yet**
-- GoHighLevel **output** (match contacts, push statuses). Not built: Settings/Onboarding show an informational "Coming soon" card only. GHL is never a source of payable amounts.
+- GoHighLevel **output** (match contacts, push verified policy information). Agreed behavior and pending design decisions are in [the GHL integration plan](docs/ghl-integration-plan.md). Not built: Settings/Onboarding show an informational "Coming soon" card only. GHL is never a source of payable amounts.
 - Career-agent **earnings screens**: the rules, rate locks and approval logic exist in `lib/carriers/compensation`, with tables, but no UI and no job that creates earnings. Payout batches have been removed.
 - Carriers other than **Ultimate Health Plans** (parser and portal).
 - **Scheduled** syncing. The worker only handles "Sync now" requests.
@@ -301,7 +301,7 @@ As of 2026-10-21, payment search/filter/pagination is locally verified. Next val
 4. **Keep running locally for now. Do not deploy yet.** Run the app, local Supabase and the worker (`npm run start` in `worker/`) on your own machine. Hosting costs money and real client data (PHI) cannot go on any hosted service until HIPAA agreements are in place. Deploy when you are ready to launch, following the roadmap in section 14 (hosted setup, nightly sync, HIPAA).
 5. Career **earnings UI** (preview via `buildEarningsPlan`, Owner approval; no payouts).
 6. **Second carrier:** write a `StatementParser` and a `CarrierPortal` (see section 9).
-7. **GoHighLevel output** (reshape `lib/crm` around push operations; no inbound payable data).
+7. **GoHighLevel output**: Marshall reviews [the field mapping and connection decisions](docs/ghl-integration-plan.md), then synthetic testing before any real-contact updates. Integration remains unbuilt; no inbound payable data.
 8. Retire the legacy CRM-driven code and the old seed data.
 
 ---
@@ -728,6 +728,9 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Document Ryan's agreed GHL current-field/history-note and evidence-based policy-status behavior, screenshot field keys/dropdown choices, proposed matching safeguards, and Marshall's pending connection/design decisions. Plan only: no API access, credentials, schema, financial rules or GHL contact changes.
+
 
 - **2026-10-21** - Verify populated Career, Independent and Manager screens in a separate local source snapshot and Supabase project (`commissionflow-role-test`, app 3001, API 55421, DB 55422). Imported a fully synthetic 37-entry, 13-column PDF totaling 83,350 cents through upload/preview/approve. Career: 3 entries / 21,000 cents, all 13 detail fields, chargeback filter 1 / -15,000 cents, another agent's client search empty, shared PDF direct request denied. Independent: 2 entries / 3,000 cents and 13-field dialog, Career client search empty. Manager: self + direct reports only, 30 entries / 24,100 cents, allowed-agent options, page 2 retains full totals, report count 30, direct-report filter/details and excluded-team search checked. Career and Independent report counts 3 and 2. Main app database remains 94 entries / 1,110,416 cents; carrier worker never run. Synthetic environment preserved separately and test services stopped after review. Captive/Independent owner-profile browser flows remain unverified; no product code or permission changes.
 
