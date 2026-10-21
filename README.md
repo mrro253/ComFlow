@@ -183,6 +183,8 @@ See section 7 for the full list. The ones that still need an answer:
 Clarity/mobile follow-up: dashboard production groups explicitly show carrier commissions, not Career take-home earnings. Activity table headings distinguish policy effective date, statement month and carrier commission. Mobile selectors have larger touch targets, pagination wraps, details use smaller phone padding and long client/field values wrap. Automated checks cover compilation; owner statement cards and activity filters were reviewed at 390px width; dashboard production heading verified. Long-value dialogs and pagination wrapping remain browser-unverified.
 
 
+Monthly chart: each month is stacked by the carriers visible to the signed-in user, with a color legend, signed carrier amounts and a month total in the tooltip. Negative contributions plot below zero. An expandable amounts table distinguishes no imported entries from a zero net total. This is presentation/reporting only; selected-month cards and ledger totals are unchanged. Desktop chart, keyboard tooltip (including a negative contribution), and amount table were browser-verified. Phone viewport verification remains pending.
+
 Statement total wording: preview and imported statement pages now show commission entries this month, an amount added/deducted from a previous statement (or a zero previous statement balance), and the statement total. Dashboard/activity explanations use the same plain language. This changes presentation only; ledger amounts and import rules stay unchanged. Negative/positive/zero presentation and safe-cent validation have synthetic coverage. Imported negative and zero-balance statements were browser-verified; positive balances and the unimported preview path remain browser-unverified. No setup, dependency or migration changes.
 
 Statement tracking: Statements now shows a year selector and month cards per visible carrier/statement owner, using all RLS-visible saved statement metadata. Imported, Needs review and None on file indicate document presence only, not missed payments. Superseded copies are excluded; unknown-month files remain in the latest-100 History table. The nine saved Devoted pairs are now registered/imported statements; future download-only files are not counted until imported. Synthetic coverage checks and build verification are recorded below; browser verification remains unverified.
@@ -743,6 +745,8 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Stack monthly commission bars by carrier with a legend, per-carrier tooltip/month total and accessible amount table. Preserve signed integer-cent aggregation and show negative contributions below zero. 335 tests, TypeScript, ESLint and production build pass. Desktop stack, legend, keyboard tooltip and amount table browser-verified; phone viewport remains unverified. No migration, dependency or import changes.
 
 - **2026-10-21** - Explain statement totals using commission entries plus amounts added/deducted from previous statements. Add the breakdown to preview and imported statements and replace accounting jargon in dashboard/activity explanations. Presentation only; 331 tests, TypeScript, ESLint and production build pass; negative and zero-balance imported summaries browser-verified. Positive balance and preview browser cases remain unverified.
 

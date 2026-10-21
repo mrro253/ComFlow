@@ -9,7 +9,6 @@ import { listUsersForAgency } from "@/lib/repositories/userRepository";
 import { formatCents } from "@/lib/carriers/money";
 import {
   monthLabel,
-  monthlyPaidSeries,
   PRODUCER_GROUP_LABELS,
   sumCents,
   totalsByCategory,
@@ -19,6 +18,8 @@ import { selectDashboardMonth } from "@/lib/reporting/dashboardMonth";
 import { isOnboardingIncomplete } from "@/lib/onboarding";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { BarChartCard } from "@/components/dashboard/bar-chart-card";
+import { CarrierMonthlyChart } from "@/components/dashboard/carrier-monthly-chart";
+import { carrierMonthlySeries } from "@/lib/reporting/carrierMonthlySeries";
 import { listCareerLevels } from "@/lib/repositories/compensationSettingsRepository";
 import { OnboardingChecklistCard } from "@/components/dashboard/onboarding-checklist-card";
 import { Button } from "@/components/ui/button";
@@ -135,7 +136,7 @@ export default async function DashboardPage({
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <BarChartCard title="Commission totals by statement month" data={monthlyPaidSeries(transactions)} barColor="hsl(var(--chart-1))" />
+            <CarrierMonthlyChart {...carrierMonthlySeries(transactions)} />
             {/* BarChartCard plots {month,total}; here the "month" axis carries the payment category. */}
             <BarChartCard
               title={`Commission categories${month ? ` - ${periodLabel}` : ""}`}
