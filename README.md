@@ -179,6 +179,9 @@ See section 7 for the full list. The ones that still need an answer:
 
 ## 3. Current functionality
 
+Statement tracking: Statements now shows a year selector and month cards per visible carrier/statement owner, using all RLS-visible saved statement metadata. Imported, Needs review and None on file indicate document presence only, not missed payments. Superseded copies are excluded; unknown-month files remain in the latest-100 History table. Devoted private downloads are not registered/imported statements. Synthetic coverage checks and build verification are recorded below; browser verification remains unverified.
+
+
 Local row-access regression: `supabase/tests/role_access.sql` uses synthetic users in two agencies inside a rollback-only transaction. It asserts exact commission-entry visibility for the owner, manager, Independent/principal, Career agents, captive writer and Career direct-report visibility, then checks the ledger fingerprint is unchanged. Run locally with `psql -U postgres -d postgres -f supabase/tests/role_access.sql` against the local development database (migrations through 0010). Verified locally on 2026-10-21; this checks database enforcement. Existing Career, Independent and Manager demo browser sign-ins and empty states were also checked; populated Career, Independent and Manager client-detail browser flows were subsequently verified in an isolated synthetic environment (see 2026-10-21 changelog). Captive and Independent owner-profile browser flows remain unverified. Fixtures are rolled back; no real records are edited.
 
 
@@ -732,6 +735,8 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Add read-only statement coverage by year, carrier and owner, complete session-scoped metadata reads, explicit missing-document wording and mobile month cards. No schema, imports, financial records or permissions changed. Browser flow unverified.
 
 - **2026-10-21** - Extend the separate Devoted downloader with explicit `--year` scope, one interactive sign-in, all-page discovery, per-pair failure reporting and unchanged content-hash preservation. Tests cover other-year exclusion, ambiguous dates and missing/failed pairs; all 254 tests plus app/worker TypeScript and ESLint pass. Live 2026 run completed: 9/9 available pairs (January-September), zero failures, all manifest/file hashes verified, and existing local content reused. The main ledger remains 94 entries / 1,110,416 cents. No imports, schema, dependencies or Ultimate changes.
 

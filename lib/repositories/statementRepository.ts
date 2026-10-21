@@ -123,6 +123,19 @@ export async function listStatements(limit = 100): Promise<StatementRecord[]> {
   return data.map(mapStatement);
 }
 
+/** Complete session/RLS-scoped metadata for coverage; fail visibly rather than report false gaps. */
+export async function listStatementCoverage(): Promise<StatementRecord[]> {
+  const supabase = await createClient();
+  const rows: StatementRecord[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase.from("commission_statements").select("*")
+      .order("id", { ascending: true }).range(offset, offset + 499);
+    if (error || !data) throw new Error("Could not load statement coverage. Please try again.");
+    rows.push(...data.map(mapStatement));
+    if (data.length < 500) return rows;
+  }
+}
+
 export async function getStatement(id: string): Promise<StatementRecord | null> {
   const supabase = await createClient();
   const { data, error } = await supabase

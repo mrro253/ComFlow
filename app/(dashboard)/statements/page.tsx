@@ -1,9 +1,10 @@
+import { statementCoverage } from "@/lib/reporting/statementCoverage";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { listSupportedCarriers } from "@/lib/carriers";
 import { formatCents } from "@/lib/carriers/money";
-import { listStatements } from "@/lib/repositories/statementRepository";
+import { listStatementCoverage, listStatements } from "@/lib/repositories/statementRepository";
 import { listUsersForAgency } from "@/lib/repositories/userRepository";
 import { STATEMENT_STATUS_BADGE } from "@/components/statements/status";
 import { UploadStatementForm } from "@/components/statements/upload-statement-form";
@@ -13,12 +14,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatDate } from "@/lib/utils";
 import { canManageStatements } from "@/lib/auth/statementAccess";
 
-export default async function StatementsPage() {
+export default async function StatementsPage({ searchParams }: { searchParams: Promise<{ year?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (!canManageStatements(user)) redirect("/dashboard");
 
-  const [statements, team] = await Promise.all([listStatements(), listUsersForAgency(user.agencyId)]);
+  const [statements, team, coverageStatements] = await Promise.all([listStatements(), listUsersForAgency(user.agencyId), listStatementCoverage()]);
+  const params = await searchParams;
+  const currentYear = new Date().getUTCFullYear();
+  const years = [...new Set([currentYear, ...coverageStatements.flatMap((s) => s.statementMonth ? [Number(s.statementMonth.slice(0, 4))] : [])])].filter((y) => Number.isInteger(y) && y >= 2000 && y <= 2099).sort((a, b) => b - a);
+  const requestedYear = Number(params.year);
+  const year = years.includes(requestedYear) ? requestedYear : currentYear;
+  const coverage = statementCoverage(coverageStatements, year);
   const independents =
     user.role === "owner"
       ? team
@@ -54,7 +61,30 @@ export default async function StatementsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Statements by month</CardTitle>
+          <CardDescription>For each carrier and statement owner already on file. None on file means no saved statement for that month; it does not mean commission is missing or unpaid. Multiple statements can belong to one month.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="mb-4 flex flex-wrap items-end gap-3" method="get">
+            <label className="grid gap-1 text-sm">Year<select name="year" defaultValue={year} className="h-10 rounded-md border bg-background px-3">{years.map((y) => <option key={y}>{y}</option>)}</select></label>
+            <button className="min-h-10 rounded-md border px-4 text-sm" type="submit">Show year</button>
+          </form>
+          {coverage.length === 0 && <p className="text-sm text-muted-foreground">No active statements on file yet.</p>}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {coverage.map((group) => <section key={JSON.stringify([group.carrier, group.userId])} className="min-w-0 rounded-md border p-3">
+              <h3 className="break-words font-medium">{group.carrier}</h3>
+              <p className="mb-3 text-sm text-muted-foreground">{group.userId ? nameById.get(group.userId) ?? "Agent" : "Agency"}</p>
+              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">{group.months.map((status, index) => <li key={index} className="rounded border p-2 text-sm"><span className="block font-medium">{new Date(Date.UTC(year, index, 1)).toLocaleString("en-US", { month: "short", timeZone: "UTC" })}</span><span className="text-xs text-muted-foreground">{status}</span></li>)}</ul>
+            </section>)}
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">Superseded copies are excluded. Statements without a verified month remain in History. Download-only Devoted files are not registered statements and are not included.</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>History</CardTitle>
+          <CardDescription>Latest 100 saved statements. On a phone, swipe the table sideways to see all columns. Statement totals are carrier-reported amounts, not verified bank deposits.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
