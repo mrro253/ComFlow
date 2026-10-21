@@ -24,7 +24,11 @@ export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, l
     const current = new URL(page.url());
     const target = carrier === "UnitedHealthcare" ? "https://www.uhcjarvis.com/content/jarvis/en/secure/commissions/statements.html" : carrier === "Devoted Health" ? "https://agent.devoted.com/commissions" : null;
     if ((usernameSubmitted || passwordSubmitted) && target && !destinationOpened && current.hostname === new URL(target).hostname && current.pathname !== new URL(target).pathname) {
-      await page.goto(target); destinationOpened = true; continue;
+      // Let the carrier finish exchanging its callback code before leaving this route.
+      const signedIn = carrier === "Devoted Health"
+        ? page.getByText("Commissions", { exact: true }).first()
+        : page.getByText(/You are now accessing/).first();
+      if (await signedIn.isVisible()) { await page.goto(target); destinationOpened = true; continue; }
     }
     const accountChange = /reset|recover|change.password|signup|register/.test(current.pathname.toLowerCase()) || await page.locator('input[autocomplete="new-password"]:visible').count() > 0;
     const challenge = page.locator('input[autocomplete="one-time-code"]:visible, input[name="code"]:visible, input[name="otp"]:visible, iframe[title*="challenge" i]:visible, iframe[title*="captcha" i]:visible');
