@@ -121,7 +121,7 @@ export async function downloadUhcYear(page: Page, year: number, directory: strin
 }
 
 /** App sync always fetches current revisions; an old month ID is not proof of unchanged content. */
-export async function syncUhcYear(page: Page, year: number, save: (pair: Awaited<ReturnType<typeof readUhcMonth>>) => Promise<"stored" | "duplicate">) {
+export async function syncUhcYear(page: Page, year: number, save: (pair: Awaited<ReturnType<typeof readUhcMonth>>) => Promise<"stored" | "duplicate">, log: (message: string) => void = () => {}) {
   if (!Number.isInteger(year) || year < 2000 || year > 2099) throw new SafePortalError("Invalid UnitedHealthcare statement year");
   assertUhcPage(page.url());
   await selectControl(page, "Year", String(year));
@@ -134,7 +134,10 @@ export async function syncUhcYear(page: Page, year: number, save: (pair: Awaited
   const summary = { found: months.length, downloaded: 0, skipped: 0, failed: 0 };
   for (const month of months) {
     try { if (await save(await readUhcMonth(page, month)) === "duplicate") summary.skipped++; else summary.downloaded++; }
-    catch { summary.failed++; }
+    catch (error) {
+      summary.failed++;
+      log(`UnitedHealthcare ${month}: ${error instanceof SafePortalError ? error.message : "Report selection, download or storage did not complete; source details withheld"}`);
+    }
   }
   return summary;
 }

@@ -1,5 +1,5 @@
 import { chromium, type Browser, type Page } from "playwright";
-import { syncUhcYear } from "./uhcDownload.js";
+import { loadUhcDownloader } from "./uhcLoader.js";
 import { UHC_STATEMENTS_URL } from "./uhcMetadata.js";
 import { SafePortalError, type CarrierPortal } from "./types.js";
 
@@ -16,9 +16,10 @@ export const uhcPortal: CarrierPortal = {
       sessions.set(options.sessionKey, session);
     }
     const { page } = session;
+    let stage = "opening Jarvis";
     try {
       await options.onVerification?.();
-      await page.goto(UHC_STATEMENTS_URL);
+      if (page.url() !== UHC_STATEMENTS_URL) await page.goto(UHC_STATEMENTS_URL);
       // Autofill only on the known identity provider, with unambiguous visible inputs.
       if (new URL(page.url()).hostname === "identity.onehealthcareid.com") {
         const username = page.locator('input[autocomplete="username"]:visible, input[type="email"]:visible');
@@ -27,15 +28,20 @@ export const uhcPortal: CarrierPortal = {
           await username.fill(login.username); await password.fill(login.password);
         }
       }
+      stage = "waiting for sign-in and Statements and More";
       await page.getByRole("heading", { name: "Commission Statements", exact: true }).waitFor({ state: "visible", timeout: 1800000 });
+      stage = "reading report controls";
+      const { syncUhcYear } = await loadUhcDownloader();
       const total = { found: 0, downloaded: 0, skipped: 0, failed: 0 };
       for (const year of options.years) {
-        const summary = await syncUhcYear(page, year, options.onUhcPair);
+        const summary = await syncUhcYear(page, year, options.onUhcPair, options.log);
         for (const key of ["found", "downloaded", "skipped", "failed"] as const) total[key] += summary[key];
       }
       return total;
-    } catch {
-      throw new SafePortalError("UnitedHealthcare sync paused. Its browser stays open. Complete verification and open Commissions > Statements and More, then retry Sync now. No commission entries were imported.");
+    } catch (error) {
+      const detail = error instanceof SafePortalError ? error.message : `Could not complete ${stage}.`;
+      options.log(`UnitedHealthcare paused: ${detail}`);
+      throw new SafePortalError(`UnitedHealthcare paused: ${detail} The browser stays open. Resolve the issue there, then retry Sync now. No commission entries imported.`);
     }
   },
 };
