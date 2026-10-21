@@ -309,6 +309,9 @@ As of 2026-10-21, payment search/filter/pagination is locally verified. Next val
 
 ## 7. Decisions to check with Ryan
 
+**Marshall approval pending:** review [Devoted statement import](docs/devoted-import-approval.md) before implementing its proposed dependency, paired-source storage/schema and duplicate/import changes. Ryan must separately approve the resulting real import previews.
+
+
 Assumptions already built in. Please confirm or correct each:
 
 Ryan's answers from 2026-10-10 are marked **Ryan:**.
@@ -732,6 +735,9 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Prepare [Devoted import approval package](docs/devoted-import-approval.md) for Marshall: exact proposed workbook dependency, immutable paired-source schema and PDF/pair uniqueness split, pay-date-aware duplicate/correction handling, reconciliation/assignment rules, file impacts and acceptance gates. Review branch only; no dependency installed, migration applied, new downloads or commission imports.
+
 
 - **2026-10-21** - Extend the separate Devoted downloader with explicit `--year` scope, one interactive sign-in, all-page discovery, per-pair failure reporting and unchanged content-hash preservation. Tests cover other-year exclusion, ambiguous dates and missing/failed pairs; all 254 tests plus app/worker TypeScript and ESLint pass. Live 2026 run completed: 9/9 available pairs (January-September), zero failures, all manifest/file hashes verified, and existing local content reused. The main ledger remains 94 entries / 1,110,416 cents. No imports, schema, dependencies or Ultimate changes.
 
