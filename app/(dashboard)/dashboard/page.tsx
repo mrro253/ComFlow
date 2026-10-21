@@ -124,7 +124,7 @@ export default async function DashboardPage({
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Commission total" value={formatCents(sumCents(inMonth))} icon={CircleDollarSign} hint="Sum of this month’s commission entries" />
+            <StatCard label="Commission total" value={formatCents(sumCents(inMonth))} icon={CircleDollarSign} hint="Carrier-reported entry total, not take-home earnings" />
             <StatCard label="Commission entries" value={String(inMonth.length)} icon={Hash} hint="Statement lines, not bank deposits" />
             {isOwner && (
               <>
@@ -147,9 +147,9 @@ export default async function DashboardPage({
           {groups.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Production breakdown</CardTitle>
+                <CardTitle>Carrier commissions by production group</CardTitle>
                 <CardDescription>
-                  {periodLabel} — owner personal production, Career agents and Independent agents are shown separately. A group appears only when it has entries.
+                  {periodLabel} — owner personal production, Career agents and Independent agents are shown separately. These are carrier-reported amounts; Career agent earnings may differ under their compensation plan. A group appears only when it has entries.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3 sm:grid-cols-2">

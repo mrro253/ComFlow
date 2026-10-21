@@ -179,6 +179,9 @@ See section 7 for the full list. The ones that still need an answer:
 
 ## 3. Current functionality
 
+Clarity/mobile follow-up: dashboard production groups explicitly show carrier commissions, not Career take-home earnings. Activity table headings distinguish policy effective date, statement month and carrier commission. Mobile selectors have larger touch targets, pagination wraps, details use smaller phone padding and long client/field values wrap. Automated checks cover compilation; owner statement cards and activity filters were reviewed at 390px width; dashboard production heading verified. Long-value dialogs and pagination wrapping remain browser-unverified.
+
+
 Statement tracking: Statements now shows a year selector and month cards per visible carrier/statement owner, using all RLS-visible saved statement metadata. Imported, Needs review and None on file indicate document presence only, not missed payments. Superseded copies are excluded; unknown-month files remain in the latest-100 History table. Devoted private downloads are not registered/imported statements. Synthetic coverage checks and build verification are recorded below; browser verification remains unverified.
 
 
@@ -735,6 +738,9 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Clarify carrier commission totals versus agent earnings and bank deposits; improve phone selector targets, pagination wrapping and long detail values. Presentation only; no calculations, data, permissions or dependencies changed. Statement coverage phase passed 256 tests, TypeScript, ESLint and production build. All 256 tests, TypeScript, ESLint and production build pass. Owner statement coverage (January–September imported, October–December none on file) and 390px month cards/activity filters reviewed; dashboard heading verified. Dialog/pagination edge cases remain browser-unverified.
+
 
 - **2026-10-21** - Add read-only statement coverage by year, carrier and owner, complete session-scoped metadata reads, explicit missing-document wording and mobile month cards. No schema, imports, financial records or permissions changed. Browser flow unverified.
 

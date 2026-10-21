@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type Payment = PaymentLedgerView["rows"][number];
-const selectClass = "h-9 w-full rounded-md border border-input bg-background px-2 text-sm";
+const selectClass = "min-h-11 w-full rounded-md border border-input bg-background px-2 text-sm";
 
 export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; role: string }) {
   const [view, setView] = useState(initial);
@@ -100,7 +100,7 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
       </Card>
       <div className="grid gap-4 sm:grid-cols-3" aria-live="polite">
         <Card><CardHeader><CardTitle>Commission total</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{formatCents(view.totalCents)}</p><p className="text-xs text-muted-foreground">Sum of matching entries across every page. Filters and carried balances can make this different from a statement total.</p></CardContent></Card>
-        <Card><CardHeader><CardTitle>Commission entries</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{view.count}</p><p className="text-xs text-muted-foreground">Client-level lines on carrier statements</p></CardContent></Card>
+        <Card><CardHeader><CardTitle>Commission entries</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{view.count}</p><p className="text-xs text-muted-foreground">Client-level lines, not separate bank deposits</p></CardContent></Card>
         {isOwner && <Card><CardHeader><CardTitle>Unassigned entries</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{view.unassignedCount}</p></CardContent></Card>}
       </div>
       {view.categories.length > 0 && <Card>
@@ -110,10 +110,10 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
         </div>)}</CardContent>
       </Card>}
       <Card>
-        <CardHeader><CardTitle>Commission entry details</CardTitle><p className="text-sm text-muted-foreground">Click a client to open all statement fields.</p></CardHeader>
+        <CardHeader><CardTitle>Commission entry details</CardTitle><p className="text-sm text-muted-foreground">Open a client to see all statement fields. On a phone, swipe the table sideways for more columns.</p></CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader><TableRow><TableHead>Client / member ID</TableHead><TableHead>Carrier</TableHead><TableHead>Product type</TableHead><TableHead>Category</TableHead><TableHead>Effective</TableHead><TableHead>Month</TableHead>{role !== "agent" && <TableHead>Credited to</TableHead>}<TableHead className="text-right">Amount</TableHead>{isOwner && <TableHead>Assign</TableHead>}</TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Client / member ID</TableHead><TableHead>Carrier</TableHead><TableHead>Product type</TableHead><TableHead>Category</TableHead><TableHead>Policy effective date</TableHead><TableHead>Statement month</TableHead>{role !== "agent" && <TableHead>Credited to</TableHead>}<TableHead className="text-right">Carrier commission</TableHead>{isOwner && <TableHead>Assign</TableHead>}</TableRow></TableHeader>
             <TableBody>
               {!view.rows.length && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">No matching commission entries. Try changing or clearing the filters.</TableCell></TableRow>}
               {view.rows.map((row) => <TableRow key={row.id}>
@@ -128,18 +128,18 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
           <nav aria-label="Commission entry pagination" className="flex flex-wrap items-center justify-between gap-3 border-t p-4">
             <p role="status" className="text-sm">Showing entries {view.start}–{view.end} of {view.count}</p>
             <label className="flex items-center gap-2 text-sm">Entries per page<select aria-label="Entries per page" className={selectClass} value={view.filters.pageSize} disabled={pending} onChange={(e) => run({ ...view.filters, pageSize: Number(e.target.value), page: 1 })}>{[25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}</select></label>
-            <div className="flex items-center gap-3"><Button type="button" variant="outline" disabled={pending || view.page <= 1} onClick={() => run({ ...view.filters, page: view.page - 1 })}>Previous</Button><span className="text-sm">Page {view.page} of {view.pages}</span><Button type="button" variant="outline" disabled={pending || view.page >= view.pages} onClick={() => run({ ...view.filters, page: view.page + 1 })}>Next</Button></div>
+            <div className="flex flex-wrap items-center gap-3"><Button type="button" variant="outline" disabled={pending || view.page <= 1} onClick={() => run({ ...view.filters, page: view.page - 1 })}>Previous</Button><span className="text-sm">Page {view.page} of {view.pages}</span><Button type="button" variant="outline" disabled={pending || view.page >= view.pages} onClick={() => run({ ...view.filters, page: view.page + 1 })}>Next</Button></div>
           </nav>
         </CardContent>
       </Card>
-      <dialog ref={dialog} aria-labelledby="payment-details-title" onCancel={() => setSelected(null)} onClose={() => setSelected(null)} className="m-auto max-h-[85vh] w-[min(95vw,48rem)] overflow-y-auto rounded-lg border bg-background p-6 text-foreground shadow-xl backdrop:bg-black/50">
+      <dialog ref={dialog} aria-labelledby="payment-details-title" onCancel={() => setSelected(null)} onClose={() => setSelected(null)} className="m-auto max-h-[85vh] w-[min(95vw,48rem)] overflow-y-auto rounded-lg border bg-background p-4 sm:p-6 text-foreground shadow-xl backdrop:bg-black/50">
         {selected && <>
-          <div className="flex items-start justify-between gap-4"><h2 id="payment-details-title" className="text-xl font-semibold">{selected.sourceDetails?.clientName || "Commission entry details"}</h2><Button type="button" variant="outline" onClick={() => setSelected(null)}>Close</Button></div>
+          <div className="flex items-start justify-between gap-4"><h2 id="payment-details-title" className="min-w-0 break-words text-xl font-semibold">{selected.sourceDetails?.clientName || "Commission entry details"}</h2><Button type="button" variant="outline" onClick={() => setSelected(null)}>Close</Button></div>
           <p className="mt-2 text-sm">{selected.carrier} · {selected.statementMonth} · {selected.commissionType} · {formatCents(selected.amountCents)}</p>
           <p className="mt-2 text-sm">Product type: {selected.product.label}{selected.product.reportedValue ? ` · As reported: ${selected.product.reportedValue}` : ` · ${selected.product.reason}`}</p>
           <p className="mt-2 text-sm text-muted-foreground">Credited to {personName(selected.userId)}{selected.writingUserId ? ` · Written by ${personName(selected.writingUserId)}` : ""}</p>
           {selected.sourceDetails ? <>
-            <dl className="mt-5 grid gap-4 sm:grid-cols-2">{selected.sourceDetails.fields.map((field, index) => <div key={index}><dt className="text-xs text-muted-foreground">{field.label}</dt><dd className="break-words text-sm">{field.value || "Not provided"}</dd></div>)}</dl>
+            <dl className="mt-5 grid gap-4 sm:grid-cols-2">{selected.sourceDetails.fields.map((field, index) => <div key={index} className="min-w-0"><dt className="text-xs text-muted-foreground">{field.label}</dt><dd className="break-words text-sm">{field.value || "Not provided"}</dd></div>)}</dl>
             <p className="mt-5 break-words text-xs text-muted-foreground">{selected.sourceDetails.statementFilename} · Source row {selected.sourceDetails.sourceRow}</p>
           </> : <p className="mt-4 text-sm">Source details unavailable. Member ID: {selected.memberId}; effective date: {selected.effectiveDate}. Your commission entry is unchanged.</p>}
           {isOwner && <Link href={`/statements/${selected.statementId}`} className="mt-4 inline-block text-sm underline">View source statement</Link>}
