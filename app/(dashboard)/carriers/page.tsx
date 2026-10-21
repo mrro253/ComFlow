@@ -61,7 +61,9 @@ export default async function CarriersPage() {
       {connectionCarriers(isOwner).map((carrier) => {
         const connection = mine.find((c) => c.carrier === carrier);
         const connected = connection && connection.status !== "disabled";
-        const status = connection ? STATUS[connection.status] : null;
+        const status = connection?.status === "needs_attention" && connection.lastError?.startsWith("Sync running.")
+          ? { label: "Sync in progress", variant: "secondary" as const }
+          : connection ? STATUS[connection.status] : null;
         return (
           <Card key={carrier}>
             <CardHeader className="flex-row items-center justify-between space-y-0">

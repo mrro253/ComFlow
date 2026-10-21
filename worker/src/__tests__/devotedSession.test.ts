@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { syncDevotedConnection } from "../devotedSync";
 import type { ConnectionRow, Db } from "../db";
 const mocks = vi.hoisted(() => ({ launch: vi.fn(), pull: vi.fn(), mark: vi.fn(), wait: vi.fn(), goto: vi.fn(), connected: true }));
+vi.mock("../carrierLogin.js", () => ({ automaticCarrierLogin: () => mocks.wait() }));
 vi.mock("playwright", () => ({ chromium: { launch: mocks.launch } }));
 vi.mock("../carriers/devotedDownload.js", () => ({ syncDevotedPage: mocks.pull }));
 vi.mock("../db.js", () => ({ loadCiphertext: async () => "encrypted", markConnection: mocks.mark }));

@@ -1,3 +1,4 @@
+import { automaticCarrierLogin } from "./carrierLogin.js";
 import { decryptCarrierLogin } from "../../lib/crypto/credentials";
 import { loadCiphertext } from "./db.js";
 import { chromium, type Browser, type Page } from "playwright";
@@ -47,16 +48,11 @@ export async function syncDevotedConnection(db: Db, connection: ConnectionRow) {
   const ciphertext = await loadCiphertext(db, connection.id);
   if (!ciphertext) throw new SafePortalError("Enter your Devoted login again before syncing");
   const login = decryptCarrierLogin(ciphertext, connection.id);
-  // Only prefill unambiguous visible fields. Verification and sign-in submission stay human controlled.
-  const passwords = page.locator('input[type="password"]:visible');
-  const usernames = page.locator('input[type="email"]:visible, input[autocomplete="username"]:visible');
-  if (new URL(page.url()).hostname === "agent.devoted.com" && await passwords.count() === 1 && await usernames.count() === 1) {
-    await usernames.fill(login.username);
-    await passwords.fill(login.password);
-  }
-  await markConnection(db, connection.id, { ok: false, error: "Devoted sync is running. If verification is requested, complete sign-in in the worker browser. Refresh this page after it finishes." });
+  await markConnection(db, connection.id, { ok: false, error: "Sync running. Signing in to Devoted with your saved login." });
   try {
-    await page.getByRole("heading", { name: "My Commissions", exact: true }).waitFor({ state: "visible", timeout: 1800000 });
+    await automaticCarrierLogin(page, "Devoted Health", login,
+      () => page.getByRole("heading", { name: "My Commissions", exact: true }).isVisible(),
+      () => markConnection(db, connection.id, { ok: false, error: "Devoted needs verification or sign-in review. Complete the request in the worker browser; sync continues when ready." }));
     return await syncDevotedPage(page, yearsToSync(), (date, pdf, workbook) => storeDevotedPair(db, connection, date, pdf, workbook));
   } catch {
     throw new SafePortalError("Devoted sync paused. Its browser stays open; complete sign-in, then choose Sync now again. No commission records were imported.");

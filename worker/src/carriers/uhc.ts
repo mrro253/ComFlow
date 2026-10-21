@@ -1,3 +1,4 @@
+import { automaticCarrierLogin } from "../carrierLogin.js";
 import { chromium, type Browser, type Page } from "playwright";
 import { loadUhcDownloader } from "./uhcLoader.js";
 import { UHC_STATEMENTS_URL } from "./uhcMetadata.js";
@@ -18,18 +19,12 @@ export const uhcPortal: CarrierPortal = {
     const { page } = session;
     let stage = "opening Jarvis";
     try {
-      await options.onVerification?.();
+      await options.onProgress?.();
       if (page.url() !== UHC_STATEMENTS_URL) await page.goto(UHC_STATEMENTS_URL);
-      // Autofill only on the known identity provider, with unambiguous visible inputs.
-      if (new URL(page.url()).hostname === "identity.onehealthcareid.com") {
-        const username = page.locator('input[autocomplete="username"]:visible, input[type="email"]:visible');
-        const password = page.locator('input[type="password"]:visible');
-        if (await username.count() === 1 && await password.count() === 1) {
-          await username.fill(login.username); await password.fill(login.password);
-        }
-      }
-      stage = "waiting for sign-in and Statements and More";
-      await page.getByRole("heading", { name: "Commission Statements", exact: true }).waitFor({ state: "visible", timeout: 1800000 });
+      stage = "signing in or waiting for verification";
+      await automaticCarrierLogin(page, "UnitedHealthcare", login,
+        () => page.getByRole("heading", { name: "Commission Statements", exact: true }).isVisible(),
+        async () => { await options.onVerification?.(); });
       stage = "reading report controls";
       const { syncUhcYear } = await loadUhcDownloader();
       const total = { found: 0, downloaded: 0, skipped: 0, failed: 0 };

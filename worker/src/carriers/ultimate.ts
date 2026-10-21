@@ -1,6 +1,7 @@
+import { automaticCarrierLogin } from "../carrierLogin.js";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { chromium, type APIRequestContext, type Download, type Locator, type Page } from "playwright";
+import { chromium, type Browser, type APIRequestContext, type Download, type Locator, type Page } from "playwright";
 import { safeError, statementIdentifier } from "../safeError.js";
 import {
   SafePortalError,
@@ -240,29 +241,26 @@ async function syncResults(
 // Portal
 // ---------------------------------------------------------------------------
 
+const sessions = new Map<string, { browser: Browser; page: Page }>();
 export const ultimatePortal: CarrierPortal = {
   carrier: CARRIER,
 
   async pull(login: CarrierLogin, options: PullOptions): Promise<PullSummary> {
     const summary: PullSummary = { found: 0, downloaded: 0, skipped: 0, failed: 0 };
-    const browser = await chromium.launch({ headless: true });
-    try {
+    if (!options.sessionKey) throw new SafePortalError("Carrier session identity is missing");
+    let session = sessions.get(options.sessionKey);
+    if (!session || !session.browser.isConnected() || session.page.isClosed()) {
+      const browser = await chromium.launch({ headless: false });
       const context = await browser.newContext({ acceptDownloads: true });
-      const page = await context.newPage();
-
-      await page.goto(LOGIN_URL);
-      await page.locator("input").nth(0).fill(login.username);
-      await page.locator('input[type="password"]').fill(login.password);
-      await page.getByRole("button", { name: "LOGIN" }).click();
-
+      session = { browser, page: await context.newPage() };
+      sessions.set(options.sessionKey, session);
+    }
+    const { page } = session;
+    try {
+      if (!page.url().startsWith("https://enroll.myultimatehp.com/agportal/")) await page.goto(LOGIN_URL);
       const menu = page.getByText("Commission Statements", { exact: true }).first();
-      try {
-        await menu.waitFor({ state: "visible", timeout: 30_000 });
-      } catch {
-        throw new SafePortalError(
-          "Login did not complete. Check the username and password; the portal may also be asking for extra verification."
-        );
-      }
+      await options.onProgress?.();
+      await automaticCarrierLogin(page, "Ultimate Health Plans", login, () => menu.isVisible(), async () => { await options.onVerification?.(); });
 
       for (const year of options.years) {
         options.log(`searching ${year}`);
@@ -281,8 +279,6 @@ export const ultimatePortal: CarrierPortal = {
     } catch (error) {
       if (error instanceof SafePortalError) throw error;
       throw new SafePortalError(safeError(error));
-    } finally {
-      await browser.close().catch(() => undefined);
     }
   },
 };

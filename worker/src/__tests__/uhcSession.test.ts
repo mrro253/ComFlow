@@ -4,6 +4,7 @@ import { SafePortalError } from "../carriers/types";
 import { uhcPortal } from "../carriers/uhc";
 import type { PullOptions } from "../carriers/types";
 const mock = vi.hoisted(() => ({ launch: vi.fn(), wait: vi.fn(), year: vi.fn(), goto: vi.fn(), currentUrl: "" }));
+vi.mock("../carrierLogin.js", () => ({ automaticCarrierLogin: () => mock.wait() }));
 vi.mock("playwright", () => ({ chromium: { launch: mock.launch } }));
 vi.mock("../carriers/uhcLoader.js", () => ({ loadUhcDownloader: async () => ({ syncUhcYear: mock.year }) }));
 beforeEach(() => {

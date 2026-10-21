@@ -41,7 +41,8 @@ export async function syncConnection(db: Db, connection: ConnectionRow): Promise
     const summary = await portal.pull(login, {
       years: yearsToSync(),
       sessionKey: connection.id,
-      onVerification: async () => { await markConnection(db, connection.id, { ok: false, error: "UnitedHealthcare sync is running. Complete verification in the worker browser and open Commissions > Statements and More. Refresh this page after sync finishes." }); },
+      onProgress: async () => { await markConnection(db, connection.id, { ok: false, error: "Sync running. Signing in with your saved carrier login." }); },
+      onVerification: async () => { await markConnection(db, connection.id, { ok: false, error: "Carrier verification or sign-in review is needed. Complete the request in the worker browser; sync continues when ready." }); },
       onUhcPair: (pair) => storeUhcPair(db, connection, statementOwner, pair),
       isKnown: (id) => known.has(id),
       log,

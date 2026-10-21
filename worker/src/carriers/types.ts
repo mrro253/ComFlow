@@ -20,6 +20,7 @@ export interface PullOptions {
   years: number[];
   /** In-memory browser isolation per connection; never a credential or cookie. */
   sessionKey?: string;
+  onProgress?(): Promise<void>;
   onVerification?(): Promise<void>;
   onUhcPair?(pair: { pdf: Buffer; text: Buffer; filename: string; statementMonth: string; payeeHash: string }): Promise<"stored" | "duplicate">;
   /** True when this statement id was already downloaded for this connection. */
