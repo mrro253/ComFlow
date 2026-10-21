@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["pdf-parse"],
   experimental: {
     // Statement PDFs are uploaded through a Server Action (default limit is 1 MB).
-    serverActions: { bodySizeLimit: "10mb" },
+    serverActions: { bodySizeLimit: "32mb" },
   },
 };
 

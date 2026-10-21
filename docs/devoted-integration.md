@@ -1,4 +1,8 @@
+> Current local status (2026-10-21): Ryan explicitly authorized proceeding while Marshall approval was pending. The nine saved pairs are now imported. See [activation and verification](devoted-import-live.md); historical plans below do not claim Marshall approval.
+
 # Devoted Health integration status
+
+Review-branch update, 2026-10-21: [paired import implementation](devoted-import-review.md) is built/tested on `feature/devoted-import-review`, unmerged and disabled pending Marshall review. The separate downloader below is unchanged. All nine saved real pairs reconcile read-only; real imports remain unauthorized.
 
 Updated 2026-10-21. Download-only development phase; not enabled for import, scheduled sync or the production carrier picker.
 
@@ -19,7 +23,7 @@ The worker scans visible table pages, requires exactly one requested pay-date ro
 - PDF and spreadsheet need to be retained and verified together. Statement date, payment period, effective date and the row's commission period are different source concepts; do not substitute one for another.
 - The first approved PDF and workbook totals were compared locally. One simple renewal sample does not verify chargebacks, adjustments, bonuses, multiple-agent statements or all historical layouts.
 
-No statement parser is registered yet. Import must remain unavailable until the paired-source parsing, reconciliation, duplicate/correction identities and storage provenance are implemented and tested. Do not map Devoted automatically to Ultimate's product or commission categories.
+No single-PDF parser is registered. This branch provides a separate paired review/import path for the verified one-row monthly-renewal layout. Keep real imports disabled until Marshall reviews the implementation and Ryan approves the actual preview. Do not map Devoted automatically to Ultimate's product or commission categories.
 
 ## Local commands (explicitly approved periods or years only)
 
@@ -43,6 +47,6 @@ Use a real requested pay date instead of the placeholder. Output must be an abso
 
 Public/signed-in navigation and the approved sample downloads were inspected in the app browser. The new worker command was run end to end against the live portal on 2026-10-21 for one explicitly approved pay period. After Ryan completed interactive sign-in, it scanned the commission pages, saved the PDF/workbook and complete-pair manifest outside Git, exited successfully, and closed its browser. Both stored file hashes matched the manifest. No database writes or imports occurred. Unattended login and other periods remain unverified. Synthetic tests cover source validation, signed-token-independent link identity, pagination, missing/ambiguous dates, paired-file failures, and local duplicate/overwrite handling. App and worker TypeScript checks, ESLint and all 254 Vitest tests pass (including year-scope and partial-failure regression tests). A subsequent explicitly authorized 2026 year run completed with 9/9 available pairs (January through September), zero failures, and all stored hashes verified against their manifests. No October-December statements were available in the observed list. The main ledger remains 94 entries / 1,110,416 cents. Live verification covers these available 2026 periods and interactive authentication; unattended login remains unbuilt.
 
-Marshall review is required before adding a workbook-reading library or changing source-storage/schema/audit meaning. Prepare paired-source persistence and parser design for that review; do not register a placeholder parser or treat an unsupported source as zero commissions. Later work includes encrypted unattended login, approved MFA handling, full statement-details display and scheduling after explicit authorization.
+Marshall review is required before merging the review-branch library, source-storage/schema/audit changes. Ryan authorized isolated implementation and synthetic testing; do not register a placeholder parser or treat an unsupported source as zero commissions. Later work includes encrypted unattended login, approved MFA handling, full statement-details display and scheduling after explicit authorization.
 
 Freedom/Optimum remains a separate planned shared-portal adapter. The inspected Agent Statement page returned No data available; no Freedom/Optimum source was imported or registered as supported.

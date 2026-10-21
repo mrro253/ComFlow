@@ -20,7 +20,7 @@ export async function listVisiblePaymentSources(ids: string[], agencyId: string)
 export async function getPaymentStatementSource(statementId: string, agencyId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin.from("commission_statements")
-    .select("storage_path,file_hash,original_filename,carrier")
+    .select("storage_path,file_hash,original_filename,carrier,source_pair_hash,statement_pay_date,devoted_payee_hash,payment_period_start,payment_period_end")
     .eq("agency_id", agencyId).eq("id", statementId).maybeSingle();
   if (error) throw new Error("Could not load the saved statement");
   return data;

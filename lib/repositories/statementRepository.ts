@@ -31,6 +31,9 @@ type StatementRow = Database["public"]["Tables"]["commission_statements"]["Row"]
 type TransactionRow = Database["public"]["Tables"]["carrier_transactions"]["Row"];
 
 export interface StatementRecord {
+  payDate?: string | null;
+  paymentPeriodStart?: string | null;
+  paymentPeriodEnd?: string | null;
   id: string;
   /** Whose statement this is: an Independent agent's own, or null for the agency's. */
   userId: string | null;
@@ -55,6 +58,9 @@ export interface StatementRecord {
 function mapStatement(row: StatementRow): StatementRecord {
   return {
     id: row.id,
+    payDate: row.statement_pay_date,
+    paymentPeriodStart: row.payment_period_start,
+    paymentPeriodEnd: row.payment_period_end,
     userId: row.user_id,
     carrier: row.carrier,
     statementMonth: row.statement_month,
@@ -201,6 +207,7 @@ export async function findStatementByHash(
     .select("*")
     .eq("agency_id", agencyId)
     .eq("file_hash", fileHash)
+    .neq("carrier", "Devoted Health")
     .maybeSingle();
   return data ? mapStatement(data) : null;
 }

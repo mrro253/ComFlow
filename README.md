@@ -36,7 +36,7 @@ Last updated: 2026-10-21
 | Upload -> preview -> approve -> payments UI | Built | Compiles, lints, `next build` passes. **Never run in a browser against a live Supabase project** (no Docker/Supabase CLI was available while building) |
 | Carrier login screen (encrypted credentials) | Built | Encryption unit-tested. UI **unverified** against live Supabase |
 | UnitedHealthcare | Limited renewal PDF import locally verified | [Supported renewal layout, mapping and verification](docs/uhc-import.md). Eight saved statements imported: 46 entries / 133,032 cents, all assigned; source details and coverage verified. August/October remain unavailable locally. |
-| Devoted Health | Download-only development; import unavailable | [Source findings and separate worker command](docs/devoted-integration.md). All nine available 2026 pairs downloaded successfully by the separate worker after interactive sign-in; manifests and file hashes verified. Paired parser, unattended login and import remain unbuilt/unverified. |
+| Devoted Health | Limited paired renewal import locally verified | [Activation, authorization and recovery notes](docs/devoted-import-live.md). Nine saved PDF/workbook pairs imported; client names and 24 detail fields verified. Ryan explicitly overrode the pending approval gate; Marshall has not approved. Unattended login remains unverified. |
 | Carrier worker (auto-pull from the portal) | Locally verified | One live Ultimate sync downloaded nine statements with zero failures on 2026-10-20. Scheduling and hosted worker remain unverified |
 | Career-agent earnings, rate locks | Logic built, **no UI** | Unit tests. Payout batches removed. Intentionally not in the MVP screens |
 | GoHighLevel output | Expanded field inventory and pilot plan documented; integration not built | [Field mapping and review plan](docs/ghl-integration-plan.md); no API access or live GHL changes |
@@ -183,7 +183,7 @@ See section 7 for the full list. The ones that still need an answer:
 Clarity/mobile follow-up: dashboard production groups explicitly show carrier commissions, not Career take-home earnings. Activity table headings distinguish policy effective date, statement month and carrier commission. Mobile selectors have larger touch targets, pagination wraps, details use smaller phone padding and long client/field values wrap. Automated checks cover compilation; owner statement cards and activity filters were reviewed at 390px width; dashboard production heading verified. Long-value dialogs and pagination wrapping remain browser-unverified.
 
 
-Statement tracking: Statements now shows a year selector and month cards per visible carrier/statement owner, using all RLS-visible saved statement metadata. Imported, Needs review and None on file indicate document presence only, not missed payments. Superseded copies are excluded; unknown-month files remain in the latest-100 History table. Devoted private downloads are not registered/imported statements. Synthetic coverage checks and build verification are recorded below; browser verification remains unverified.
+Statement tracking: Statements now shows a year selector and month cards per visible carrier/statement owner, using all RLS-visible saved statement metadata. Imported, Needs review and None on file indicate document presence only, not missed payments. Superseded copies are excluded; unknown-month files remain in the latest-100 History table. The nine saved Devoted pairs are now registered/imported statements; future download-only files are not counted until imported. Synthetic coverage checks and build verification are recorded below; browser verification remains unverified.
 
 
 Local row-access regression: `supabase/tests/role_access.sql` uses synthetic users in two agencies inside a rollback-only transaction. It asserts exact commission-entry visibility for the owner, manager, Independent/principal, Career agents, captive writer and Career direct-report visibility, then checks the ledger fingerprint is unchanged. Run locally with `psql -U postgres -d postgres -f supabase/tests/role_access.sql` against the local development database (migrations through 0010). Verified locally on 2026-10-21; this checks database enforcement. Existing Career, Independent and Manager demo browser sign-ins and empty states were also checked; populated Career, Independent and Manager client-detail browser flows were subsequently verified in an isolated synthetic environment (see 2026-10-21 changelog). Captive and Independent owner-profile browser flows remain unverified. Fixtures are rolled back; no real records are edited.
@@ -273,7 +273,7 @@ Important properties:
 **Not built yet**
 - GoHighLevel **output** (match contacts, push verified policy information). Agreed behavior and pending design decisions are in [the GHL integration plan](docs/ghl-integration-plan.md). Not built: Settings/Onboarding show an informational "Coming soon" card only. GHL is never a source of payable amounts.
 - Career-agent **earnings screens**: the rules, rate locks and approval logic exist in `lib/carriers/compensation`, with tables, but no UI and no job that creates earnings. Payout batches have been removed.
-- Carrier parsers beyond Ultimate and the limited verified UHC renewal PDF layout. UHC portal downloads remain on a separate unverified worker branch; Devoted paired import remains on its Marshall-review branch.
+- Carrier parsers beyond Ultimate and the limited verified UHC renewal PDF layout. UHC portal downloads remain on a separate unverified worker branch. Devoted supports only the verified one-page/single-renewal paired layout; other layouts and unattended sign-in remain unsupported.
 - **Scheduled** syncing. The worker only handles "Sync now" requests.
 - Auto-import for Independent agents' statements (currently the Owner approves every statement).
 - Inviting teammates by email (new users get a temporary password shown to the Owner).
@@ -291,7 +291,7 @@ Important properties:
 - `commission_plans`, `commission_plan_rates`, bonuses, `commission_transactions`, `lib/commission-engine`, `/commissions`, Settings plan/bonus screens, `/onboarding`, and the inbound GoHighLevel adapter in `lib/crm` (its webhook route and fake "Connect" button were removed 2026-10-10; `crm_connections` table stays). They still work but no longer feed the dashboard. The signup function `create_agency_with_owner` still seeds the old 10% / 2% / 1% plan. Retire these once nothing needs them.
 
 **Known limits**
-- Client detail extraction supports the verified 13-column Ultimate layout and the limited UHC renewal PDF layout (18 source-detail fields). It reads each relevant saved PDF once per request for the displayed page. A client-name search or product-filter request reads candidate statements after metadata filtering; a member-ID search does not need to scan every client name; details are not stored in the financial tables or a shared cross-user cache. Other layouts need synthetic fixtures and verification. Saved PDFs must remain available and unchanged.
+- Client detail extraction supports the verified 13-column Ultimate layout the limited UHC renewal PDF layout (18 source-detail fields), and the limited Devoted paired layout (24 source-detail fields). It reads each relevant saved PDF once per request for the displayed page. A client-name search or product-filter request reads candidate statements after metadata filtering; a member-ID search does not need to scan every client name; details are not stored in the financial tables or a shared cross-user cache. Other layouts need synthetic fixtures and verification. Saved PDFs must remain available and unchanged.
 - **Unverified:** the payee ID is read from the `W####` code right after the `ADV/MCC/PFS/BRP` marker on Ultimate rows (assumed to be the writer's carrier number). Confirm with Ryan against a real statement. Until then the payee ID only breaks ties between same-name teammates.
 - Ultimate parser only recognizes the writing-agent layouts proven in Ryan's prototype (`ADV`, `MCC`, `PFS`, `BRP` codes). Other layouts leave the writing agent unverified -> Unassigned.
 - Statement tables show at most 300 rows per page (all rows still import).
@@ -301,14 +301,14 @@ Important properties:
 
 ## 6. Recommended next steps (in order)
 
-As of 2026-10-21, payment search/filter/pagination and eight saved UHC renewal statement imports are locally verified. Repeating the UHC preflight proposes zero new entries. Next resume the UHC worker when Jarvis is available; obtain Marshall approval before merging/applying the separate Devoted library/schema changes. Gmail/Outlook MFA-code retrieval is planned separately for Marshall's integration/security review; no mailbox access is enabled by this feature.
+As of 2026-10-21, payment search/filter/pagination and eight saved UHC renewal statement imports are locally verified. Repeating the UHC preflight proposes zero new entries. Next resume the UHC worker when Jarvis is available; review the completed local Devoted integration with Marshall after Ryan explicitly authorized proceeding without his approval. Gmail/Outlook MFA-code retrieval is planned separately for Marshall's integration/security review; no mailbox access is enabled by this feature.
 
 1. **Run the manual flow once** on a real Supabase project with `sample-statement.pdf`, then with one of Ryan's real PDFs. Fix whatever breaks. Nothing else is trustworthy until this is done.
 2. **Answer the open decisions** in section 7, especially how Independent agents' production rolls up and how aliases should work.
 3. **Run the worker once** with Ryan's Ultimate login on a machine with a browser; fix selector/flow issues.
 4. **Keep running locally for now. Do not deploy yet.** Run the app, local Supabase and the worker (`npm run start` in `worker/`) on your own machine. Hosting costs money and real client data (PHI) cannot go on any hosted service until HIPAA agreements are in place. Deploy when you are ready to launch, following the roadmap in section 14 (hosted setup, nightly sync, HIPAA).
 5. Career **earnings UI** (preview via `buildEarningsPlan`, Owner approval; no payouts).
-6. **Additional carrier work:** verify unsupported UHC layouts before expanding the parser; resume missing-month downloads when the portal returns. Review the separate Devoted import branch before any Devoted migration or real import.
+6. **Additional carrier work:** verify unsupported UHC layouts before expanding the parser; resume missing-month downloads when the portal returns. Review the Devoted activation/recovery notes with Marshall; Ryan authorized the local migration/import while his approval was pending.
 7. **GoHighLevel output**: Marshall reviews [the field mapping and connection decisions](docs/ghl-integration-plan.md), then synthetic testing before any real-contact updates. Integration remains unbuilt; no inbound payable data.
 8. Retire the legacy CRM-driven code and the old seed data.
 
@@ -383,6 +383,8 @@ the private `statements` storage bucket.
 Commands: `npm run dev | build | test | lint | typecheck | sample:statement`.
 
 ---
+
+Local Devoted imports require migration `0011_devoted_paired_sources.sql` and ignored local flags `DEVOTED_REVIEW_ENABLED=true`, `DEVOTED_IMPORT_REVIEW_ENABLED=true`. Example defaults stay false. Owner-only paired upload/preview is `/statements/devoted`; see [activation and recovery notes](docs/devoted-import-live.md). Back up before applying migrations; never use `db reset` on the working ledger.
 
 ## 9. Carrier worker (`worker/`)
 
@@ -739,6 +741,8 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - At Ryan's explicit instruction to proceed without Marshall approval, activate the limited Devoted paired importer after database/storage backup and isolated SQL/RLS tests. Add read-excel-file@9.3.9 and migration 0011; preserve UHC/Ultimate details. Import nine saved pairs (9 entries / 26,019 cents), verify 24 source fields and replay protection. All 326 tests, app/worker TypeScript, ESLint and production build pass. See docs/devoted-import-live.md; Marshall approval is not claimed.
 
 - **2026-10-21** - Add UHC renewal PDF parsing and source details through the existing permission, preview and atomic import flow. Reject unsupported layouts, balances and unreconciled totals. Eight saved pairs verified read-only; 282 tests, TypeScript, ESLint and production build pass. Eight UHC statements imported locally, activity/source details/coverage verified, replay proposes zero new rows. Ultimate remains unchanged.
 

@@ -4,8 +4,12 @@ import { buildSampleStatementLines } from "@/lib/carriers/sampleStatement";
 import { parseUltimateText, ULTIMATE_CARRIER } from "@/lib/carriers/ultimate/parseUltimateStatement";
 import { readUhcStatement,UHC_CARRIER } from "@/lib/carriers/uhc/parseUhcStatement";
 import { uhcText } from "@/lib/carriers/__tests__/fixtures/uhcStatement";
+import { parseDevotedPair,DEVOTED } from "@/lib/carriers/devoted/parseDevotedPair";
+import { syntheticPair } from "@/lib/carriers/devoted/__fixtures__/syntheticPair";
 
-const mocks = vi.hoisted(() => ({ visible: vi.fn(), statement: vi.fn(), download: vi.fn(), text: vi.fn(), details: vi.fn(), statementText:vi.fn() }));
+const mocks = vi.hoisted(() => ({ visible: vi.fn(), statement: vi.fn(), download: vi.fn(), text: vi.fn(), details: vi.fn(), statementText:vi.fn(), devotedSource:vi.fn(),devotedParse:vi.fn() }));
+vi.mock("@/lib/repositories/devotedRepository",()=>({loadSavedDevotedPair:mocks.devotedSource}));
+vi.mock("@/lib/services/devotedPairService",()=>({parseDevotedBytes:mocks.devotedParse}));
 vi.mock("@/lib/pdf/extractStatementPdf",()=>({extractStatementPdf:mocks.statementText}));
 vi.mock("@/lib/repositories/paymentDetailsRepository", () => ({ listVisiblePaymentSources: mocks.visible, getPaymentStatementSource: mocks.statement }));
 vi.mock("@/lib/repositories/statementRepository", () => ({ downloadStatementPdf: mocks.download }));
@@ -30,6 +34,17 @@ beforeEach(() => {
 });
 
 describe("payment source access and integrity", () => {
+  it("keeps Devoted details scoped to visible entries and rejects changed pair context",async()=>{
+    const pair=parseDevotedPair(syntheticPair()),tx=pair.statement.transactions[0];
+    const source={storage_path:"agency/devoted/source.pdf",file_hash:pair.statement.sourceHash,carrier:DEVOTED,source_pair_hash:pair.pairHash,statement_pay_date:pair.payDate,devoted_payee_hash:pair.payeeHash};
+    mocks.statement.mockResolvedValue(source);mocks.devotedSource.mockResolvedValue({pdf:Buffer.from("synthetic"),workbook:Buffer.from("synthetic")});mocks.devotedParse.mockResolvedValue(pair);
+    const row={...visible,transaction_key:tx.transactionKey,carrier_member_id:tx.memberId,effective_date:tx.effectiveDateIso,amount_cents:tx.amountCents,commission_type:tx.type};
+    mocks.visible.mockResolvedValue([row]);const details=await loadPaymentDetails(["visible-id","hidden-id"],"agency-id");
+    expect([...details.keys()]).toEqual(["visible-id"]);expect(details.get("visible-id")?.clientName).toBe("SAM EXAMPLE");
+    for(const change of [{source_pair_hash:"changed"},{statement_pay_date:"2026-01-01"},{devoted_payee_hash:"changed"},{file_hash:"changed"}]){
+      mocks.statement.mockResolvedValue({...source,...change});expect((await loadPaymentDetails(["visible-id"],"agency-id")).size).toBe(0);
+    }
+  });
   it("enriches only the RLS-visible UHC entry from a verified source",async()=>{
     const text=uhcText(),tx=readUhcStatement(text,hash).statement.transactions[0];
     const row={...visible,transaction_key:tx.transactionKey,carrier_member_id:tx.memberId,effective_date:tx.effectiveDateIso,amount_cents:tx.amountCents,commission_type:tx.type};
