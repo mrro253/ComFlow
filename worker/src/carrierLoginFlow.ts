@@ -1,3 +1,4 @@
+import type { LoginHelp } from "../../lib/carriers/syncResult.js";
 import type { Page, Locator } from "playwright";
 import type { CarrierLogin } from "./carriers/types.js";
 import { SafePortalError } from "./carriers/types.js";
@@ -13,7 +14,7 @@ export function trustedLoginUrl(carrier: LoginCarrier, value: string): boolean {
 }
 async function uniqueVisible(locator: Locator) { return await locator.count() === 1 && await locator.isVisible(); }
 /** Submit a username/password at most once per request. Never submit codes or challenge forms. */
-export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, login: CarrierLogin, ready: () => Promise<boolean>, needsUser: () => Promise<void>) {
+export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, login: CarrierLogin, ready: () => Promise<boolean>, needsUser: (reason: LoginHelp) => Promise<void>) {
   const enter = async (field: Locator, value: string) => {
     if (carrier === "UnitedHealthcare") {
       // One Healthcare ID updates validation on typing and blur, not only input replacement.
@@ -47,7 +48,7 @@ export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, l
       throw new SafePortalError("The carrier rejected the saved login. Replace the saved username/password in Carrier connections, then retry Sync now. No automatic repeat attempt was made.");
     }
     if (accountChange || await challenge.count() > 0 || ((usernameSubmitted || passwordSubmitted) && await alert.count() > 0 && await alert.first().isVisible())) {
-      if (!notified) { await needsUser(); notified = true; }
+      if (!notified) { await needsUser(await challenge.count() > 0 && !accountChange ? "verification" : "sign_in_review"); notified = true; }
     } else if (!passwordSubmitted) {
       if (carrier === "Devoted Health" && new URL(page.url()).hostname === "agent.devoted.com" && !entryClicked) {
         const entry = page.getByRole("button", { name: "Login", exact: true });
@@ -79,9 +80,9 @@ export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, l
     // A carrier may use a push approval, passkey or an unfamiliar verification screen.
     if ((usernameSubmitted || passwordSubmitted || entryClicked) && !notified) {
       const verification = page.getByText(/verification code|verify your identity|approve.*sign.in|check your.*email|security code|passkey/i);
-      if (await verification.count() > 0 && await verification.first().isVisible()) { await needsUser(); notified = true; }
+      if (await verification.count() > 0 && await verification.first().isVisible()) { await needsUser("verification"); notified = true; }
     }
-    if (!notified && Date.now() - started > 20000) { await needsUser(); notified = true; }
+    if (!notified && Date.now() - started > 20000) { await needsUser("sign_in_review"); notified = true; }
     await page.waitForTimeout(500);
   }
   throw new SafePortalError("Carrier sign-in did not complete. The browser stays open; review its sign-in or verification message before retrying.");

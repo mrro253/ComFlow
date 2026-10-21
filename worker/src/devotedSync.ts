@@ -1,3 +1,4 @@
+import { loginHelpMessage } from "../../lib/carriers/syncResult.js";
 import { automaticCarrierLogin } from "./carrierLogin.js";
 import { decryptCarrierLogin } from "../../lib/crypto/credentials";
 import { loadCiphertext } from "./db.js";
@@ -52,7 +53,7 @@ export async function syncDevotedConnection(db: Db, connection: ConnectionRow) {
   try {
     await automaticCarrierLogin(page, "Devoted Health", login,
       () => page.getByRole("heading", { name: "My Commissions", exact: true }).isVisible(),
-      () => markConnection(db, connection.id, { ok: false, error: "Devoted needs verification or sign-in review. Complete the request in the worker browser; sync continues when ready." }));
+      (reason) => markConnection(db, connection.id, { ok: false, error: loginHelpMessage(reason) }));
     return await syncDevotedPage(page, yearsToSync(), (date, pdf, workbook) => storeDevotedPair(db, connection, date, pdf, workbook));
   } catch {
     throw new SafePortalError("Devoted sync paused. Its browser stays open; complete sign-in, then choose Sync now again. No commission records were imported.");

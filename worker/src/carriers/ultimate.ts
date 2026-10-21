@@ -260,7 +260,7 @@ export const ultimatePortal: CarrierPortal = {
       if (!page.url().startsWith("https://enroll.myultimatehp.com/agportal/")) await page.goto(LOGIN_URL);
       const menu = page.getByText("Commission Statements", { exact: true }).first();
       await options.onProgress?.();
-      await automaticCarrierLogin(page, "Ultimate Health Plans", login, () => menu.isVisible(), async () => { await options.onVerification?.(); });
+      await automaticCarrierLogin(page, "Ultimate Health Plans", login, () => menu.isVisible(), async (reason) => { await options.onVerification?.(reason); });
 
       for (const year of options.years) {
         options.log(`searching ${year}`);

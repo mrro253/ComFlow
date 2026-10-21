@@ -27,6 +27,7 @@ describe("automatic carrier login", () => {
     expect(f.fills).toContain("username"); expect(f.fills.filter(v => v === "password")).toHaveLength(1);
     expect(f.clicks).toHaveLength(carrier === "Ultimate Health Plans" ? 1 : 2);
     expect(f.needs).toHaveBeenCalledTimes(carrier === "UnitedHealthcare" ? 1 : 0);
+    if (carrier === "UnitedHealthcare") expect(f.needs).toHaveBeenCalledWith("verification");
   });
   it("lets the sign-in callback complete before navigating to commissions", async () => {
     const f = fixture("Devoted Health", undefined, true);

@@ -49,7 +49,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
       </div>
 
       {user.role === "owner" && process.env.DEVOTED_REVIEW_ENABLED === "true" && <Link href="/statements/devoted" className="text-sm font-medium underline">Review a Devoted PDF/workbook pair</Link>}
-      <Card>
+      <Card className="min-w-0">
         <CardHeader>
           <CardTitle>Upload a statement</CardTitle>
           <CardDescription>
@@ -65,7 +65,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="min-w-0">
         <CardHeader>
           <CardTitle>Statements to review ({queue.length})</CardTitle>
           <CardDescription>New statement means no imported statement for that carrier, owner, and month. Possible correction means one is already on file; compare the reports before importing. These labels do not change your commissions.</CardDescription>
@@ -82,7 +82,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="min-w-0">
         <CardHeader>
           <CardTitle>Statements by month</CardTitle>
           <CardDescription>For each carrier and statement owner already on file. None on file means no saved statement for that month; it does not mean commission is missing or unpaid. Multiple statements can belong to one month.</CardDescription>
@@ -104,7 +104,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="min-w-0">
         <CardHeader>
           <CardTitle>History</CardTitle>
           <CardDescription>Latest 100 saved statements. On a phone, swipe the table sideways to see all columns. Statement totals are carrier-reported amounts, not verified bank deposits.</CardDescription>

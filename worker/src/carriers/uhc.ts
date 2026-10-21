@@ -24,7 +24,7 @@ export const uhcPortal: CarrierPortal = {
       stage = "signing in or waiting for verification";
       await automaticCarrierLogin(page, "UnitedHealthcare", login,
         () => page.getByRole("heading", { name: "Commission Statements", exact: true }).isVisible(),
-        async () => { await options.onVerification?.(); });
+        async (reason) => { await options.onVerification?.(reason); });
       stage = "reading report controls";
       const { syncUhcYear } = await loadUhcDownloader();
       const total = { found: 0, downloaded: 0, skipped: 0, failed: 0 };
