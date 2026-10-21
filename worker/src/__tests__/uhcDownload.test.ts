@@ -88,6 +88,10 @@ describe("UHC app-requested sync", () => {
     const result = await syncUhcYear(f.page, 2026, async () => "stored");
     expect(result).toEqual({ found: 2, downloaded: 2, skipped: 0, failed: 0 });
   });
+  it("ignores a selection prompt without treating it as an available month", async () => {
+    const f = await fixture({ months: ["Select Month", "JANUARY", "FEBRUARY"] });
+    expect(await syncUhcYear(f.page, 2026, async () => "stored")).toEqual({ found: 2, downloaded: 2, skipped: 0, failed: 0 });
+  });
   it("does not register incomplete pairs", async () => {
     const f = await fixture({ invalidText: true }); let called = false;
     const result = await syncUhcYear(f.page, 2026, async () => { called = true; return "stored"; });

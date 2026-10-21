@@ -15,6 +15,7 @@ async function preserve(directory: string, bytes: Buffer, extension: string) {
   }
   return { sha256: hash, file: path.basename(target) };
 }
+const isMonthPrompt = (label: string) => /^(?:PLEASE )?(?:SELECT|CHOOSE)(?: A)?(?: MONTH)?[.\s-]*$/.test(label);
 const labelText = (text: string) => text.replace(/\s+/g, " ").trim().toUpperCase();
 async function menuOptions(page: Page) {
   // Downshift leaves closed menus mounted. Read only the currently visible popup.
@@ -115,9 +116,9 @@ export async function downloadUhcYear(page: Page, year: number, directory: strin
   const options = await menuOptions(page);
   await page.getByRole("combobox", { name: "Month", exact: true }).press("Escape");
   const all = Array.from({ length: 12 }, (_, i) => `${year}-${String(i+1).padStart(2,"0")}`);
-  if (!options.length || new Set(options).size !== options.length || options.some((label) => !all.some((month) => uhcMonth(month).month === label))) {
+  if (!options.length || new Set(options).size !== options.length || options.some((label) => !isMonthPrompt(label) && !all.some((month) => uhcMonth(month).month === label))) {
     const recognized = options.filter((label) => all.some((month) => uhcMonth(month).month === label)).length;
-    throw new SafePortalError(`Unsupported UnitedHealthcare available-month list (${options.length} options, ${recognized} recognized months)`);
+    throw new SafePortalError(`Unsupported UnitedHealthcare available-month list (${options.length} options, ${recognized} recognized months, ${options.filter(isMonthPrompt).length} prompts)`);
   }
   const months = all.filter((month) => options.includes(uhcMonth(month).month));
   const saved: string[] = [], reused: string[] = [], failed: string[] = [];
@@ -139,9 +140,9 @@ export async function syncUhcYear(page: Page, year: number, save: (pair: Awaited
   const options = await menuOptions(page);
   await page.getByRole("combobox", { name: "Month", exact: true }).press("Escape");
   const all = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, "0")}`);
-  if (!options.length || new Set(options).size !== options.length || options.some((label) => !all.some((month) => uhcMonth(month).month === label))) {
+  if (!options.length || new Set(options).size !== options.length || options.some((label) => !isMonthPrompt(label) && !all.some((month) => uhcMonth(month).month === label))) {
     const recognized = options.filter((label) => all.some((month) => uhcMonth(month).month === label)).length;
-    throw new SafePortalError(`Unsupported UnitedHealthcare available-month list (${options.length} options, ${recognized} recognized months)`);
+    throw new SafePortalError(`Unsupported UnitedHealthcare available-month list (${options.length} options, ${recognized} recognized months, ${options.filter(isMonthPrompt).length} prompts)`);
   }
   const months = all.filter((month) => options.includes(uhcMonth(month).month));
   const summary = { found: months.length, downloaded: 0, skipped: 0, failed: 0 };
