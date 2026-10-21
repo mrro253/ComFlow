@@ -1,4 +1,5 @@
 import { decryptCarrierLogin } from "../../lib/crypto/credentials";
+import { storeUhcPair } from "./uhcStorage.js";
 import { syncDevotedConnection } from "./devotedSync.js";
 import { getPortal } from "./carriers/registry.js";
 import {
@@ -39,6 +40,9 @@ export async function syncConnection(db: Db, connection: ConnectionRow): Promise
     const known = await knownStatementIds(db, connection.id);
     const summary = await portal.pull(login, {
       years: yearsToSync(),
+      sessionKey: connection.id,
+      onVerification: async () => { await markConnection(db, connection.id, { ok: false, error: "UnitedHealthcare sync is running. Complete verification in the worker browser and open Commissions > Statements and More. Refresh this page after sync finishes." }); },
+      onUhcPair: (pair) => storeUhcPair(db, connection, statementOwner, pair),
       isKnown: (id) => known.has(id),
       log,
       onStatement: async (statement) => {

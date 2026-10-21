@@ -279,7 +279,7 @@ Important properties:
 **Not built yet**
 - GoHighLevel **output** (match contacts, push verified policy information). Agreed behavior and pending design decisions are in [the GHL integration plan](docs/ghl-integration-plan.md). Not built: Settings/Onboarding show an informational "Coming soon" card only. GHL is never a source of payable amounts.
 - Career-agent **earnings screens**: the rules, rate locks and approval logic exist in `lib/carriers/compensation`, with tables, but no UI and no job that creates earnings. Payout batches have been removed.
-- Carrier parsers beyond Ultimate and the limited verified UHC renewal PDF layout. UHC portal downloads remain on a separate unverified worker branch. Devoted supports only the verified one-page/single-renewal paired layout; other layouts and unattended sign-in remain unsupported.
+- Carrier parsers beyond Ultimate and the limited verified UHC renewal PDF layout. UHC app-requested downloads are now wired to the polling worker; the current live Jarvis flow remains unverified. Devoted supports only the verified one-page/single-renewal paired layout; other layouts and unattended sign-in remain unsupported.
 - **Scheduled** syncing. The worker only handles "Sync now" requests.
 - Auto-import for Independent agents' statements (currently the Owner approves every statement).
 - Inviting teammates by email (new users get a temporary password shown to the Owner).
@@ -307,7 +307,7 @@ Important properties:
 
 ## 6. Recommended next steps (in order)
 
-As of 2026-10-21, payment search/filter/pagination and eight saved UHC renewal statement imports are locally verified. Repeating the UHC preflight proposes zero new entries. Next resume the UHC worker when Jarvis is available; review the completed local Devoted integration with Marshall after Ryan explicitly authorized proceeding without his approval. Gmail/Outlook MFA-code retrieval is planned separately for Marshall's integration/security review; no mailbox access is enabled by this feature.
+As of 2026-10-21, payment search/filter/pagination and eight saved UHC renewal statement imports are locally verified. Repeating the UHC preflight proposes zero new entries. Next verify app-triggered UHC Sync now when Jarvis is available; review the completed local Devoted integration with Marshall after Ryan explicitly authorized proceeding without his approval. Gmail/Outlook MFA-code retrieval is planned separately for Marshall's integration/security review; no mailbox access is enabled by this feature.
 
 1. **Run the manual flow once** on a real Supabase project with `sample-statement.pdf`, then with one of Ryan's real PDFs. Fix whatever breaks. Nothing else is trustworthy until this is done.
 2. **Answer the open decisions** in section 7, especially how Independent agents' production rolls up and how aliases should work.
@@ -393,6 +393,11 @@ Commands: `npm run dev | build | test | lint | typecheck | sample:statement`.
 Local Devoted imports require migration `0011_devoted_paired_sources.sql` and ignored local flags `DEVOTED_REVIEW_ENABLED=true`, `DEVOTED_IMPORT_REVIEW_ENABLED=true`. Example defaults stay false. Owner-only paired upload/preview is `/statements/devoted`; see [activation and recovery notes](docs/devoted-import-live.md). Back up before applying migrations; never use `db reset` on the working ledger.
 
 ## 9. Carrier worker (`worker/`)
+
+**UnitedHealthcare Sync now:** The normal polling worker now includes the Jarvis adapter. Use the existing encrypted UHC login on Carrier connections, choose Sync now, then complete verification in the headed worker browser and open Commissions > Statements and More. The worker can prefill unambiguous username/password inputs only on `identity.onehealthcareid.com`; submission and MFA remain interactive. It waits up to 30 minutes and retains its in-memory browser for later requests/retries; restarting the worker or carrier session expiry may require verification again. No mailbox access or verification bypass is added.
+
+UHC sync discovers available months for the current year (also the preceding year in January/February), validates the PDF/text source filenames against the selected month and signed-in PID, and saves both privately with verified content hashes before registering the PDF in Statements for normal preview/approval. Companion text/manifests use the existing private bucket at `<agency>/uhc-downloads/<connection>/<pairHash>.*`; no source details are logged. Identical PDFs reuse existing statements. Sync fetches current revisions rather than treating a previously seen month as unchanged; changed PDFs reach correction review, never automatic import. Private companion-source cleanup is not automated. No schema, library, financial-calculation or permission changes. All 378 synthetic tests, app/worker TypeScript and ESLint pass; production build pass; owner UHC card and Sync now button browser-verified. The current live app-triggered Jarvis sync remains unverified until sign-in and download are exercised.
+
 
 Devoted has a separate, explicit period/year local download command; see [Devoted integration status](docs/devoted-integration.md). It uses interactive sign-in and preserves PDF/workbook pairs outside Git. Owner connections now also support **Devoted Health / Sync now** through the normal polling worker. The worker opens a headed Devoted browser, prefills encrypted credentials only for unambiguous visible login fields, and waits up to 30 minutes for interactive sign-in/verification. It reuses that in-memory browser on subsequent requests and leaves it open after recoverable errors; no session is saved to disk. Keep the worker running locally and refresh Carrier connections for progress. Restarting the worker or carrier session expiry may require signing in again. No unattended/MFA-email retrieval is provided.
 
@@ -749,6 +754,9 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Connect UHC Sync now to the existing polling worker using the Jarvis downloader, retained interactive browser/MFA, current-revision downloads, private PDF/text preservation and existing statement review. No automatic import, migration or dependency change. All 378 synthetic tests, app/worker TypeScript, ESLint and production build pass; owner UHC connection card browser-verified. Live Jarvis sync remains unverified; existing imported records are preserved.
+
 
 - **2026-10-21** - Add owner Devoted carrier connections and app-requested polling sync with a retained in-memory interactive browser. Preserve complete PDF/workbook pairs privately for existing preview/approval, skip imported pair hashes, verify inbox authorization/integrity and keep incomplete pairs out of review. No automatic commission import or schema/dependency change. All 356 synthetic tests, app/worker TypeScript, ESLint and production build pass; owner connection card and empty inbox browser-verified. Live app-triggered portal sync and a newly downloaded-pair approval remain unverified.
 

@@ -18,6 +18,10 @@ export interface PortalStatement {
 
 export interface PullOptions {
   years: number[];
+  /** In-memory browser isolation per connection; never a credential or cookie. */
+  sessionKey?: string;
+  onVerification?(): Promise<void>;
+  onUhcPair?(pair: { pdf: Buffer; text: Buffer; filename: string; statementMonth: string; payeeHash: string }): Promise<"stored" | "duplicate">;
   /** True when this statement id was already downloaded for this connection. */
   isKnown(carrierStatementId: string): boolean;
   /** Called once per newly downloaded statement. May throw; the portal records the failure and continues. */
