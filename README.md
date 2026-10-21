@@ -394,7 +394,9 @@ Local Devoted imports require migration `0011_devoted_paired_sources.sql` and ig
 
 ## 9. Carrier worker (`worker/`)
 
-Devoted has a separate, explicit period/year local download command; see [Devoted integration status](docs/devoted-integration.md). It uses interactive sign-in and preserves PDF/workbook pairs outside Git. It is not registered for polling, upload/import, or scheduled sync. Ultimate remains unchanged.
+Devoted has a separate, explicit period/year local download command; see [Devoted integration status](docs/devoted-integration.md). It uses interactive sign-in and preserves PDF/workbook pairs outside Git. Owner connections now also support **Devoted Health / Sync now** through the normal polling worker. The worker opens a headed Devoted browser, prefills encrypted credentials only for unambiguous visible login fields, and waits up to 30 minutes for interactive sign-in/verification. It reuses that in-memory browser on subsequent requests and leaves it open after recoverable errors; no session is saved to disk. Keep the worker running locally and refresh Carrier connections for progress. Restarting the worker or carrier session expiry may require signing in again. No unattended/MFA-email retrieval is provided.
+
+Complete PDF/workbook pairs are hash-verified in the existing private `statements` bucket under `<agency>/devoted-inbox/<connection>/<pairHash>.*`; a small manifest is written last, so incomplete pairs cannot be reviewed. No financial rows are written by sync. Already imported pair hashes are skipped; changed pairs go through the existing correction preview and explicit approval. `/statements/devoted` lists the current owner's unimported downloads by pay date and accepts either a saved pair or manual uploads. Every saved-pair read checks the active owner and their session-visible connection before admin storage access, then verifies both source and pair hashes. Imports keep the staging evidence privately; cleanup is not automated. No new migration, dependency, RLS or commission calculation changes. The two Devoted review/import flags in section 8 remain required. Other-role Devoted connections are unavailable until their paired review is supported. Live app-triggered portal sync remains unverified until Ryan connects and signs in; synthetic checks cover downloads/storage/access. Ultimate remains unchanged.
 
 
 Logging into a carrier portal needs a real browser, so it **cannot run on
@@ -416,7 +418,7 @@ It reads `../.env.local`. How it behaves:
 - On a login problem, MFA prompt, or portal change the connection becomes **Needs attention** with a safe message (no URLs, selectors or credentials).
 - Selectors live only in `worker/src/carriers/ultimate.ts` (ported from Ryan's prototype; **unverified** here).
 
-Adding a carrier: implement `StatementParser` (`lib/carriers/types.ts`, register in `lib/carriers/index.ts`) **and** `CarrierPortal` (`worker/src/carriers/types.ts`, register in `worker/src/carriers/registry.ts`). The carrier name string must be identical in both.
+Adding a carrier: implement `StatementParser` (`lib/carriers/types.ts`, register in `lib/carriers/index.ts`) **and** `CarrierPortal` (`worker/src/carriers/types.ts`, register in `worker/src/carriers/registry.ts`). The carrier name string must be identical in both. Paired carriers use their paired review adapter instead of registering a fake single-PDF parser; connection options are separate in `lib/carriers/connectionCarriers.ts`.
 
 TODO: nightly scheduled syncs; MFA handling; monitoring/alerts.
 
@@ -747,6 +749,8 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Add owner Devoted carrier connections and app-requested polling sync with a retained in-memory interactive browser. Preserve complete PDF/workbook pairs privately for existing preview/approval, skip imported pair hashes, verify inbox authorization/integrity and keep incomplete pairs out of review. No automatic commission import or schema/dependency change. All 356 synthetic tests, app/worker TypeScript, ESLint and production build pass; owner connection card and empty inbox browser-verified. Live app-triggered portal sync and a newly downloaded-pair approval remain unverified.
 
 - **2026-10-21** - Test repeat imports and recognized corrections for Ultimate, UHC and Devoted using synthetic parser/preview cases and isolated database rollback regressions. Verify originals/history, active corrected totals, explicit Devoted approval and atomic failure rollback. All 347 tests, TypeScript and ESLint pass; working statement/ledger/source/audit/assignment fingerprints match. No production behavior or imported-record changes.
 

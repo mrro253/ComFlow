@@ -12,6 +12,7 @@ export function ConnectCarrierForm({ carrier, replacing }: { carrier: string; re
 
   return (
     <form action={formAction} className="flex flex-col gap-4" autoComplete="off">
+      {carrier === "Devoted Health" && <p className="text-sm text-muted-foreground">The worker can fill your saved login when Devoted presents matching fields. Submit sign-in and complete verification in its browser; the session stays in memory while the worker runs.</p>}
       <input type="hidden" name="carrier" value={carrier} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">

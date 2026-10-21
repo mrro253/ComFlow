@@ -1,4 +1,5 @@
 import { decryptCarrierLogin } from "../../lib/crypto/credentials";
+import { syncDevotedConnection } from "./devotedSync.js";
 import { getPortal } from "./carriers/registry.js";
 import {
   knownStatementIds,
@@ -17,6 +18,12 @@ export async function syncConnection(db: Db, connection: ConnectionRow): Promise
   const log = (message: string) => console.log(`[${connection.id.slice(0, 8)}] ${message}`);
 
   try {
+    if (connection.carrier === "Devoted Health") {
+      const summary = await syncDevotedConnection(db, connection);
+      log(`done: ${JSON.stringify(summary)}`);
+      await markConnection(db, connection.id, summary.failed ? { ok: true, warning: "Some Devoted pairs could not be saved. Review downloaded pairs, then retry Sync now." } : { ok: true });
+      return;
+    }
     const portal = getPortal(connection.carrier);
     if (!portal) throw new Error(`${connection.carrier} is not supported by the worker yet`);
 

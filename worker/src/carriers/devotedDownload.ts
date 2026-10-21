@@ -99,3 +99,20 @@ export async function downloadDevotedYear(page: Page, year: number, directory: s
   }
   return { year, found: matches.length, saved, failed };
 }
+
+/** Polling worker path: complete pairs go to private review storage, never the ledger. */
+export async function syncDevotedPage(page: Page, years: number[], onPair: (payDate: string, pdf: Buffer, workbook: Buffer) => Promise<"stored" | "duplicate">) {
+  const rows = (await listPeriods(page)).filter((row) => years.includes(Number(row.payDate.slice(0, 4))));
+  if (!rows.length) throw new SafePortalError("No Devoted statements are available for the requested year");
+  if (new Set(rows.map((r) => r.payDate)).size !== rows.length) throw new SafePortalError("Multiple Devoted statements share a pay date; manual review is required");
+  const summary = { found: rows.length, downloaded: 0, skipped: 0, failed: 0 };
+  for (const row of rows) {
+    try {
+      const pdf = await fetchFile(page.context().request, row.pdfUrl, "pdf");
+      const workbook = await fetchFile(page.context().request, row.sheetUrl, "xlsx");
+      const outcome = await onPair(row.payDate, pdf, workbook);
+      if (outcome === "duplicate") summary.skipped++; else summary.downloaded++;
+    } catch { summary.failed++; }
+  }
+  return summary;
+}

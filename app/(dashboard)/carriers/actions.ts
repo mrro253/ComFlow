@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/requireRole";
-import { getStatementParser } from "@/lib/carriers";
+import { connectionCarriers } from "@/lib/carriers/connectionCarriers";
 import {
   disconnectCarrier,
   listVisibleConnections,
@@ -25,7 +25,8 @@ export async function saveCarrierCredentials(
     const carrier = String(formData.get("carrier") ?? "");
     const username = String(formData.get("username") ?? "").trim();
     const password = String(formData.get("password") ?? "");
-    if (!getStatementParser(carrier)) return { error: "Choose a supported carrier." };
+    if (!connectionCarriers(user.role === "owner").includes(carrier)) return { error: "Choose a supported carrier." };
+    if (carrier === "Devoted Health" && process.env.DEVOTED_REVIEW_ENABLED !== "true") return { error: "Enable Devoted paired review before connecting this carrier." };
     if (!username || !password) return { error: "Enter both the username and password." };
 
     await saveCarrierLogin({
@@ -59,9 +60,10 @@ export async function syncCarrierNow(
     if (!connection) return { error: "Connection not found." };
     if (connection.status === "disabled") return { error: "Reconnect your login first." };
 
+    if (connection.carrier === "Devoted Health" && (user.role !== "owner" || connection.userId !== user.id)) return { error: "Devoted sync is available for your own owner connection." };
     await requestSync(user.agencyId, connection.id);
     revalidatePath("/carriers");
-    return { info: "Sync requested. New statements will appear under Statements shortly." };
+    return { info: connection.carrier === "Devoted Health" ? "Sync requested. Keep the local worker running and complete verification in its browser if asked. Open Devoted paired statement review after sync finishes." : "Sync requested. New statements will appear under Statements shortly." };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Could not request a sync." };
   }

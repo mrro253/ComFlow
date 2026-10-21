@@ -1,3 +1,5 @@
+> Current connection update (2026-10-21): Owner Devoted connections and Sync now are implemented in the polling worker. Complete pairs are saved privately for review, imported pair hashes are skipped, and the interactive browser is reused in memory. See README section 9 for operation and verification limits. The download-only development notes below are historical; they do not describe the current connection picker or import authorization.
+
 > Current local status (2026-10-21): Ryan explicitly authorized proceeding while Marshall approval was pending. The nine saved pairs are now imported. See [activation and verification](devoted-import-live.md); historical plans below do not claim Marshall approval.
 
 # Devoted Health integration status

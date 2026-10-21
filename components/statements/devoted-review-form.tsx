@@ -6,7 +6,7 @@ import { formatCents } from "@/lib/carriers/money";
 import { Button } from "@/components/ui/button";
 
 type ReviewResult = Awaited<ReturnType<typeof reviewDevotedFiles>>;
-export function DevotedReviewForm({ importEnabled }: { importEnabled: boolean }) {
+export function DevotedReviewForm({ importEnabled, savedPair }: { importEnabled: boolean; savedPair?: { connectionId: string; pairHash: string } }) {
   const [state, setState] = useState<Partial<ReviewResult>>({});
   const [pending, start] = useTransition();
   const result = state.result;
@@ -18,9 +18,10 @@ export function DevotedReviewForm({ importEnabled }: { importEnabled: boolean })
     form.set("operation", button instanceof HTMLButtonElement ? button.value : "preview");
     submit(form);
   }} className="space-y-5 rounded-lg border bg-card p-4" aria-busy={pending}>
+    {savedPair && <><input type="hidden" name="pairHash" value={savedPair.pairHash} /><input type="hidden" name="connectionId" value={savedPair.connectionId} /><p className="text-sm">Downloaded PDF and matching workbook selected. Preview verifies their saved fingerprints.</p></>}
     <fieldset disabled={pending} className="grid gap-4 sm:grid-cols-2">
-      <label className="grid gap-2 text-sm">Statement PDF<input required type="file" name="pdf" accept=".pdf" onChange={() => setState({})} /></label>
-      <label className="grid gap-2 text-sm">Matching workbook<input required type="file" name="workbook" accept=".xlsx,.xls" onChange={() => setState({})} /></label>
+      {!savedPair && <><label className="grid gap-2 text-sm">Statement PDF<input required type="file" name="pdf" accept=".pdf" onChange={() => setState({})} /></label>
+      <label className="grid gap-2 text-sm">Matching workbook<input required type="file" name="workbook" accept=".xlsx,.xls" onChange={() => setState({})} /></label></>}
       <Button name="operation" value="preview" type="submit">{pending ? "Checking sources…" : "Preview pair"}</Button>
     </fieldset>
     {state.error && <p role="alert" className="text-sm text-destructive">{state.error}</p>}

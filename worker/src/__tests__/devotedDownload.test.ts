@@ -3,7 +3,7 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import type { Page } from "playwright";
-import { downloadDevotedPeriod, downloadDevotedYear } from "../carriers/devotedDownload";
+import { downloadDevotedPeriod, downloadDevotedYear, syncDevotedPage } from "../carriers/devotedDownload";
 const roots: string[] = [];
 async function directory() { const root = await mkdtemp(path.join(os.tmpdir(), "comflow-devoted-test-")); roots.push(root); return root; }
 afterEach(async () => {
@@ -80,5 +80,22 @@ describe("Devoted explicit year downloads", () => {
     await expect(downloadDevotedYear(mock.page, 2025, root)).rejects.toThrow("No Devoted");
     await expect(downloadDevotedYear(mock.page, 2026.5, root)).rejects.toThrow("Invalid");
     expect(mock.get).not.toHaveBeenCalled();
+  });
+});
+
+describe("Devoted connection download review", () => {
+  it("sends complete pairs to review, excludes other years and reports duplicates", async () => {
+    const mock = fixture([["Sep 25, 2026", "Aug 28, 2026"], ["Dec 12, 2025"]]);
+    const save = vi.fn().mockResolvedValueOnce("stored").mockResolvedValueOnce("duplicate");
+    expect(await syncDevotedPage(mock.page, [2026], save)).toEqual({ found: 2, downloaded: 1, skipped: 1, failed: 0 });
+    expect(save.mock.calls.map((c) => c[0])).toEqual(["2026-09-25", "2026-08-28"]);
+    expect(mock.get).toHaveBeenCalledTimes(4);
+  });
+  it("does not stage an incomplete pair and reports storage failure", async () => {
+    const save = vi.fn();
+    expect((await syncDevotedPage(fixture([["Sep 25, 2026"]], true).page, [2026], save)).failed).toBe(1);
+    expect(save).not.toHaveBeenCalled();
+    save.mockRejectedValue(new Error("private storage failure"));
+    expect((await syncDevotedPage(fixture([["Sep 25, 2026"]]).page, [2026], save)).downloaded).toBe(0);
   });
 });

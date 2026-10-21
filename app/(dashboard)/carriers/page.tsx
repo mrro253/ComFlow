@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { canManageCarrierLogin } from "@/lib/auth/carrierAccess";
-import { listSupportedCarriers } from "@/lib/carriers";
+import Link from "next/link";
+import { connectionCarriers } from "@/lib/carriers/connectionCarriers";
 import { listVisibleConnections } from "@/lib/repositories/carrierConnectionRepository";
 import { listUsersForAgency } from "@/lib/repositories/userRepository";
 import { ConnectCarrierForm } from "@/components/carriers/connect-carrier-form";
@@ -57,7 +58,7 @@ export default async function CarriersPage() {
         </p>
       </div>
 
-      {listSupportedCarriers().map((carrier) => {
+      {connectionCarriers(isOwner).map((carrier) => {
         const connection = mine.find((c) => c.carrier === carrier);
         const connected = connection && connection.status !== "disabled";
         const status = connection ? STATUS[connection.status] : null;
@@ -75,6 +76,7 @@ export default async function CarriersPage() {
               {status && <Badge variant={status.variant}>{status.label}</Badge>}
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
+              {carrier === "Devoted Health" && <p className="text-sm text-muted-foreground">Sync saves PDF and spreadsheet pairs for review. Keep the local worker running; complete any Devoted verification in its browser window. <Link className="underline" href="/statements/devoted">Review downloaded Devoted statements</Link></p>}
               {connection?.lastError && connection.status === "needs_attention" && (
                 <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{connection.lastError}</p>
               )}

@@ -2,18 +2,24 @@
 import { DevotedValidationError, DevotedReviewError } from "@/lib/carriers/devoted/errors";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
+import { readDevotedInbox } from "@/lib/repositories/devotedInboxRepository";
 import { devotedPreview, approveDevoted } from "@/lib/services/devotedPairService";
 
 export async function reviewDevotedFiles(form: FormData) {
   const user = await getCurrentUser();
   if (!user || user.role !== "owner" || process.env.DEVOTED_REVIEW_ENABLED !== "true") return { error: "Devoted review is unavailable" };
   try {
-    const pdf = form.get("pdf"), workbook = form.get("workbook");
-    if (!(pdf instanceof File) || !(workbook instanceof File) || !pdf.size || !workbook.size || pdf.size > 15728640 || workbook.size > 15728640) return { error: "Select a PDF and OOXML workbook, each no larger than 15 MB" };
-    const pdfBytes = new Uint8Array(await pdf.arrayBuffer()), workbookBytes = new Uint8Array(await workbook.arrayBuffer());
+    let pdfBytes: Uint8Array, workbookBytes: Uint8Array;
+    if (form.get("pairHash")) {
+      ({ pdf: pdfBytes, workbook: workbookBytes } = await readDevotedInbox(user, String(form.get("connectionId") ?? ""), String(form.get("pairHash"))));
+    } else {
+      const pdf = form.get("pdf"), workbook = form.get("workbook");
+      if (!(pdf instanceof File) || !(workbook instanceof File) || !pdf.size || !workbook.size || pdf.size > 15728640 || workbook.size > 15728640) return { error: "Select a PDF and OOXML workbook, each no larger than 15 MB" };
+      pdfBytes = new Uint8Array(await pdf.arrayBuffer()); workbookBytes = new Uint8Array(await workbook.arrayBuffer());
+    }
     if (form.get("operation") === "import") {
       const id = await approveDevoted(user, pdfBytes, workbookBytes, String(form.get("digest") ?? ""), form.get("replace") === "yes");
-      for (const path of ["/statements", "/payments", "/dashboard"]) revalidatePath(path);
+      for (const path of ["/statements", "/statements/devoted", "/payments", "/dashboard"]) revalidatePath(path);
       return { importedId: id };
     }
     const result = await devotedPreview(user, pdfBytes, workbookBytes);
