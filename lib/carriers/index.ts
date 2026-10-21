@@ -1,5 +1,6 @@
 import type { StatementParser } from "@/lib/carriers/types";
 import { ultimateParser } from "@/lib/carriers/ultimate/parseUltimateStatement";
+import { uhcParser } from "@/lib/carriers/uhc/parseUhcStatement";
 
 export * from "@/lib/carriers/types";
 export * from "@/lib/carriers/money";
@@ -18,7 +19,7 @@ export {
   type StatementImportPlan,
 } from "@/lib/carriers/planStatementImport";
 
-const PARSERS: readonly StatementParser[] = [ultimateParser];
+const PARSERS: readonly StatementParser[] = [ultimateParser, uhcParser];
 
 /** Supported carriers, for UI pickers. */
 export function listSupportedCarriers(): string[] {

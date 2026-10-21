@@ -4,6 +4,8 @@ import { extractPdfText } from "@/lib/pdf/extractPdfText";
 import { extractUltimateDetails } from "@/lib/pdf/extractUltimateDetails";
 import { parseUltimateText, ULTIMATE_CARRIER } from "@/lib/carriers/ultimate/parseUltimateStatement";
 import { verifiedUltimateDetails, type StatementRowDetails } from "@/lib/carriers/ultimate/statementDetails";
+import { extractStatementPdf } from "@/lib/pdf/extractStatementPdf";
+import { readUhcStatement, UHC_CARRIER } from "@/lib/carriers/uhc/parseUhcStatement";
 
 export interface PaymentStatementDetails extends StatementRowDetails {
   statementFilename: string;
@@ -18,12 +20,13 @@ export async function loadPaymentDetails(transactionIds: string[], agencyId: str
   for (const statementId of new Set(visible.map((tx) => tx.statement_id))) {
     try {
       const statement = await getPaymentStatementSource(statementId, agencyId);
-      if (!statement?.storage_path || statement.carrier !== ULTIMATE_CARRIER) continue;
+      if (!statement?.storage_path || ![ULTIMATE_CARRIER,UHC_CARRIER].includes(statement.carrier)) continue;
       const bytes = await downloadStatementPdf(statement.storage_path);
-      const pdf = await extractPdfText(bytes);
+      const pdf = statement.carrier === UHC_CARRIER ? await extractStatementPdf(bytes,statement.carrier) : await extractPdfText(bytes);
       if (pdf.sha256 !== statement.file_hash) continue;
-      const parsed = parseUltimateText(pdf.text, pdf.sha256);
-      const details = verifiedUltimateDetails(parsed.transactions, await extractUltimateDetails(bytes));
+      const uhc = statement.carrier === UHC_CARRIER ? readUhcStatement(pdf.text,pdf.sha256) : null;
+      const parsed = uhc?.statement ?? parseUltimateText(pdf.text, pdf.sha256);
+      const details = verifiedUltimateDetails(parsed.transactions, uhc?.details ?? await extractUltimateDetails(bytes));
       const source = new Map(parsed.transactions.map((tx) => [tx.transactionKey, tx]));
       for (const tx of visible.filter((row) => row.statement_id === statementId)) {
         const detail = details.get(tx.transaction_key);

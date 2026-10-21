@@ -2,8 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadPaymentDetails } from "../paymentDetailsService";
 import { buildSampleStatementLines } from "@/lib/carriers/sampleStatement";
 import { parseUltimateText, ULTIMATE_CARRIER } from "@/lib/carriers/ultimate/parseUltimateStatement";
+import { readUhcStatement,UHC_CARRIER } from "@/lib/carriers/uhc/parseUhcStatement";
+import { uhcText } from "@/lib/carriers/__tests__/fixtures/uhcStatement";
 
-const mocks = vi.hoisted(() => ({ visible: vi.fn(), statement: vi.fn(), download: vi.fn(), text: vi.fn(), details: vi.fn() }));
+const mocks = vi.hoisted(() => ({ visible: vi.fn(), statement: vi.fn(), download: vi.fn(), text: vi.fn(), details: vi.fn(), statementText:vi.fn() }));
+vi.mock("@/lib/pdf/extractStatementPdf",()=>({extractStatementPdf:mocks.statementText}));
 vi.mock("@/lib/repositories/paymentDetailsRepository", () => ({ listVisiblePaymentSources: mocks.visible, getPaymentStatementSource: mocks.statement }));
 vi.mock("@/lib/repositories/statementRepository", () => ({ downloadStatementPdf: mocks.download }));
 vi.mock("@/lib/pdf/extractPdfText", () => ({ extractPdfText: mocks.text }));
@@ -27,6 +30,19 @@ beforeEach(() => {
 });
 
 describe("payment source access and integrity", () => {
+  it("enriches only the RLS-visible UHC entry from a verified source",async()=>{
+    const text=uhcText(),tx=readUhcStatement(text,hash).statement.transactions[0];
+    const row={...visible,transaction_key:tx.transactionKey,carrier_member_id:tx.memberId,effective_date:tx.effectiveDateIso,amount_cents:tx.amountCents,commission_type:tx.type};
+    mocks.visible.mockResolvedValue([row]);mocks.statement.mockResolvedValue({storage_path:"agency/uhc.pdf",file_hash:hash,carrier:UHC_CARRIER});
+    mocks.statementText.mockResolvedValue({text,sha256:hash});
+    const result=await loadPaymentDetails(["visible-id","hidden-id"],"agency-id");
+    expect([...result.keys()]).toEqual(["visible-id"]);expect(result.get("visible-id")?.clientName).toBe("SYNTHETIC CLIENT 1");
+    expect(mocks.details).not.toHaveBeenCalled();
+    for(const override of [{amount_cents:0},{carrier_member_id:"different"},{transaction_key:"different"}]){
+      mocks.visible.mockResolvedValue([{...row,...override}]);expect((await loadPaymentDetails(["visible-id"],"agency-id")).size).toBe(0);
+    }
+    mocks.statementText.mockResolvedValue({text,sha256:"b".repeat(64)});expect((await loadPaymentDetails(["visible-id"],"agency-id")).size).toBe(0);
+  });
   it("returns only the RLS-visible payment, never other clients in the same PDF", async () => {
     const result = await loadPaymentDetails(["visible-id", "hidden-id"], "agency-id");
     expect(mocks.visible).toHaveBeenCalledWith(["visible-id", "hidden-id"], "agency-id");

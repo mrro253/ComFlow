@@ -1,7 +1,7 @@
 import { buildStatementPreview, toImportRows, type StatementPreview } from "@/lib/carriers/buildStatementPreview";
 import { getStatementParser } from "@/lib/carriers";
 import { planCorrection } from "@/lib/carriers/planCorrection";
-import { extractPdfText } from "@/lib/pdf/extractPdfText";
+import { extractStatementPdf } from "@/lib/pdf/extractStatementPdf";
 import { getAgencyById } from "@/lib/repositories/agencyRepository";
 import {
   downloadStatementPdf,
@@ -31,7 +31,7 @@ export async function buildPreviewForStatement(
   const parser = getStatementParser(statement.carrier);
   if (!parser) throw new StatementProcessingError(`${statement.carrier} statements are not supported yet`);
 
-  const pdf = await extractPdfText(await downloadStatementPdf(statement.storagePath));
+  const pdf = await extractStatementPdf(await downloadStatementPdf(statement.storagePath), statement.carrier);
   if (pdf.sha256 !== statement.fileHash) {
     throw new StatementProcessingError("The stored PDF does not match its recorded fingerprint");
   }
