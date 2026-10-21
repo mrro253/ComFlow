@@ -1,8 +1,9 @@
+import { PRODUCT_TYPES } from "@/lib/reporting/productTypes";
 import { sumCents, totalsByCategory } from "@/lib/reporting/carrierMetrics";
 import type { CarrierTransactionRecord } from "@/lib/repositories/statementRepository";
 
 export interface PaymentFilters {
-  search: string; month: string; carrier: string; agent: string; category: string;
+  search: string; month: string; carrier: string; agent: string; category: string; product: string;
   from: string; to: string; unassigned: boolean; page: number; pageSize: number;
 }
 export class PaymentFilterError extends Error {}
@@ -22,9 +23,11 @@ export function normalizePaymentFilters(input: unknown): PaymentFilters {
   if (from && to && from > to) throw new PaymentFilterError("The start date must be on or before the end date.");
   const month = value(data.month, 7) || "all";
   if (month !== "all" && !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new PaymentFilterError("Choose a valid statement month.");
+  const product = value(data.product, 40) || "all";
+  if (product !== "all" && !PRODUCT_TYPES.some((type) => type.code === product)) throw new PaymentFilterError("Choose a supported product type.");
   const page = Number(data.page), size = Number(data.pageSize);
   return {
-    search: value(data.search, 160), month,
+    search: value(data.search, 160), month, product,
     carrier: value(data.carrier) || "all", agent: value(data.agent) || "all", category: value(data.category) || "all",
     from, to, unassigned: data.unassigned === true,
     page: Number.isSafeInteger(page) && page > 0 ? page : 1,

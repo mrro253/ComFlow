@@ -50,4 +50,32 @@ describe("payment ledger service", () => {
     await expect(loadPaymentLedger(user, { month: "invalid" })).rejects.toThrow("month");
     expect(mocks.rows).not.toHaveBeenCalled();
   });
-});
+  it("filters products before paging and totals every matching payment", async () => {
+    mocks.details.mockResolvedValue(new Map(rows.map((row, i) => [row.id, { clientName: "Synthetic Client", fields: [{ label: "Product type", value: i < 30 ? "Dental" : "MAPD" }] }])));
+    const view = await loadPaymentLedger(user, { product: "DENTAL", page: 2 });
+    expect(view.count).toBe(30); expect(view.totalCents).toBe(3000); expect(view.rows).toHaveLength(5);
+    expect(view.rows.every((row) => row.product.code === "DENTAL")).toBe(true);
+  });
+  it("keeps unreported and unavailable product information Unknown", async () => {
+    mocks.details.mockResolvedValue(new Map());
+    const view = await loadPaymentLedger(user, { product: "UNKNOWN" });
+    expect(view.count).toBe(60); expect(view.totalCents).toBe(6000);
+    expect(view.rows.every((row) => row.product.code === "UNKNOWN")).toBe(true);
+    expect(view.warning).toContain("Unknown");
+  });
+  it("combines name and product filters and does not read the same candidates twice", async () => {
+    mocks.details.mockResolvedValue(new Map(rows.map((row, i) => [row.id, { clientName: i % 2 ? "Target Client" : "Other Client", fields: [{ label: "Product", value: i < 30 ? "Dental" : "PDP" }] }])));
+    const view = await loadPaymentLedger(user, { product: "DENTAL", search: "Target" });
+    expect(view.count).toBe(15); expect(view.totalCents).toBe(1500);
+    expect(mocks.details).toHaveBeenCalledTimes(1);
+  });
+  it("uses the user-confirmed Ultimate MAPD mapping without changing amounts", async () => {
+    mocks.rows.mockResolvedValue(rows.map((row) => ({ ...row, carrier: "Ultimate Health Plans" })));
+    const view = await loadPaymentLedger(user, { product: "MEDICARE_ADVANTAGE" });
+    expect(view.count).toBe(60); expect(view.totalCents).toBe(6000);
+    expect(view.rows.every((row) => row.product.code === "MEDICARE_ADVANTAGE" && row.product.basis === "carrier")).toBe(true);
+  });
+  it("rejects a fabricated product filter before reading records", async () => {
+    await expect(loadPaymentLedger(user, { product: "INVALID_PRODUCT" })).rejects.toThrow("product type");
+    expect(mocks.rows).not.toHaveBeenCalled();
+  });});

@@ -37,7 +37,7 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
   }
   function submit(event: FormEvent) { event.preventDefault(); run({ ...draft, page: 1 }); }
   function clear() {
-    run({ search: "", month: "all", carrier: "all", agent: "all", category: "all", from: "", to: "", unassigned: false, page: 1, pageSize: view.filters.pageSize });
+    run({ search: "", month: "all", carrier: "all", agent: "all", category: "all", product: "all", from: "", to: "", unassigned: false, page: 1, pageSize: view.filters.pageSize });
   }
   const personName = (id: string | null) => id ? (view.options.agents.find((person) => person.id === id)?.name ?? "Team member") : "Unassigned";
   return (
@@ -69,6 +69,11 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
                   <option value="all">All visible agents</option>{view.options.agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}
                 </select>
               </label>}
+              <label className="grid gap-1 text-sm">Product type
+                <select className={selectClass} value={draft.product} onChange={(e) => setDraft({ ...draft, product: e.target.value })}>
+                  <option value="all">All product types</option>{view.options.products.map((type) => <option key={type.code} value={type.code}>{type.label}</option>)}
+                </select>
+              </label>
               <label className="grid gap-1 text-sm">Payment category
                 <select className={selectClass} value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>
                   <option value="all">All categories</option>{view.options.categories.map((category) => <option key={category}>{category}</option>)}
@@ -87,6 +92,7 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
               </div>
             </fieldset>
           </form>
+          <p className="mt-3 text-xs text-muted-foreground">Product types use confirmed carrier mappings or verified statement fields. Unconfirmed products stay Unknown.</p>
           {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
           {view.warning && <p role="status" className="mt-3 text-sm text-muted-foreground">{view.warning}</p>}
         </CardContent>
@@ -106,12 +112,12 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
         <CardHeader><CardTitle>Payment detail</CardTitle><p className="text-sm text-muted-foreground">Click a client to open all statement fields.</p></CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader><TableRow><TableHead>Client / member ID</TableHead><TableHead>Carrier</TableHead><TableHead>Category</TableHead><TableHead>Effective</TableHead><TableHead>Month</TableHead>{role !== "agent" && <TableHead>Credited to</TableHead>}<TableHead className="text-right">Amount</TableHead>{isOwner && <TableHead>Assign</TableHead>}</TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Client / member ID</TableHead><TableHead>Carrier</TableHead><TableHead>Product type</TableHead><TableHead>Category</TableHead><TableHead>Effective</TableHead><TableHead>Month</TableHead>{role !== "agent" && <TableHead>Credited to</TableHead>}<TableHead className="text-right">Amount</TableHead>{isOwner && <TableHead>Assign</TableHead>}</TableRow></TableHeader>
             <TableBody>
-              {!view.rows.length && <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">No matching payments. Try changing or clearing the filters.</TableCell></TableRow>}
+              {!view.rows.length && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">No matching payments. Try changing or clearing the filters.</TableCell></TableRow>}
               {view.rows.map((row) => <TableRow key={row.id}>
                 <TableCell><button type="button" disabled={pending} onClick={() => setSelected(row)} className="text-left font-medium underline-offset-4 hover:underline focus-visible:underline">{row.sourceDetails?.clientName || "View payment details"}</button><p className="text-xs text-muted-foreground">{row.memberId}</p></TableCell>
-                <TableCell>{row.carrier}</TableCell><TableCell>{row.commissionType}</TableCell><TableCell>{row.effectiveDate}</TableCell><TableCell>{row.statementMonth}</TableCell>
+                <TableCell>{row.carrier}</TableCell><TableCell>{row.product.label}</TableCell><TableCell>{row.commissionType}</TableCell><TableCell>{row.effectiveDate}</TableCell><TableCell>{row.statementMonth}</TableCell>
                 {role !== "agent" && <TableCell>{personName(row.userId)}</TableCell>}
                 <TableCell className={row.amountCents < 0 ? "text-right font-medium text-destructive" : "text-right font-medium"}>{formatCents(row.amountCents)}</TableCell>
                 {isOwner && <TableCell>{!row.userId && <AssignPaymentForm transactionId={row.id} team={view.team} canRemember={row.writingAgentName !== null} />}</TableCell>}
@@ -129,6 +135,7 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
         {selected && <>
           <div className="flex items-start justify-between gap-4"><h2 id="payment-details-title" className="text-xl font-semibold">{selected.sourceDetails?.clientName || "Payment details"}</h2><Button type="button" variant="outline" onClick={() => setSelected(null)}>Close</Button></div>
           <p className="mt-2 text-sm">{selected.carrier} · {selected.statementMonth} · {selected.commissionType} · {formatCents(selected.amountCents)}</p>
+          <p className="mt-2 text-sm">Product type: {selected.product.label}{selected.product.reportedValue ? ` · As reported: ${selected.product.reportedValue}` : ` · ${selected.product.reason}`}</p>
           <p className="mt-2 text-sm text-muted-foreground">Credited to {personName(selected.userId)}{selected.writingUserId ? ` · Written by ${personName(selected.writingUserId)}` : ""}</p>
           {selected.sourceDetails ? <>
             <dl className="mt-5 grid gap-4 sm:grid-cols-2">{selected.sourceDetails.fields.map((field, index) => <div key={index}><dt className="text-xs text-muted-foreground">{field.label}</dt><dd className="break-words text-sm">{field.value || "Not provided"}</dd></div>)}</dl>
