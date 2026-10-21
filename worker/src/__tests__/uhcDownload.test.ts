@@ -19,7 +19,7 @@ async function fixture(options: { months?: string[]; party?: string; invalidText
   const page = {
     url:()=>options.wrongHost ? "https://example.invalid/" : UHC_STATEMENTS_URL,
     getByText:()=>({first:()=>({locator:()=>({innerText:async()=>options.header ?? `You are now accessing JARVIS as Medicare User: SYNTHETIC ( PID: ${options.party ?? "999001"} )`})})}),
-    locator:(selector:string)=>({first:()=>({waitFor:async()=>undefined}),allTextContents:async()=> options.hiddenMenus && !selector.includes(":visible") ? Object.values(menus).flat() : menus[opened]}),
+    locator:(selector:string)=>({first:()=>({waitFor:async()=>undefined}),nth:(index:number)=>({click:async()=>{selected[opened]=menus[opened][index];opened="";}}),allTextContents:async()=> options.hiddenMenus && !selector.includes(":visible") ? Object.values(menus).flat() : menus[opened]}),
     getByRole:(role:string,opts:{name:string})=>role==="combobox" ? combo(opts.name) : {click:async()=>{if(opts.name!=="DOWNLOAD"){opened=opts.name;cursor=menus[opts.name].indexOf(selected[opts.name]);}else downloads.push(`${selected.Year}-${names.indexOf(selected.Month.toUpperCase().trim())+1}:${selected.Format}`);}},
     waitForEvent:async()=>{
       const kind = selected.Format==="PDF" ? "pdf" : "txt", month=`${selected.Year}-${String(names.indexOf(selected.Month.toUpperCase().trim())+1).padStart(2,"0")}`;
