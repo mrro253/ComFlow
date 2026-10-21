@@ -22,7 +22,7 @@ export function ApproveImportForm({
       <div>
         <Button type="submit" disabled={disabled || isPending}>
           <CheckCircle2 className="h-4 w-4" />
-          {isPending ? "Importing..." : `Approve and import ${newCount} payment${newCount === 1 ? "" : "s"}`}
+          {isPending ? "Importing..." : `Approve and import ${newCount} commission entr${newCount === 1 ? "y" : "ies"}`}
         </Button>
       </div>
       {state?.error && <p className="text-sm text-destructive">{state.error}</p>}

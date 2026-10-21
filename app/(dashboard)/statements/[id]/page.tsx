@@ -112,7 +112,7 @@ export default async function StatementDetailPage({ params }: { params: Promise<
         )}
         <div className="grid gap-4 sm:grid-cols-3">
           <StatCard label="Statement month" value={statement.statementMonth ?? "—"} icon={FileText} />
-          <StatCard label="Payments imported" value={String(statement.transactionCount ?? 0)} icon={Copy} />
+          <StatCard label="Commission entries imported" value={String(statement.transactionCount ?? 0)} icon={Copy} />
           <StatCard
             label="Statement total"
             value={formatCents(statement.statementTotalCents ?? 0)}
@@ -126,7 +126,7 @@ export default async function StatementDetailPage({ params }: { params: Promise<
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>Imported payments</CardTitle>
+            <CardTitle>Imported commission entries</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
@@ -212,7 +212,7 @@ export default async function StatementDetailPage({ params }: { params: Promise<
 
       {correction.kind === "duplicate" && (
         <p className="rounded-md bg-secondary p-3 text-sm">
-          This has the same file name and identical payments as{" "}
+          This has the same file name and identical commission entries as{" "}
           <Link href={`/statements/${correction.of.id}`} className="font-medium underline">
             {correction.of.filename ?? "an earlier statement"}
           </Link>
@@ -230,7 +230,7 @@ export default async function StatementDetailPage({ params }: { params: Promise<
               </Link>
             </span>
           ))}{" "}
-          but different payments, so it is treated as the corrected version. Approving will import this
+          but different commission entries, so it is treated as the corrected version. Approving will import this
           statement and move the earlier one to Superseded (kept for reference, removed from reports).
         </p>
       )}
@@ -238,13 +238,13 @@ export default async function StatementDetailPage({ params }: { params: Promise<
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Statement month" value={preview.statement.statementMonth} icon={FileText} />
         <StatCard
-          label="New payments"
+          label="New commission entries"
           value={String(preview.counts.new)}
           icon={Copy}
           hint={`${preview.counts["already-imported"]} already imported`}
         />
         <StatCard
-          label="New amount"
+          label="New commission total"
           value={formatCents(preview.newTotalCents)}
           icon={CircleDollarSign}
           hint={`Statement total ${formatCents(preview.statement.statementTotalCents)}`}
@@ -262,7 +262,7 @@ export default async function StatementDetailPage({ params }: { params: Promise<
           <CardHeader>
             <CardTitle>Writing agents to match</CardTitle>
             <CardDescription>
-              These names are not matched to anyone yet, so their payments would stay unassigned. Pick
+              These names are not matched to anyone yet, so their commission entries would stay unassigned. Pick
               the teammate they belong to, or create a new agent. The match is remembered for future
               statements.
             </CardDescription>
@@ -302,7 +302,7 @@ export default async function StatementDetailPage({ params }: { params: Promise<
           />
           {preview.counts.new === 0 && preview.canImport && (
             <p className="text-sm text-muted-foreground">
-              Every payment on this statement is already in the system.
+              Every commission entry on this statement is already in the system.
             </p>
           )}
         </CardContent>
@@ -310,7 +310,7 @@ export default async function StatementDetailPage({ params }: { params: Promise<
 
       <Card>
         <CardHeader>
-          <CardTitle>Payments on this statement</CardTitle>
+          <CardTitle>Commission entries on this statement</CardTitle>
           {preview.rows.length > MAX_ROWS_SHOWN && (
             <CardDescription>
               Showing the first {MAX_ROWS_SHOWN} of {preview.rows.length}. All will be imported.

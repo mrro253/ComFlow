@@ -195,7 +195,7 @@ export async function approveStatementImport(
     revalidatePath(`/statements/${statement.id}`);
     revalidatePath("/payments");
     revalidatePath("/dashboard");
-    return { info: `Imported ${inserted} new payment${inserted === 1 ? "" : "s"}.` };
+    return { info: `Imported ${inserted} new commission entr${inserted === 1 ? "y" : "ies"}.` };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Import failed." };
   }

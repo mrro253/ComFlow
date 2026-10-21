@@ -105,7 +105,7 @@ export default async function ReportsPage({
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Payments</CardTitle>
+            <CardTitle>Commission entries</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">{report.paymentCount}</CardContent>
         </Card>
@@ -126,7 +126,7 @@ export default async function ReportsPage({
             <TableHeader>
               <TableRow>
                 <TableHead>Category</TableHead>
-                <TableHead className="text-right">Payments</TableHead>
+                <TableHead className="text-right">Commission entries</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
               </TableRow>
             </TableHeader>
@@ -134,7 +134,7 @@ export default async function ReportsPage({
               {report.byCategory.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">
-                    No payments in this range.
+                    No commission entries in this range.
                   </TableCell>
                 </TableRow>
               )}
@@ -152,7 +152,7 @@ export default async function ReportsPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Payments in this range</CardTitle>
+          <CardTitle>Commission entries in this range</CardTitle>
           <CardDescription>
             Showing {Math.min(report.rows.length, 300)} of {report.rows.length}. The CSV includes every row.
           </CardDescription>
@@ -188,7 +188,7 @@ export default async function ReportsPage({
       <p className="text-xs text-muted-foreground">
         This report is what the carrier paid, not what anyone is owed.{" "}
         <Link href="/payments" className="underline">
-          Payments
+          Commission activity
         </Link>{" "}
         is the live list.
       </p>

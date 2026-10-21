@@ -31,8 +31,8 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
       try {
         const response = await queryPayments(filters);
         if (response.data) { setView(response.data); setDraft(response.data.filters); }
-        else setError(response.error ?? "Could not load payments.");
-      } catch { setError("Could not load payments. Try again."); }
+        else setError(response.error ?? "Could not load commission entries.");
+      } catch { setError("Could not load commission entries. Try again."); }
     });
   }
   function submit(event: FormEvent) { event.preventDefault(); run({ ...draft, page: 1 }); }
@@ -43,11 +43,12 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
   return (
     <div className="flex flex-col gap-6" aria-busy={pending}>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Payments</h1>
-        <p className="text-sm text-muted-foreground">Search carrier payments and open a client to see their statement details.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Commission activity</h1>
+        <p className="text-sm text-muted-foreground">Review commission entries from carrier statements. Open a client to see the details.</p>
       </div>
+      <p className="rounded-md border bg-secondary/40 p-3 text-sm">One carrier payment can cover several commission entries. Compare your bank deposit with the total on your carrier statement; bank deposits are not verified here.</p>
       <Card>
-        <CardHeader><CardTitle>Find payments</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Find commission entries</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={submit}>
             <fieldset disabled={pending} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -74,7 +75,7 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
                   <option value="all">All product types</option>{view.options.products.map((type) => <option key={type.code} value={type.code}>{type.label}</option>)}
                 </select>
               </label>
-              <label className="grid gap-1 text-sm">Payment category
+              <label className="grid gap-1 text-sm">Commission category
                 <select className={selectClass} value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>
                   <option value="all">All categories</option>{view.options.categories.map((category) => <option key={category}>{category}</option>)}
                 </select>
@@ -98,25 +99,25 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
         </CardContent>
       </Card>
       <div className="grid gap-4 sm:grid-cols-3" aria-live="polite">
-        <Card><CardHeader><CardTitle>Paid by carrier</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{formatCents(view.totalCents)}</p><p className="text-xs text-muted-foreground">All matching payments, across every page</p></CardContent></Card>
-        <Card><CardHeader><CardTitle>Matching payments</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{view.count}</p></CardContent></Card>
-        {isOwner && <Card><CardHeader><CardTitle>Unassigned</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{view.unassignedCount}</p></CardContent></Card>}
+        <Card><CardHeader><CardTitle>Commission total</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{formatCents(view.totalCents)}</p><p className="text-xs text-muted-foreground">Sum of matching entries across every page. Filters and carried balances can make this different from a statement total.</p></CardContent></Card>
+        <Card><CardHeader><CardTitle>Commission entries</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{view.count}</p><p className="text-xs text-muted-foreground">Client-level lines on carrier statements</p></CardContent></Card>
+        {isOwner && <Card><CardHeader><CardTitle>Unassigned entries</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{view.unassignedCount}</p></CardContent></Card>}
       </div>
       {view.categories.length > 0 && <Card>
-        <CardHeader><CardTitle>By payment category</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Entries by commission category</CardTitle></CardHeader>
         <CardContent className="flex flex-wrap gap-3">{view.categories.map((category) => <div key={category.type} className="min-w-40 rounded-md border p-3">
-          <p className="text-xs text-muted-foreground">{category.type}</p><p className={category.cents < 0 ? "font-semibold text-destructive" : "font-semibold"}>{formatCents(category.cents)}</p><p className="text-xs text-muted-foreground">{category.count} payments</p>
+          <p className="text-xs text-muted-foreground">{category.type}</p><p className={category.cents < 0 ? "font-semibold text-destructive" : "font-semibold"}>{formatCents(category.cents)}</p><p className="text-xs text-muted-foreground">{category.count} {category.count === 1 ? "entry" : "entries"}</p>
         </div>)}</CardContent>
       </Card>}
       <Card>
-        <CardHeader><CardTitle>Payment detail</CardTitle><p className="text-sm text-muted-foreground">Click a client to open all statement fields.</p></CardHeader>
+        <CardHeader><CardTitle>Commission entry details</CardTitle><p className="text-sm text-muted-foreground">Click a client to open all statement fields.</p></CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader><TableRow><TableHead>Client / member ID</TableHead><TableHead>Carrier</TableHead><TableHead>Product type</TableHead><TableHead>Category</TableHead><TableHead>Effective</TableHead><TableHead>Month</TableHead>{role !== "agent" && <TableHead>Credited to</TableHead>}<TableHead className="text-right">Amount</TableHead>{isOwner && <TableHead>Assign</TableHead>}</TableRow></TableHeader>
             <TableBody>
-              {!view.rows.length && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">No matching payments. Try changing or clearing the filters.</TableCell></TableRow>}
+              {!view.rows.length && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">No matching commission entries. Try changing or clearing the filters.</TableCell></TableRow>}
               {view.rows.map((row) => <TableRow key={row.id}>
-                <TableCell><button type="button" disabled={pending} onClick={() => setSelected(row)} className="text-left font-medium underline-offset-4 hover:underline focus-visible:underline">{row.sourceDetails?.clientName || "View payment details"}</button><p className="text-xs text-muted-foreground">{row.memberId}</p></TableCell>
+                <TableCell><button type="button" disabled={pending} onClick={() => setSelected(row)} className="text-left font-medium underline-offset-4 hover:underline focus-visible:underline">{row.sourceDetails?.clientName || "View commission entry"}</button><p className="text-xs text-muted-foreground">{row.memberId}</p></TableCell>
                 <TableCell>{row.carrier}</TableCell><TableCell>{row.product.label}</TableCell><TableCell>{row.commissionType}</TableCell><TableCell>{row.effectiveDate}</TableCell><TableCell>{row.statementMonth}</TableCell>
                 {role !== "agent" && <TableCell>{personName(row.userId)}</TableCell>}
                 <TableCell className={row.amountCents < 0 ? "text-right font-medium text-destructive" : "text-right font-medium"}>{formatCents(row.amountCents)}</TableCell>
@@ -124,23 +125,23 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
               </TableRow>)}
             </TableBody>
           </Table>
-          <nav aria-label="Payment pagination" className="flex flex-wrap items-center justify-between gap-3 border-t p-4">
-            <p role="status" className="text-sm">Showing {view.start}–{view.end} of {view.count} payments</p>
-            <label className="flex items-center gap-2 text-sm">Rows per page<select aria-label="Rows per page" className={selectClass} value={view.filters.pageSize} disabled={pending} onChange={(e) => run({ ...view.filters, pageSize: Number(e.target.value), page: 1 })}>{[25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}</select></label>
+          <nav aria-label="Commission entry pagination" className="flex flex-wrap items-center justify-between gap-3 border-t p-4">
+            <p role="status" className="text-sm">Showing entries {view.start}–{view.end} of {view.count}</p>
+            <label className="flex items-center gap-2 text-sm">Entries per page<select aria-label="Entries per page" className={selectClass} value={view.filters.pageSize} disabled={pending} onChange={(e) => run({ ...view.filters, pageSize: Number(e.target.value), page: 1 })}>{[25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}</select></label>
             <div className="flex items-center gap-3"><Button type="button" variant="outline" disabled={pending || view.page <= 1} onClick={() => run({ ...view.filters, page: view.page - 1 })}>Previous</Button><span className="text-sm">Page {view.page} of {view.pages}</span><Button type="button" variant="outline" disabled={pending || view.page >= view.pages} onClick={() => run({ ...view.filters, page: view.page + 1 })}>Next</Button></div>
           </nav>
         </CardContent>
       </Card>
       <dialog ref={dialog} aria-labelledby="payment-details-title" onCancel={() => setSelected(null)} onClose={() => setSelected(null)} className="m-auto max-h-[85vh] w-[min(95vw,48rem)] overflow-y-auto rounded-lg border bg-background p-6 text-foreground shadow-xl backdrop:bg-black/50">
         {selected && <>
-          <div className="flex items-start justify-between gap-4"><h2 id="payment-details-title" className="text-xl font-semibold">{selected.sourceDetails?.clientName || "Payment details"}</h2><Button type="button" variant="outline" onClick={() => setSelected(null)}>Close</Button></div>
+          <div className="flex items-start justify-between gap-4"><h2 id="payment-details-title" className="text-xl font-semibold">{selected.sourceDetails?.clientName || "Commission entry details"}</h2><Button type="button" variant="outline" onClick={() => setSelected(null)}>Close</Button></div>
           <p className="mt-2 text-sm">{selected.carrier} · {selected.statementMonth} · {selected.commissionType} · {formatCents(selected.amountCents)}</p>
           <p className="mt-2 text-sm">Product type: {selected.product.label}{selected.product.reportedValue ? ` · As reported: ${selected.product.reportedValue}` : ` · ${selected.product.reason}`}</p>
           <p className="mt-2 text-sm text-muted-foreground">Credited to {personName(selected.userId)}{selected.writingUserId ? ` · Written by ${personName(selected.writingUserId)}` : ""}</p>
           {selected.sourceDetails ? <>
             <dl className="mt-5 grid gap-4 sm:grid-cols-2">{selected.sourceDetails.fields.map((field, index) => <div key={index}><dt className="text-xs text-muted-foreground">{field.label}</dt><dd className="break-words text-sm">{field.value || "Not provided"}</dd></div>)}</dl>
             <p className="mt-5 break-words text-xs text-muted-foreground">{selected.sourceDetails.statementFilename} · Source row {selected.sourceDetails.sourceRow}</p>
-          </> : <p className="mt-4 text-sm">Source details unavailable. Member ID: {selected.memberId}; effective date: {selected.effectiveDate}. Your payment record is unchanged.</p>}
+          </> : <p className="mt-4 text-sm">Source details unavailable. Member ID: {selected.memberId}; effective date: {selected.effectiveDate}. Your commission entry is unchanged.</p>}
           {isOwner && <Link href={`/statements/${selected.statementId}`} className="mt-4 inline-block text-sm underline">View source statement</Link>}
         </>}
       </dialog>

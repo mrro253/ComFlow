@@ -52,7 +52,7 @@ export function UnmatchedAgentRow({
         <div>
           <p className="text-sm font-medium">{agent.name}</p>
           <p className="text-xs text-muted-foreground">
-            {agent.rowCount} payment{agent.rowCount === 1 ? "" : "s"} - {agent.amount}
+            {agent.rowCount} commission entr{agent.rowCount === 1 ? "y" : "ies"} - {agent.amount}
             {agent.writingAgentId ? ` - carrier ID ${agent.writingAgentId}` : ""}
           </p>
         </div>

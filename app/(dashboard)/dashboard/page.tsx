@@ -26,8 +26,8 @@ import { cn } from "@/lib/utils";
 
 const SCOPE_LABEL = {
   owner: "Everything the carriers paid across your agency.",
-  manager: "Payments for you and your direct reports.",
-  agent: "Your carrier payments.",
+  manager: "Commission entries for you and your direct reports.",
+  agent: "Your carrier commission activity.",
 } as const;
 
 export default async function DashboardPage() {
@@ -75,11 +75,11 @@ export default async function DashboardPage() {
       {transactions.length === 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle>No carrier payments yet</CardTitle>
+            <CardTitle>No commission entries yet</CardTitle>
             <CardDescription>
               {isOwner
                 ? "Upload a carrier commission statement, or connect a carrier login, to see what you were paid."
-                : "Payments appear here once your carrier statements have been imported."}
+                : "Commission entries appear here once your carrier statements have been imported."}
             </CardDescription>
           </CardHeader>
           {isOwner && (
@@ -93,8 +93,8 @@ export default async function DashboardPage() {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Paid by carrier" value={formatCents(sumCents(inMonth))} icon={CircleDollarSign} hint={month ?? undefined} />
-            <StatCard label="Payments" value={String(inMonth.length)} icon={Hash} hint={month ?? undefined} />
+            <StatCard label="Commission total" value={formatCents(sumCents(inMonth))} icon={CircleDollarSign} hint={month ?? undefined} />
+            <StatCard label="Commission entries" value={String(inMonth.length)} icon={Hash} hint={month ?? undefined} />
             {isOwner && (
               <>
                 <StatCard label="Unassigned" value={String(unassignedCount)} icon={UserX} hint="Need an agent assigned" />
@@ -104,10 +104,10 @@ export default async function DashboardPage() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <BarChartCard title="Paid by carrier, by month" data={monthlyPaidSeries(transactions)} barColor="hsl(var(--chart-1))" />
+            <BarChartCard title="Commission totals by statement month" data={monthlyPaidSeries(transactions)} barColor="hsl(var(--chart-1))" />
             {/* BarChartCard plots {month,total}; here the "month" axis carries the payment category. */}
             <BarChartCard
-              title={`Payment categories${month ? ` - ${month}` : ""}`}
+              title={`Commission categories${month ? ` - ${month}` : ""}`}
               data={categories.map((c) => ({ month: c.type, total: c.cents / 100 }))}
               barColor="hsl(var(--chart-2))"
             />
@@ -127,7 +127,7 @@ export default async function DashboardPage() {
                     <div className="text-xs text-muted-foreground">{PRODUCER_GROUP_LABELS[g.group]}</div>
                     <div className={cn("text-lg font-semibold", g.cents < 0 && "text-destructive")}>{formatCents(g.cents)}</div>
                     <div className="text-xs text-muted-foreground">
-                      {g.count} payment{g.count === 1 ? "" : "s"}
+                      {g.count} commission entr{g.count === 1 ? "y" : "ies"}
                     </div>
                   </div>
                 ))}

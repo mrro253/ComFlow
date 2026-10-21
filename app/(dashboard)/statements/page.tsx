@@ -66,7 +66,7 @@ export default async function StatementsPage() {
                 <TableHead>Month</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Payments</TableHead>
+                <TableHead className="text-right">Commission entries</TableHead>
                 <TableHead className="text-right">Statement total</TableHead>
                 <TableHead className="text-right">Received</TableHead>
               </TableRow>

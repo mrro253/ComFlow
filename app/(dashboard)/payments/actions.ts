@@ -65,6 +65,6 @@ export async function queryPayments(input: unknown) {
     const user = await requireRole();
     return { data: await loadPaymentLedger(user, input) };
   } catch (error) {
-    return { error: error instanceof PaymentFilterError ? error.message : "Could not load payments. Check your connection and sign-in, then try again." };
+    return { error: error instanceof PaymentFilterError ? error.message : "Could not load commission entries. Check your connection and sign-in, then try again." };
   }
 }
