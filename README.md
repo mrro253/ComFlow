@@ -183,6 +183,8 @@ See section 7 for the full list. The ones that still need an answer:
 Clarity/mobile follow-up: dashboard production groups explicitly show carrier commissions, not Career take-home earnings. Activity table headings distinguish policy effective date, statement month and carrier commission. Mobile selectors have larger touch targets, pagination wraps, details use smaller phone padding and long client/field values wrap. Automated checks cover compilation; owner statement cards and activity filters were reviewed at 390px width; dashboard production heading verified. Long-value dialogs and pagination wrapping remain browser-unverified.
 
 
+Statement total wording: preview and imported statement pages now show commission entries this month, an amount added/deducted from a previous statement (or a zero previous statement balance), and the statement total. Dashboard/activity explanations use the same plain language. This changes presentation only; ledger amounts and import rules stay unchanged. Negative/positive/zero presentation and safe-cent validation have synthetic coverage. Imported negative and zero-balance statements were browser-verified; positive balances and the unimported preview path remain browser-unverified. No setup, dependency or migration changes.
+
 Statement tracking: Statements now shows a year selector and month cards per visible carrier/statement owner, using all RLS-visible saved statement metadata. Imported, Needs review and None on file indicate document presence only, not missed payments. Superseded copies are excluded; unknown-month files remain in the latest-100 History table. The nine saved Devoted pairs are now registered/imported statements; future download-only files are not counted until imported. Synthetic coverage checks and build verification are recorded below; browser verification remains unverified.
 
 
@@ -741,6 +743,8 @@ Each Independent-agent customer is their own business associate of their carrier
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-10-21** - Explain statement totals using commission entries plus amounts added/deducted from previous statements. Add the breakdown to preview and imported statements and replace accounting jargon in dashboard/activity explanations. Presentation only; 331 tests, TypeScript, ESLint and production build pass; negative and zero-balance imported summaries browser-verified. Positive balance and preview browser cases remain unverified.
 
 - **2026-10-21** - At Ryan's explicit instruction to proceed without Marshall approval, activate the limited Devoted paired importer after database/storage backup and isolated SQL/RLS tests. Add read-excel-file@9.3.9 and migration 0011; preserve UHC/Ultimate details. Import nine saved pairs (9 entries / 26,019 cents), verify 24 source fields and replay protection. All 326 tests, app/worker TypeScript, ESLint and production build pass. See docs/devoted-import-live.md; Marshall approval is not claimed.
 

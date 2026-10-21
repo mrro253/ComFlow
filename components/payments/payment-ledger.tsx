@@ -99,7 +99,7 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
         </CardContent>
       </Card>
       <div className="grid gap-4 sm:grid-cols-3" aria-live="polite">
-        <Card><CardHeader><CardTitle>Commission total</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{formatCents(view.totalCents)}</p><p className="text-xs text-muted-foreground">Sum of matching entries across every page. Filters and carried balances can make this different from a statement total.</p></CardContent></Card>
+        <Card><CardHeader><CardTitle>Commission total</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{formatCents(view.totalCents)}</p><p className="text-xs text-muted-foreground">Sum of matching entries across every page. Filters and amounts added or deducted from previous statements can make this different from a statement total.</p></CardContent></Card>
         <Card><CardHeader><CardTitle>Commission entries</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{view.count}</p><p className="text-xs text-muted-foreground">Client-level lines, not separate bank deposits</p></CardContent></Card>
         {isOwner && <Card><CardHeader><CardTitle>Unassigned entries</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{view.unassignedCount}</p></CardContent></Card>}
       </div>

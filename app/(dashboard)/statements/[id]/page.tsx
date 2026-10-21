@@ -18,6 +18,7 @@ import { listCareerLevels } from "@/lib/repositories/compensationSettingsReposit
 import { activeLevelNames } from "@/lib/carriers/careerLevels";
 import { buildPreviewForStatement } from "@/lib/services/statementService";
 import { ApproveImportForm } from "@/components/statements/approve-import-form";
+import { StatementTotalBreakdown } from "@/components/statements/statement-total-breakdown";
 import { STATEMENT_STATUS_BADGE } from "@/components/statements/status";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Badge } from "@/components/ui/badge";
@@ -118,13 +119,9 @@ export default async function StatementDetailPage({ params }: { params: Promise<
             label="Statement total"
             value={formatCents(statement.statementTotalCents ?? 0)}
             icon={CircleDollarSign}
-            hint={
-              statement.carriedBalanceCents
-                ? `Includes ${formatCents(statement.carriedBalanceCents)} carried balance`
-                : undefined
-            }
           />
         </div>
+        <StatementTotalBreakdown totalCents={statement.statementTotalCents ?? 0} previousBalanceCents={statement.carriedBalanceCents ?? 0} />
         <Card>
           <CardHeader>
             <CardTitle>Imported commission entries</CardTitle>
@@ -258,6 +255,7 @@ export default async function StatementDetailPage({ params }: { params: Promise<
         />
       </div>
 
+      <StatementTotalBreakdown totalCents={preview.statement.statementTotalCents} previousBalanceCents={preview.statement.carriedBalanceCents} />
       {unmatched.length > 0 && (
         <Card>
           <CardHeader>

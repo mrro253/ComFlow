@@ -120,7 +120,7 @@ export default async function DashboardPage({
             <p className="mt-1 text-muted-foreground">
               The commission totals, categories and production breakdown show the selected month. The monthly chart shows all imported months; the recent-review count covers the five most recent statements across months.
               One carrier payment can cover several commission entries. These totals are statement activity; bank deposits are not verified here.
-              Carried balances can make a statement total different from its commission entries.
+              Amounts added or deducted from previous statements can make a statement total different from its commission entries.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
