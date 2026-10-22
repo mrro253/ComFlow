@@ -1,5 +1,6 @@
+import { sunfireReport } from "./sunfireReports.js";
 import { chromium, type Page } from "playwright";
-import { mkdir, access, unlink } from "node:fs/promises";
+import { mkdir, access, unlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 
@@ -14,8 +15,9 @@ async function main() {
     if (existsSync(join(path, ".git"))) throw new Error("Exports must stay outside Git workspaces");
     if (dirname(path) === path) break;
   }
+  const report = sunfireReport(process.env.SUNFIRE_REPORT_KIND);
   const start = process.env.SUNFIRE_REPORT_START ?? "", end = process.env.SUNFIRE_REPORT_END ?? "";
-  if (![start, end].every((s) => /^\d{4}-\d{2}-\d{2}$/.test(s))) throw new Error("Explicit report dates are required");
+  if (report.dated && ![start, end].every((s) => /^\d{4}-\d{2}-\d{2}$/.test(s))) throw new Error("Explicit report dates are required");
   await mkdir(output, { recursive: true });
   const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1500, height: 900 } });
@@ -30,21 +32,28 @@ async function main() {
     await page.waitForFunction(() => !!document.querySelector("#navLinkreporting"), null, { timeout: 30 * 60 * 1000 });
     stage = "opening reporting";
     await page.goto(reporting.href);
-    stage = "opening Performance";
-    await page.getByRole("button", { name: "Performance", exact: true }).click();
+    stage = "opening selected report";
+    await page.getByRole("button", { name: report.tab, exact: true }).click();
     const frame = page.frameLocator("iframe:not([title])");
-    const visual = frame.getByRole("button", { name: "Table, Submitted Enrollments - Detail Report", exact: true });
+    const visual = frame.getByRole("button", { name: report.visual, exact: true });
     stage = "waiting for detail table";
     await visual.waitFor({ timeout: 60000 });
     for (const suffix of ["first", "repeat"]) {
       if (saved.has(suffix)) continue;
       // Verify visible date controls instead of trusting defaults or an opaque dashboard URL.
       stage = "checking report dates";
-      const startText = await frame.getByRole("heading", { name: /^Start Date:/ }).innerText();
-      const endText = await frame.getByRole("heading", { name: /^End Date:/ }).innerText();
-      const dateValue = (s: string) => new Date(`${s.slice(s.indexOf(":") + 1).trim()} UTC`).toISOString().slice(0, 10);
-      if (dateValue(startText) !== start || dateValue(endText) !== end) throw new Error("Selected report dates differ from the approved test window");
-      const destination = join(output, `sunfire-enrollments-${start}_${end}-${suffix}.csv`);
+      if (report.dated) {
+        const startText = await frame.getByRole("heading", { name: /^Start Date:/ }).innerText();
+        const endText = await frame.getByRole("heading", { name: /^End Date:/ }).innerText();
+        const dateValue = (s: string) => new Date(`${s.slice(s.indexOf(":") + 1).trim()} UTC`).toISOString().slice(0, 10);
+        if (dateValue(startText) !== start || dateValue(endText) !== end) throw new Error("Selected report dates differ from the approved test window");
+      }
+      if (!report.dated) {
+        const filters = await frame.getByRole("heading", { level: 5 }).allTextContents();
+        await writeFile(join(output, "sunfire-book-of-business-scope.json"), JSON.stringify({ report: report.kind, capturedAt: new Date().toISOString(), filters }, null, 2));
+      }
+      const prefix = report.dated ? `sunfire-enrollments-${start}_${end}` : "sunfire-book-of-business";
+      const destination = join(output, `${prefix}-${suffix}.csv`);
       if (await access(destination).then(() => true).catch(() => false)) throw new Error("Research output already exists; choose another private output folder");
       stage = "opening export menu";
       await visual.scrollIntoViewIfNeeded(); await visual.hover();
