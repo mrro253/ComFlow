@@ -1,7 +1,6 @@
 import { chromium } from "playwright";
 import { access, mkdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
-import { collectEnrollments } from "./sunfire/collector.js";
 import { enrollmentWindows, EnrollmentReadError, type CollectedEnrollment } from "./sunfire/enrollment.js";
 
 async function exists(file: string) { try { await access(file); return true; } catch { return false; } }
@@ -36,7 +35,12 @@ async function main() {
       retry = false;
       try {
         await page.locator("#navLinkreporting").waitFor({ state: "attached", timeout: 900000 });
-        const count = await collectEnrollments(context, page, { portal: portal.href, start, end, checkpoint, log: console.log });
+        // Reload only the collector implementation on retries, preserving the authenticated context.
+        const { collectEnrollments } = await import(new URL(`./sunfire/collector.ts?attempt=${Date.now()}`, import.meta.url).href);
+        const count = await collectEnrollments(context, page, { portal: portal.href, start, end, checkpoint, log: console.log,
+          failure: async (failedPage: import("playwright").Page) => {
+            await failedPage.screenshot({ path: path.join(output, "paused-page.png"), fullPage: true }).catch(() => undefined);
+          } });
         console.log(`Complete: ${count} enrollments verified. Nothing imported into ComFlow.`);
         break;
       } catch (error) {

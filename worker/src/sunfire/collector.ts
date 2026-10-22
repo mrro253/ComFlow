@@ -54,6 +54,7 @@ export async function collectEnrollments(context: BrowserContext, page: Page, op
   portal: string; start: string; end: string;
   checkpoint(rows: CollectedEnrollment[], complete: boolean): Promise<void>;
   log(message: string): void;
+  failure?(page: Page): Promise<void>;
 }) {
   const discovered = new Map<string, EnrollmentListRow>();
   const collected: CollectedEnrollment[] = [];
@@ -66,6 +67,7 @@ export async function collectEnrollments(context: BrowserContext, page: Page, op
       const row = snapshot.rows[i], prior = discovered.has(row.code);
       rememberEnrollment(discovered, row);
       if (prior) continue;
+      options.log(`Opening enrollment ${collected.length + 1}: report action menu.`);
       await page.getByRole("table").getByRole("row").nth(i + 1).getByRole("cell").first().click();
       const link = page.getByRole("link", { name: "View Enrollment", exact: true });
       const href = await link.getAttribute("href");
@@ -75,9 +77,11 @@ export async function collectEnrollments(context: BrowserContext, page: Page, op
       // One new document per enrollment avoids SunFire's same-route stale-form reuse.
       const detailPage = await context.newPage();
       try {
+        options.log("Loading a fresh enrollment detail document.");
         await detailPage.goto(target, { waitUntil: "domcontentloaded" });
         await detailPage.getByText("Enrollment code", { exact: true }).waitFor({ state: "visible", timeout: 30000 });
         detailUrl(detailPage.url(), options.portal, row.code);
+        options.log("Reading required enrollment fields.");
         const first = await readField(detailPage, "Enrollment code");
         const result = verifyEnrollment(row, { code: first,
           firstName: await readField(detailPage, "First name"), lastName: await readField(detailPage, "Last name"),
@@ -87,6 +91,9 @@ export async function collectEnrollments(context: BrowserContext, page: Page, op
         collected.push(result);
         await options.checkpoint(collected, false);
         options.log(`Verified enrollment ${collected.length}; saved privately.`);
+      } catch (error) {
+        await options.failure?.(detailPage);
+        throw error;
       } finally { await detailPage.close(); }
     }
   }
