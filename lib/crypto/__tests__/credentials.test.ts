@@ -6,6 +6,11 @@ const KEY = randomBytes(32).toString("base64");
 const LOGIN = { username: "synthetic-user", password: "synthetic-pass-123!" };
 
 describe("carrier credential encryption", () => {
+  it("encrypts and preserves SunFire agency configuration with the login", () => {
+    const login = { ...LOGIN, portalUrl: "https://www.sunfirematrix.com/app/agent/example/", enrollmentStart: "2026-01-01" };
+    const payload = encryptCarrierLogin(login, "conn-1", KEY);
+    expect(payload).not.toContain("example"); expect(decryptCarrierLogin(payload, "conn-1", KEY)).toEqual(login);
+  });
   it("round-trips a login", () => {
     const payload = encryptCarrierLogin(LOGIN, "conn-1", KEY);
     expect(decryptCarrierLogin(payload, "conn-1", KEY)).toEqual(LOGIN);

@@ -1,6 +1,7 @@
 import { decryptCarrierLogin } from "../../lib/crypto/credentials";
 import { storeUhcPair } from "./uhcStorage.js";
 import { syncDevotedConnection } from "./devotedSync.js";
+import { syncSunfireConnection } from "./sunfireSync.js";
 import { getPortal } from "./carriers/registry.js";
 import {
   knownStatementIds,
@@ -19,6 +20,12 @@ export async function syncConnection(db: Db, connection: ConnectionRow): Promise
   const log = (message: string) => console.log(`[${connection.id.slice(0, 8)}] ${message}`);
 
   try {
+    if (connection.carrier === "SunFire") {
+      const result = await syncSunfireConnection(db, connection);
+      log(`SunFire: ${result.count} enrollments verified; ${result.duplicate ? "unchanged collection" : "collection saved"}. No commissions imported.`);
+      await markConnection(db, connection.id, { ok: true });
+      return;
+    }
     if (connection.carrier === "Devoted Health") {
       const summary = await syncDevotedConnection(db, connection);
       log(`done: ${JSON.stringify(summary)}`);

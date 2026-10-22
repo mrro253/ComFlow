@@ -6,7 +6,7 @@ function fixture(carrier: LoginCarrier, initial?: string, callbackFlow = false, 
   let closed = false;
   const fills: string[] = [], clicks: string[] = [], destinations: string[] = [], events: string[] = [];
   const values = new Map<string, string>();
-  const url = () => state === "untrusted" ? "https://example.invalid/" : state === "reset" ? "https://devoted.auth0.com/reset" : carrier === "Devoted Health" ? state === "callback" ? "https://agent.devoted.com/callback" : state === "home" ? "https://agent.devoted.com/home" : state === "entry" || state === "ready" ? "https://agent.devoted.com/commissions" : "https://devoted.auth0.com/login" : carrier === "UnitedHealthcare" ? state === "ready" ? "https://www.uhcjarvis.com/content/jarvis/en/secure/commissions/statements.html" : "https://identity.onehealthcareid.com/login" : "https://enroll.myultimatehp.com/agportal/#/login";
+  const url = () => state === "untrusted" ? "https://example.invalid/" : state === "reset" ? "https://devoted.auth0.com/reset" : carrier === "Devoted Health" ? state === "callback" ? "https://agent.devoted.com/callback" : state === "home" ? "https://agent.devoted.com/home" : state === "entry" || state === "ready" ? "https://agent.devoted.com/commissions" : "https://devoted.auth0.com/login" : carrier === "UnitedHealthcare" ? state === "ready" ? "https://www.uhcjarvis.com/content/jarvis/en/secure/commissions/statements.html" : "https://identity.onehealthcareid.com/login" : carrier === "SunFire" ? state === "ready" ? "https://www.sunfirematrix.com/app/agent/example/" : "https://auth.sunfirematrix.com/u/login" : "https://enroll.myultimatehp.com/agportal/#/login";
   const needs = vi.fn(async () => { if (state === "challenge") state = "ready"; else closed = true; });
   const locator = (selector: string) => {
     const count = () => selector.includes('new-password') ? state === "reset" ? 1 : 0 : selector.includes('one-time-code') ? state === "challenge" ? 1 : 0 : selector.includes('type="password"') ? ["password", "reset"].includes(state) ? 1 : 0 : ["username", "password"].includes(state) ? 1 : 0;
@@ -14,7 +14,7 @@ function fixture(carrier: LoginCarrier, initial?: string, callbackFlow = false, 
   };
   const page = { url, isClosed: () => closed, locator, goto: async () => { destinations.push(state); state = "ready"; }, waitForTimeout: async () => { if (state === "callback") state = "home"; }, getByText: (text: string | RegExp) => ({ count: async () => reject && state === "bad" && text instanceof RegExp && text.test("Wrong username or password") ? 1 : 0, first: () => ({ isVisible: async () => state === "home" || (reject && state === "bad") }) }), getByRole: (role: string, options?: {name: string | RegExp}) => {
     if (role === "alert") return { count: async () => state === "bad" ? 1 : 0, first: () => ({ isVisible: async () => state === "bad" }) };
-    const name = state === "entry" ? "Login" : carrier === "Devoted Health" ? "Log In" : carrier === "UnitedHealthcare" ? state === "username" ? "Continue" : "Sign In" : "LOGIN";
+    const name = state === "entry" ? "Login" : carrier === "Devoted Health" ? "Log In" : carrier === "UnitedHealthcare" ? state === "username" ? "Continue" : "Sign In" : carrier === "SunFire" ? "Login" : "LOGIN";
     const visible = () => ["entry", "username", "password"].includes(state) && (typeof options?.name === "string" ? options.name === name : options?.name.test(name));
     return { count: async () => visible() ? 1 : 0, isVisible: async () => Boolean(visible()), click: async () => { clicks.push(name); state = state === "entry" || state === "username" ? "password" : initial === "password" ? "bad" : carrier === "UnitedHealthcare" ? "challenge" : callbackFlow ? "callback" : "ready"; } };
   } } as unknown as Page;
@@ -22,10 +22,10 @@ function fixture(carrier: LoginCarrier, initial?: string, callbackFlow = false, 
 }
 const login = { username: "synthetic-user", password: "synthetic-password" };
 describe("automatic carrier login", () => {
-  it.each(["Devoted Health", "UnitedHealthcare", "Ultimate Health Plans"] as const)("submits saved credentials for %s", async (carrier) => {
+  it.each(["Devoted Health", "UnitedHealthcare", "Ultimate Health Plans", "SunFire"] as const)("submits saved credentials for %s", async (carrier) => {
     const f = fixture(carrier); await automaticCarrierLogin(f.page, carrier, login, f.ready, f.needs);
     expect(f.fills).toContain("username"); expect(f.fills.filter(v => v === "password")).toHaveLength(1);
-    expect(f.clicks).toHaveLength(carrier === "Ultimate Health Plans" ? 1 : 2);
+    expect(f.clicks).toHaveLength(carrier === "Ultimate Health Plans" || carrier === "SunFire" ? 1 : 2);
     expect(f.needs).toHaveBeenCalledTimes(carrier === "UnitedHealthcare" ? 1 : 0);
   });
   it("lets the sign-in callback complete before navigating to commissions", async () => {

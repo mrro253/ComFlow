@@ -27,7 +27,7 @@ export default async function CarriersPage() {
   if (!canManageCarrierLogin(user)) {
     return (
       <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Carrier connections</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Carrier &amp; enrollment connections</h1>
         <Card>
           <CardHeader>
             <CardTitle>Your agency handles this for you</CardTitle>
@@ -53,7 +53,7 @@ export default async function CarriersPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Carrier connections</h1>
         <p className="text-sm text-muted-foreground">
           {isOwner
-            ? "Connect your agency's carrier portal login so statements are pulled automatically."
+            ? "Connect carrier portals for commission statements and SunFire for enrollment details."
             : "Connect your carrier portal login so your statements are pulled automatically. Your carrier pays you directly; this only lets us show what you were paid."}
         </p>
       </div>
@@ -69,6 +69,7 @@ export default async function CarriersPage() {
             <CardHeader className="flex-row items-center justify-between space-y-0">
               <div>
                 <CardTitle>{carrier}</CardTitle>
+                {carrier === "SunFire" && <p className="mt-1 text-sm font-medium">Enrollment source</p>}
                 <CardDescription>
                   {connection?.lastSuccessfulSyncAt
                     ? `Last successful sync ${formatDate(connection.lastSuccessfulSyncAt)}`
@@ -78,18 +79,19 @@ export default async function CarriersPage() {
               {status && <Badge variant={status.variant}>{status.label}</Badge>}
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
+              {carrier === "SunFire" && <p className="text-sm text-muted-foreground">Collects each enrollment’s full Medicare ID (MBI), plan and proposed effective date. Each detail page is checked against the enrollment code and client name. These are proposed enrollments, not confirmed active coverage or payments. {connection && <Link className="underline" href="/carriers/sunfire">View collected enrollments</Link>}</p>}
               {carrier === "UnitedHealthcare" && <p className="text-sm text-muted-foreground">Sync downloads available PDF and text reports. Keep the local worker running; complete verification in its browser and open Commissions &gt; Statements and More. New PDFs appear in <Link className="underline" href="/statements">Statements for review</Link>. Existing imported entries stay unchanged.</p>}
               {carrier === "Devoted Health" && <p className="text-sm text-muted-foreground">Sync saves PDF and spreadsheet pairs for review. Keep the local worker running; complete any Devoted verification in its browser window. <Link className="underline" href="/statements/devoted">Review downloaded Devoted statements</Link></p>}
               {connection?.lastError && connection.status === "needs_attention" && (
                 <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{connection.lastError}</p>
               )}
               {connected && connection && (
-                <ConnectionActions connectionId={connection.id} syncPending={connection.syncRequestedAt !== null} />
+                <ConnectionActions connectionId={connection.id} syncPending={connection.syncRequestedAt !== null} enrollmentSource={carrier === "SunFire"} />
               )}
               <div className={connected ? "border-t border-border pt-4" : ""}>
                 <ConnectCarrierForm carrier={carrier} replacing={Boolean(connected)} />
                 <p className="mt-3 text-xs text-muted-foreground">
-                  Your login is encrypted before it is stored and is only used by the statement downloader.
+                  Your login is encrypted before it is stored and is only used by the {carrier === "SunFire" ? "enrollment collector" : "statement downloader"}.
                   It is never shown again.
                 </p>
               </div>

@@ -2,11 +2,12 @@ import type { Page, Locator } from "playwright";
 import type { CarrierLogin } from "./carriers/types.js";
 import { SafePortalError } from "./carriers/types.js";
 
-export type LoginCarrier = "Devoted Health" | "UnitedHealthcare" | "Ultimate Health Plans";
+export type LoginCarrier = "Devoted Health" | "UnitedHealthcare" | "Ultimate Health Plans" | "SunFire";
 const HOSTS: Record<LoginCarrier, readonly string[]> = {
   "Devoted Health": ["agent.devoted.com", "devoted.auth0.com"],
   "UnitedHealthcare": ["www.uhcjarvis.com", "identity.onehealthcareid.com"],
   "Ultimate Health Plans": ["enroll.myultimatehp.com"],
+  "SunFire": ["www.sunfirematrix.com", "auth.sunfirematrix.com"],
 };
 export function trustedLoginUrl(carrier: LoginCarrier, value: string): boolean {
   try { const url = new URL(value); return url.protocol === "https:" && !url.username && !url.password && HOSTS[carrier].includes(url.hostname); } catch { return false; }
@@ -55,7 +56,7 @@ export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, l
       }
       const username = carrier === "UnitedHealthcare" ? page.locator('input#username:visible') : carrier === "Devoted Health" ? page.locator('input[name="username"]:visible') : page.locator('input[type="text"]:visible, input[type="email"]:visible, input:not([type]):visible');
       const password = page.locator('input[type="password"]:visible');
-      const submit = page.getByRole("button", { name: carrier === "Devoted Health" ? /^Log In$/i : carrier === "Ultimate Health Plans" ? /^LOGIN$/i : /^(Continue|Sign In|Log In|Next)$/i });
+      const submit = page.getByRole("button", { name: carrier === "Devoted Health" ? /^Log In$/i : carrier === "Ultimate Health Plans" || carrier === "SunFire" ? /^LOGIN$/i : /^(Continue|Sign In|Log In|Next)$/i });
       if (await uniqueVisible(password) && await uniqueVisible(submit)) {
         if (await uniqueVisible(username) && await username.isEditable()) {
           if (!trustedLoginUrl(carrier, page.url())) throw new SafePortalError("Sign-in destination changed");
@@ -69,7 +70,7 @@ export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, l
         catch { throw new SafePortalError("The carrier password-submit button could not be activated. Review the open browser before retrying."); }
         passwordSubmitted = true; usernameSubmitted = true; continue;
       }
-      if (carrier === "UnitedHealthcare" && !usernameSubmitted && await uniqueVisible(username) && await uniqueVisible(submit)) {
+      if ((carrier === "UnitedHealthcare" || carrier === "SunFire") && !usernameSubmitted && await uniqueVisible(username) && await uniqueVisible(submit)) {
         if (!trustedLoginUrl(carrier, page.url())) throw new SafePortalError("Sign-in destination changed");
         await enter(username, login.username);
         if (!trustedLoginUrl(carrier, page.url())) throw new SafePortalError("Sign-in destination changed");
