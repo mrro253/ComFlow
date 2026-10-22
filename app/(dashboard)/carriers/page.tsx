@@ -82,15 +82,21 @@ export default async function CarriersPage() {
             <CardContent className="flex flex-col gap-4">
               {carrier === "SunFire" && (
                 <>
-                  <p className="text-sm text-muted-foreground">Collects each enrollment’s full Medicare ID (MBI), plan and proposed effective date. Each detail page is checked against the enrollment code and client name. These are proposed enrollments, not confirmed active coverage or payments.</p>
+                  <p className="text-sm text-muted-foreground">Collect enrollment details from SunFire, then compare them with your imported commissions. Nothing is linked automatically.</p>
                   {connection && (
-                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                      <Button asChild variant="secondary" className="h-auto min-h-10 whitespace-normal text-center">
-                        <Link href="/carriers/sunfire">View collected enrollments</Link>
-                      </Button>
-                      <Button asChild className="h-auto min-h-10 whitespace-normal text-center">
-                        <Link href="/carriers/sunfire/matches">Review commission candidates and chargebacks</Link>
-                      </Button>
+                    <div className="grid gap-4 rounded-lg border bg-muted/30 p-4 lg:grid-cols-2">
+                      <div className="flex flex-col items-start gap-2">
+                        <Button asChild variant="outline" className="h-auto min-h-10 whitespace-normal text-left">
+                          <Link href="/carriers/sunfire">View enrollments</Link>
+                        </Button>
+                        <p className="text-sm text-muted-foreground">See the clients, plans and proposed effective dates collected from SunFire.</p>
+                      </div>
+                      <div className="flex flex-col items-start gap-2">
+                        <Button asChild className="h-auto min-h-10 whitespace-normal text-left">
+                          <Link href="/carriers/sunfire/matches">Review commission matches</Link>
+                        </Button>
+                        <p className="text-sm text-muted-foreground">Compare possible matches and check chargebacks before linking anything.</p>
+                      </div>
                     </div>
                   )}
                 </>
@@ -101,7 +107,10 @@ export default async function CarriersPage() {
                 <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{connection.lastError}</p>
               )}
               {connected && connection && (
-                <ConnectionActions connectionId={connection.id} syncPending={connection.syncRequestedAt !== null} enrollmentSource={carrier === "SunFire"} />
+                <div className={carrier === "SunFire" ? "border-t pt-4" : undefined}>
+                  {carrier === "SunFire" && <p className="mb-2 text-sm font-medium">Update enrollment data</p>}
+                  <ConnectionActions connectionId={connection.id} syncPending={connection.syncRequestedAt !== null} enrollmentSource={carrier === "SunFire"} />
+                </div>
               )}
               <div className={connected ? "border-t border-border pt-4" : ""}>
                 <ConnectCarrierForm carrier={carrier} replacing={Boolean(connected)} />
