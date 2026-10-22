@@ -760,6 +760,8 @@ Each Independent-agent customer is their own business associate of their carrier
 
 ## 15. Changelog (newest first)
 
+- **2026-10-21** - Make SunFire's collected-enrollment and commission-review navigation prominent buttons, with wrapping labels on smaller screens. Presentation only; destinations, sync behavior and imported records unchanged.
+
 - **2026-10-21** - Add `/carriers/sunfire/matches` with read-only commission candidate and chargeback review, linked from the SunFire connection and collected-enrollment screen while preserving collection selection. Compare the owner's integrity-checked collection against active agency/RLS-visible imported entries, reuse source verification, and stop the whole comparison if evidence is unavailable or changes during loading. Separate full-ID, shortened-ID, different-date, identity-conflict and unavailable-carrier evidence; mask identifiers, preserve source entry amounts/signs and warn when submissions share evidence. Add filters, client/plan/carrier search and original statement links. No record writes, new dependencies, migrations, linking actions or reviewer-decision persistence. All 434 tests, TypeScript, ESLint and production build pass. Owner browser reproduces 19 enrollments/160 entries/29 statements, 11 shortened-ID candidates, 3 with chargebacks and 1 different-date candidate. Chargeback/date filters, expanders, source links, no-result search and reset verified. All imported statement, carrier-entry and commission-row fingerprints unchanged. Main remains unchanged on `feature/sunfire-match-review`.
 
 ### SunFire commission candidate review (read only)

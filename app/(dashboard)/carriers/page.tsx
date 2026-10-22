@@ -8,6 +8,7 @@ import { listUsersForAgency } from "@/lib/repositories/userRepository";
 import { ConnectCarrierForm } from "@/components/carriers/connect-carrier-form";
 import { ConnectionActions } from "@/components/carriers/connection-actions";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
@@ -79,7 +80,21 @@ export default async function CarriersPage() {
               {status && <Badge variant={status.variant}>{status.label}</Badge>}
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              {carrier === "SunFire" && <p className="text-sm text-muted-foreground">Collects each enrollment’s full Medicare ID (MBI), plan and proposed effective date. Each detail page is checked against the enrollment code and client name. These are proposed enrollments, not confirmed active coverage or payments. {connection && <><Link className="underline" href="/carriers/sunfire">View collected enrollments</Link><span className="mx-2">·</span><Link className="underline" href="/carriers/sunfire/matches">Review commission candidates and chargebacks</Link></>}</p>}
+              {carrier === "SunFire" && (
+                <>
+                  <p className="text-sm text-muted-foreground">Collects each enrollment’s full Medicare ID (MBI), plan and proposed effective date. Each detail page is checked against the enrollment code and client name. These are proposed enrollments, not confirmed active coverage or payments.</p>
+                  {connection && (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                      <Button asChild variant="secondary" className="h-auto min-h-10 whitespace-normal text-center">
+                        <Link href="/carriers/sunfire">View collected enrollments</Link>
+                      </Button>
+                      <Button asChild className="h-auto min-h-10 whitespace-normal text-center">
+                        <Link href="/carriers/sunfire/matches">Review commission candidates and chargebacks</Link>
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
               {carrier === "UnitedHealthcare" && <p className="text-sm text-muted-foreground">Sync downloads available PDF and text reports. Keep the local worker running; complete verification in its browser and open Commissions &gt; Statements and More. New PDFs appear in <Link className="underline" href="/statements">Statements for review</Link>. Existing imported entries stay unchanged.</p>}
               {carrier === "Devoted Health" && <p className="text-sm text-muted-foreground">Sync saves PDF and spreadsheet pairs for review. Keep the local worker running; complete any Devoted verification in its browser window. <Link className="underline" href="/statements/devoted">Review downloaded Devoted statements</Link></p>}
               {connection?.lastError && connection.status === "needs_attention" && (
