@@ -1,8 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { detailUrl, enrollmentWindows, rememberEnrollment, verifyEnrollment } from "../sunfire/enrollment";
+import { uniqueFieldValue } from "../sunfire/fields";
+import { readField } from "../sunfire/collector";
+import type { Page } from "playwright";
 const row = { code: "TEST123", firstName: "Example", lastName: "Person", carrier: "Example Carrier", submittedDate: "2026-01-20", status: "completed" };
 const detail = { code: row.code, firstName: row.firstName, lastName: row.lastName, mbi: "1EG4TE5MK73", plan: "Example Plan", proposedEffectiveDate: "02/01/2026" };
 describe("SunFire enrollment verification", () => {
+  it("reads the submitted applicant value rather than a provider input with the same label", async () => {
+    const applicant = { parentElement: { querySelector: (selector: string) => selector === "i,p.summary-value" ? { textContent: "Example" } : null } };
+    const provider = { parentElement: { querySelector: (selector: string) => selector === "input" ? { value: "Doctor" } : null } };
+    const page = { getByText: () => ({ evaluateAll: (read: (elements: Element[]) => string[]) => read([applicant, provider] as unknown as Element[]) }) } as unknown as Page;
+    expect(await readField(page, "First name")).toBe("Example");
+  });
+  it("ignores empty repeated provider fields but rejects conflicting populated labels", () => {
+    expect(uniqueFieldValue(["Example", "", "  "], "First name")).toBe("Example");
+    expect(uniqueFieldValue(["Example", " Example "], "First name")).toBe("Example");
+    expect(() => uniqueFieldValue(["Example", "Different"], "First name")).toThrow();
+    expect(() => uniqueFieldValue(["", " "], "First name")).toThrow();
+  });
   it("splits ranges into contiguous calendar months including leap days", () => {
     expect(enrollmentWindows("2024-01-20", "2024-03-03")).toEqual([{ start: "2024-01-20", end: "2024-01-31" }, { start: "2024-02-01", end: "2024-02-29" }, { start: "2024-03-01", end: "2024-03-03" }]);
   });

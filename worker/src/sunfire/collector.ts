@@ -1,4 +1,5 @@
 import type { BrowserContext, Page } from "playwright";
+import { uniqueFieldValue } from "./fields.js";
 import { detailUrl, enrollmentWindows, rememberEnrollment, verifyEnrollment, type EnrollmentListRow, type CollectedEnrollment, EnrollmentReadError } from "./enrollment.js";
 
 const mmdd = (iso: string) => `${iso.slice(5, 7)}/${iso.slice(8)}/${iso.slice(0, 4)}`;
@@ -41,14 +42,17 @@ async function loadWindow(page: Page, portal: string, window: { start: string; e
   if (JSON.stringify(first) !== JSON.stringify(second) || second.rows.some((r) => r.submittedDate < window.start || r.submittedDate > window.end)) throw new EnrollmentReadError("The report has not settled to the requested date window.");
   return second;
 }
-async function readField(page: Page, label: string) {
+export async function readField(page: Page, label: string) {
   const locator = page.getByText(label, { exact: true });
-  if (await locator.count() !== 1) throw new EnrollmentReadError("A required enrollment label is missing or ambiguous.");
-  return locator.evaluate((e) => {
+  const values = await locator.evaluateAll((elements) => elements.map((e) => {
     const parent = e.parentElement;
-    const input = parent?.querySelector("input");
-    return input?.value ?? parent?.querySelector("i,p.summary-value")?.textContent?.trim() ?? "";
-  });
+    // Submitted applicant details use read-only display values. Provider input
+    // controls reuse name labels and can contain a doctor's name; exclude them.
+    return parent?.querySelector("i,p.summary-value")?.textContent?.trim() ?? "";
+  }));
+  // Provider sections can repeat applicant labels with empty inputs. Never choose
+  // among different populated values, even when one happens to match the list.
+  return uniqueFieldValue(values, label);
 }
 export async function collectEnrollments(context: BrowserContext, page: Page, options: {
   portal: string; start: string; end: string;
