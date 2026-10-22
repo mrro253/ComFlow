@@ -32,5 +32,8 @@ describe("owner-reported enrollment not effective", () => {
     expect(noCommissionExpected(match)).toBe(false);
     expect(noCommissionExpected({ ...match, enrollmentCode: "OTHER" }, note)).toBe(false);
     expect(noCommissionExpected({ ...match, evidence: [{}] } as EnrollmentCommissionMatch, note)).toBe(false);
+    expect(noCommissionExpected(match, note, "Inactive")).toBe(true);
+    expect(noCommissionExpected(match, note, "Active")).toBe(false);
+    expect(noCommissionExpected(match, note, "Future Active")).toBe(false);
   });
 });

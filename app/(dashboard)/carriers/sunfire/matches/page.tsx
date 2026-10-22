@@ -10,6 +10,8 @@ import { digest } from "@/lib/carriers/digest";
 import { confirmMatches, saveNotEffective } from "./actions";
 import { readSunfireFollowups } from "@/lib/repositories/sunfireFollowupRepository";
 import { noCommissionExpected, noCommissionExpectedLabel } from "@/lib/enrollments/followup";
+import { readSaleEvents } from "@/lib/repositories/saleDispositionRepository";
+import { latestSaleDisposition } from "@/lib/enrollments/saleDisposition";
 
 export default async function SunfireMatchesPage({ searchParams }: { searchParams: Promise<{ collection?: string; filter?: string; q?: string }> }) {
   const user = await getCurrentUser();
@@ -23,7 +25,9 @@ export default async function SunfireMatchesPage({ searchParams }: { searchParam
   const plan = linkPlan(review.matches);
   const saved = review.current ? await readConfirmedSunfireLinks(user, review.current.hash) : [];
   const followups = review.current ? await readSunfireFollowups(user, review.current.hash) : {};
-  const resolved = new Set(review.matches.filter(row => noCommissionExpected(row, followups[row.enrollmentCode])).map(row => row.enrollmentCode));
+  const dispositionEvents = review.current ? await readSaleEvents(user) : [];
+  const resolved = new Set(review.matches.filter(row => noCommissionExpected(row, followups[row.enrollmentCode],
+    latestSaleDisposition(dispositionEvents, user.id, review.current!.hash, row.enrollmentCode)?.status)).map(row => row.enrollmentCode));
   const confirmed = new Set(plan.filter(link => isConfirmedLink(link, saved)).map(link => link.enrollmentCode));
   const pending = plan.filter(link => !confirmed.has(link.enrollmentCode));
   const visible = filterEnrollmentMatches(review.matches, filter, query).filter(row =>
@@ -34,7 +38,7 @@ export default async function SunfireMatchesPage({ searchParams }: { searchParam
     chargebacks: review.matches.filter(row => row.chargebackEntries > 0).length, date: review.matches.filter(row => row.status === "date").length };
   return <div className="space-y-6">
     <div><h1 className="text-2xl font-semibold">SunFire commission matches &amp; follow-up</h1><p className="mt-2 text-sm text-muted-foreground">Review enrollment evidence and confirm matching statement entries. A link records the relationship; it does not mark coverage active, mark commissions paid or change financial amounts.</p></div>
-    <div className="flex flex-wrap gap-4 text-sm"><Link className="underline" href="/carriers">Carrier connections</Link><Link className="underline" href={review.current ? `/carriers/sunfire?collection=${review.current.hash}` : "/carriers/sunfire"}>Collected enrollments</Link></div>
+    <div className="flex flex-wrap gap-4 text-sm"><Link className="underline" href="/carriers">Carrier connections</Link><Link className="underline" href={review.current ? `/carriers/sunfire?collection=${review.current.hash}` : "/carriers/sunfire"}>Collected enrollments</Link><Link className="underline" href={review.current ? `/sales?collection=${review.current.hash}` : "/sales"}>Manage sales dispositions</Link></div>
     {!review.current ? <p className="rounded-lg border p-4">No complete SunFire collection is available. Collect enrollments first, then return here.</p> : <>
       <section className="rounded-lg border p-4 space-y-2"><h2 className="font-semibold">{review.matches.length} enrollments compared with {review.entryCount} statement entries from {review.statementCount} imported statements</h2><p className="text-sm">Full-ID candidates: {counts.full} · Shortened-ID candidates: {counts.strong} · Candidates with chargebacks: {counts.chargebacks} · Different effective dates: {counts.date}</p><p className="text-sm text-muted-foreground">Collection enrollment dates: {review.range?.start} through {review.range?.end}. A shortened Medicare ID plus a matching name, carrier and date supports a candidate; it does not establish a full-ID match. No matching entry does not prove a commission is missing.</p></section>
       <section className="rounded-lg border bg-muted/30 p-4 space-y-3">
@@ -58,11 +62,12 @@ export default async function SunfireMatchesPage({ searchParams }: { searchParam
       {visible.map(match => <details className="rounded-lg border p-4" key={match.enrollmentCode}>
         <summary className="cursor-pointer space-y-1"><span className="font-semibold">{match.clientName}</span><span className="ml-2 text-sm">{match.carrier} · Proposed {match.proposedEffectiveDate}</span><span className="block text-sm">{resolved.has(match.enrollmentCode) ? noCommissionExpectedLabel : match.label}{match.chargebackEntries > 0 && <strong className="ml-2 text-destructive">{match.chargebackEntries} chargeback {match.chargebackEntries === 1 ? "entry" : "entries"}</strong>}</span></summary>
         <div className="mt-4 space-y-3 text-sm"><p>{match.plan}</p><p>Medicare ID: {match.mbiDisplay}. Proposed effective date: {match.proposedEffectiveDate}.</p>
+          <p>Policy disposition: <strong>{latestSaleDisposition(dispositionEvents, user.id, review.current!.hash, match.enrollmentCode)?.status ?? "Unknown"}</strong> · <Link className="underline" href={`/sales?collection=${review.current!.hash}&q=${encodeURIComponent(match.enrollmentCode)}`}>Edit disposition and notes</Link></p>
           {followups[match.enrollmentCode] && <section className="rounded-md border bg-muted/30 p-3 space-y-2">
             <p className="font-medium">{noCommissionExpectedLabel}</p>
             <p className="whitespace-pre-wrap">{followups[match.enrollmentCode].note}</p>
             <p className="text-xs text-muted-foreground">Reported by the owner. This records the owner’s explanation; it does not change SunFire or carrier records.</p>
-            {!resolved.has(match.enrollmentCode) && <p className="font-medium text-destructive">Statement evidence now exists. Review this explanation against the new evidence; this enrollment remains in follow-up.</p>}
+            {!resolved.has(match.enrollmentCode) && <p className="font-medium text-destructive">Statement evidence or an Active/Future Active disposition conflicts with this explanation. Review the current details; this enrollment remains in follow-up.</p>}
           </section>}
           {confirmed.has(match.enrollmentCode) ? <p className="font-medium text-success">Linked by owner confirmation. Current source evidence still agrees.</p> : saved.some(link => link.enrollmentCode === match.enrollmentCode) ? <p className="font-medium text-destructive">Previously confirmed evidence has changed. Review again; the earlier confirmation is retained in the audit trail.</p> : <p className="text-muted-foreground">Not linked.</p>}
           {match.sharedEvidence && <p className="rounded-md bg-muted p-3">A statement entry also appears under another SunFire enrollment. It cannot identify which submission generated the commission. Do not count it twice.</p>}

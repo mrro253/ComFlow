@@ -11,13 +11,15 @@ what the agency owes them).
 > The business rules live in `.cursorrules`; this file describes the system as
 > it is *right now*.
 
-Last updated: 2026-10-21
+Last updated: 2026-10-22
 
 > **Changing code? Read section 13 (Contributing) first.** Work on a branch, never directly on `Main`.
 
 ---
 
 ## 1. Status at a glance
+
+Sales review branch: manual GHL-aligned policy statuses, required explanations and actor/time history are available under Sales. Owners explicitly assign SunFire sales to active agents; agents only see currently assigned sales. No assignment, financial adjustment or GHL update is inferred from a disposition. See the sales-dispositions changelog for validation and limits.
 
 SunFire review branch: owner-confirmed enrollment-to-statement associations and enrollment follow-up filters are available on feature/sunfire-confirmed-links. Eleven live associations are confirmed; three retain chargeback warnings, one differing-date enrollment stays unlinked, and six have no supported imported match and one is owner-reported as not taking effect with no commission expected. Financial records are unchanged. See the Marshall handoff near section 15.
 
@@ -766,6 +768,8 @@ The review branch `feature/sunfire-confirmed-links` builds on the prior SunFire 
 
 
 ## 15. Changelog (newest first)
+
+- **2026-10-22** - Add Sales with manual GHL-aligned policy dispositions (Active, Inactive, Future Active, Unknown), required explanations, actor/time history and explicit owner-managed assignment to active agency agents. Agents can read/update only currently assigned enrollments; revocations and reassignments replace access. Source snapshots are verified and only selected assigned sale fields are returned, without raw MBIs or commission data. Dispositions remain separate from financial records and no-commission-expected follow-up outcomes; Active/Future Active conflicts reopen follow-up. Uses existing append-only audit events, with no schema/RLS/carrier/GHL API changes. No automatic assignments, statuses or cross-collection carry-forward. All 465 tests, TypeScript, ESLint and production build pass. Owner live browser verified Sales navigation/search, all four dropdown options, a saved Inactive disposition with explanation/history, reload persistence, and the matching-review display. The independent no-commission-expected outcome and all eleven links are preserved; financial-table fingerprints remain unchanged. No actual agent assignments were changed. Agent access/revocation and cross-owner/source-scope rejection are covered with synthetic tests; other-role live browser flows remain unverified. Keep on review branch `feature/sales-dispositions`; Main unchanged.
 
 - **2026-10-22** - Add owner-reported “Did not take effect — no commission expected” status with a required private explanation. Save notes in scoped append-only audit events; keep the original enrollment and all financial records unchanged. Exclude resolved enrollments from Needs follow-up and unresolved no-match counts, add a No commission expected filter, and reopen review if statement evidence appears. New collections require their own review. No schema, RLS or carrier-portal changes. All 453 tests, TypeScript, ESLint and production build pass. Live owner status/note save and reload verified; No commission expected shows one enrollment, Needs follow-up shows ten and excludes that enrollment, and unresolved no-match count is six. All imported financial-table fingerprints remain unchanged. Keep on review branch `feature/sunfire-followup-notes`; Main unchanged.
 
