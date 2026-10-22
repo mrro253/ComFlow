@@ -26,6 +26,14 @@ describe("SunFire match review service", () => {
   it("holds the whole comparison if a source cannot be verified", async () => {
     mocks.details.mockResolvedValue(new Map()); await expect(getSunfireMatches(user)).rejects.toThrow("could not be verified");
   });
+  it("shows verified carrier notes separately without changing link evidence", async () => {
+    const original = await getSunfireMatches(user);
+    const details = await mocks.details(); details.get("entry").fields.push({ label: "Notes", value: "Synthetic carrier reversal explanation" });
+    mocks.details.mockResolvedValue(details);
+    const updated = await getSunfireMatches(user);
+    expect(updated.sourceNotes.entry).toBe("Synthetic carrier reversal explanation");
+    expect(updated.matches).toEqual(original.matches);
+  });
   it("rejects another collection and detects concurrent corrections", async () => {
     await expect(getSunfireMatches(user, "b".repeat(64))).rejects.toThrow("not found"); expect(mocks.inventory).not.toHaveBeenCalled();
     mocks.inventory.mockResolvedValueOnce(inventory).mockResolvedValueOnce({ ...inventory, entries: [] });

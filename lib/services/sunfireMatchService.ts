@@ -10,7 +10,7 @@ export async function getSunfireMatches(user: CurrentUser, selected?: string) {
   const collections = await listSunfireCollections(user);
   const current = selected ? collections.find(collection => collection.hash === selected) : collections[0];
   if (selected && !current) throw new Error("SunFire collection not found.");
-  if (!current) return { current: null, range: null, matches: [], statementCount: 0, entryCount: 0 };
+  if (!current) return { current: null, range: null, matches: [], statementCount: 0, entryCount: 0, sourceNotes: {} as Record<string, string> };
   const collection = await readSunfireCollection(user, current.hash);
   const inventory = await loadSunfireMatchInventory(user);
   const details = await loadPaymentDetails(inventory.entries.map(entry => entry.id), user.agencyId);
@@ -29,5 +29,6 @@ export async function getSunfireMatches(user: CurrentUser, selected?: string) {
   if (digest(inventory) !== digest(after)) throw new Error("Commission records changed during the comparison. Reload to review current evidence.");
   return { current, range: { start: collection.start, end: collection.end },
     matches: compareEnrollmentCommissions(collection.records, evidence, inventory.statements.map(statement => statement.carrier)),
-    statementCount: inventory.statements.length, entryCount: inventory.entries.length };
+    statementCount: inventory.statements.length, entryCount: inventory.entries.length,
+    sourceNotes: Object.fromEntries([...details].map(([id, detail]) => [id, detail.fields.find(field => field.label.toUpperCase() === "NOTES")?.value ?? ""])) };
 }
