@@ -1,0 +1,11 @@
+import type { EnrollmentCommissionMatch } from "./commissionMatches";
+export const noCommissionExpectedLabel = "Did not take effect — no commission expected";
+export interface SunfireFollowup {
+  enrollmentCode: string;
+  status: "did_not_take_effect";
+  note: string;
+  recordedAt: string;
+}
+export function noCommissionExpected(match: EnrollmentCommissionMatch, followup?: SunfireFollowup) {
+  return followup?.status === "did_not_take_effect" && followup.enrollmentCode === match.enrollmentCode && match.evidence.length === 0;
+}
