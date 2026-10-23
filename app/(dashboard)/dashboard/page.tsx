@@ -4,7 +4,8 @@ import { CircleDollarSign, FileText, Hash, UserX } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { getAgencyById } from "@/lib/repositories/agencyRepository";
 import { listVisibleConnections } from "@/lib/repositories/carrierConnectionRepository";
-import { listStatements, listVisibleTransactions } from "@/lib/repositories/statementRepository";
+import { listVisibleTransactions } from "@/lib/repositories/statementRepository";
+import { getStatementWorklists } from "@/lib/services/statementWorklistService";
 import { listUsersForAgency } from "@/lib/repositories/userRepository";
 import { formatCents } from "@/lib/carriers/money";
 import {
@@ -25,6 +26,7 @@ import { OnboardingChecklistCard } from "@/components/dashboard/onboarding-check
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { AttentionHome } from "@/components/dashboard/attention-home";
 
 const SCOPE_LABEL = {
   owner: "Carrier statement activity for your personal production and your team.",
@@ -35,26 +37,28 @@ const SCOPE_LABEL = {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string | string[] }>;
+  searchParams: Promise<{ month?: string | string[]; view?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const params = await searchParams;
+  if (params.view !== "overview" && !params.month) return <AttentionHome user={user} />;
 
   const isOwner = user.role === "owner";
   // RLS scopes every query below to what this user is allowed to see.
   const [transactions, team] = await Promise.all([listVisibleTransactions(), listUsersForAgency(user.agencyId)]);
 
-  const [agency, statements, connections, levels] = isOwner
+  const [agency, statementWork, connections, levels] = isOwner
     ? await Promise.all([
         getAgencyById(user.agencyId),
-        listStatements(5),
+        getStatementWorklists(user),
         listVisibleConnections(),
         listCareerLevels(user.agencyId),
       ])
-    : [null, [], [], []];
+    : [null, { statements: [], needsAttention: [], downloadedPairs: [] }, [], []];
+  const statements = statementWork.statements;
   const showChecklist = isOwner && agency !== null && isOnboardingIncomplete(agency);
 
-  const params = await searchParams;
   const { months, month, unavailable } = selectDashboardMonth(
     transactions.map((tx) => tx.statementMonth), params.month
   );
@@ -64,13 +68,14 @@ export default async function DashboardPage({
   const unassignedCount = inMonth.filter((tx) => tx.userId === null).length;
   const categories = totalsByCategory(inMonth);
   const groups = isOwner ? totalsByProducerGroup(inMonth, usersById) : [];
-  const pendingReview = statements.filter((s) => s.status !== "imported" && s.status !== "superseded").length;
+  const pendingReview = statementWork.needsAttention.length + statementWork.downloadedPairs.length;
 
   return (
     <div className="flex flex-col gap-6">
+      <Link className="text-sm underline" href="/dashboard">Back to Needs attention</Link>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Commission overview</h1>
           <p className="text-sm text-muted-foreground">{SCOPE_LABEL[user.role]}</p>
         </div>
         <Button asChild variant="outline"><Link href={month ? `/payments?month=${month}` : "/payments"}>View commission activity</Link></Button>
@@ -114,12 +119,12 @@ export default async function DashboardPage({
                 </select>
               </label>
               <Button type="submit" size="sm">Show month</Button>
-              <Link href="/dashboard" className="py-2 text-sm underline underline-offset-4">Latest month</Link>
+              <Link href="/dashboard?view=overview" className="py-2 text-sm underline underline-offset-4">Latest month</Link>
             </form>
             <p className="mt-3 font-medium">Showing statement month: {periodLabel}</p>
             {unavailable && <p role="status" className="mt-1 text-muted-foreground">That month is not available in your commission activity. Showing your latest available month instead.</p>}
             <p className="mt-1 text-muted-foreground">
-              The commission totals, categories and production breakdown show the selected month. The monthly chart shows all imported months; the recent-review count covers the five most recent statements across months.
+              The commission totals, categories and production breakdown show the selected month. The monthly chart shows all imported months; the statement-review count covers all verified review items across months.
               One carrier payment can cover several commission entries. These totals are statement activity; bank deposits are not verified here.
               Amounts added or deducted from previous statements can make a statement total different from its commission entries.
             </p>
@@ -130,7 +135,7 @@ export default async function DashboardPage({
             {isOwner && (
               <>
                 <StatCard label="Unassigned entries" value={String(unassignedCount)} icon={UserX} hint="Entries in this month needing an agent" />
-                <StatCard label="Recent statements needing review" value={String(pendingReview)} icon={FileText} hint="Among the five most recent statements" />
+                <StatCard label="Statements needing review" value={String(pendingReview)} icon={FileText} hint="Files requiring a decision; verified repeat copies excluded" />
               </>
             )}
           </div>

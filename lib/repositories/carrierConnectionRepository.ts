@@ -30,13 +30,16 @@ function mapConnection(row: ConnectionRow): CarrierConnectionRecord {
 }
 
 /** Connections the signed-in user may see (RLS: Owner sees all, others only their own). */
-export async function listVisibleConnections(): Promise<CarrierConnectionRecord[]> {
+export async function listVisibleConnections(strict = false): Promise<CarrierConnectionRecord[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("carrier_connections")
     .select("*")
     .order("created_at", { ascending: true });
-  if (error || !data) return [];
+  if (error || !data) {
+    if (strict) throw new Error("Could not check carrier connections.");
+    return [];
+  }
   return data.map(mapConnection);
 }
 

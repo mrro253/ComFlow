@@ -11,13 +11,15 @@ what the agency owes them).
 > The business rules live in `.cursorrules`; this file describes the system as
 > it is *right now*.
 
-Last updated: 2026-10-22
+Last updated: 2026-10-23
 
 > **Changing code? Read section 13 (Contributing) first.** Work on a branch, never directly on `Main`.
 
 ---
 
 ## 1. Status at a glance
+
+Attention-first review branch: the default home shows actionable exceptions, while commission totals, history and settings are secondary. Manual sales corrections and agent-access controls are collapsed. Routine Unknown statuses, missing imported carrier coverage and verified repeat downloads are not agent tasks. Collection still starts from a sync request with a running collector; scheduled collection and automatic import approval remain separate, unbuilt work.
 
 Sales review branch: manual GHL-aligned policy statuses, required explanations and actor/time history are available under Sales. Owners explicitly assign SunFire sales to active agents; agents only see currently assigned sales. No assignment, financial adjustment or GHL update is inferred from a disposition. See the sales-dispositions changelog for validation and limits.
 
@@ -768,6 +770,8 @@ The review branch `feature/sunfire-confirmed-links` builds on the prior SunFire 
 
 
 ## 15. Changelog (newest first)
+
+- **2026-10-23** - Simplify around an attention-first home: show scoped connection blocks, statements requiring decisions, verified enrollment conflicts and unreviewed carrier chargebacks. Unknown dispositions and unavailable carrier statements are not tasks. Retain totals/charts under View commission totals, group navigation under Records & settings, split Statements into Needs attention and Imported, and hide upload/month coverage/archive plus sale corrections and agent-access forms behind explicit expanders. Recognize Ultimate/UHC repeat copies only from identical hashes or verified matching full printed text plus all parsed source fields, scoped to the same statement owner/carrier/month/pay date. Notes, payment identifiers and field differences keep a correction in review. Never infer an identical Devoted pair from its PDF. PDF checks are bounded to 500 relevant files per request; unsupported/unavailable sources remain review items. Devoted downloaded pairs awaiting review are included through the existing private inbox. Chargeback review acknowledgments are private append-only audit receipts tied to current RLS-visible entry evidence, so corrected evidence reappears. No imports, financial amounts, source statuses, assignments, schedules, carrier sessions, schema or RLS are changed. Collection remains request-triggered with a running collector; scheduled collection and automatic import approval are not enabled. All 481 tests, app TypeScript, ESLint and production build pass. Owner browser verified: Home shows one enrollment-date conflict and nine source-named chargebacks, no unavailable-statement/Unknown-status chores; Statements has zero review items, 29 imported records and 18 retained identical-content copies; corrections and agent-access forms remain collapsed but accessible; all four connected account settings are collapsed; commission-overview review count is consistently zero. All imported financial-table fingerprints remain unchanged. No real review acknowledgments or source/assignment edits were made during QA. Receipt persistence/access and other-role behavior are covered by synthetic tests; live agent browser and live receipt writes remain unverified. Review branch `feature/attention-first-workflow`; Main unchanged.
 
 - **2026-10-22** - Add Sales with manual GHL-aligned policy dispositions (Active, Inactive, Future Active, Unknown), required explanations, actor/time history and explicit owner-managed assignment to active agency agents. Agents can read/update only currently assigned enrollments; revocations and reassignments replace access. Source snapshots are verified and only selected assigned sale fields are returned, without raw MBIs or commission data. Dispositions remain separate from financial records and no-commission-expected follow-up outcomes; Active/Future Active conflicts reopen follow-up. Uses existing append-only audit events, with no schema/RLS/carrier/GHL API changes. No automatic assignments, statuses or cross-collection carry-forward. All 465 tests, TypeScript, ESLint and production build pass. Owner live browser verified Sales navigation/search, all four dropdown options, a saved Inactive disposition with explanation/history, reload persistence, and the matching-review display. The independent no-commission-expected outcome and all eleven links are preserved; financial-table fingerprints remain unchanged. No actual agent assignments were changed. Agent access/revocation and cross-owner/source-scope rejection are covered with synthetic tests; other-role live browser flows remain unverified. Keep on review branch `feature/sales-dispositions`; Main unchanged.
 

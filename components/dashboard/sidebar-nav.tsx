@@ -17,9 +17,9 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Needs attention", icon: LayoutDashboard },
   { href: "/payments", label: "Commission activity", icon: CircleDollarSign },
-  { href: "/sales", label: "Sales", icon: ClipboardList, roles: ["owner", "agent"] },
+  { href: "/sales", label: "Sales records", icon: ClipboardList, roles: ["owner", "agent"] },
   { href: "/reports", label: "Reports", icon: ClipboardList },
   { href: "/statements", label: "Statements", icon: FileText, roles: ["owner"] },
   { href: "/carriers", label: "Carriers", icon: KeyRound, roles: ["owner", "agent"] },
@@ -37,7 +37,10 @@ export function SidebarNav({ user }: { user: Pick<AppUser, "role" | "agentType" 
 
   return (
     <nav className="flex flex-col gap-1">
-      {items.map((item) => {
+      {items.filter(item => item.href === "/dashboard").map(item => <Link key={item.href} href={item.href} aria-current={pathname === "/dashboard" ? "page" : undefined} className={cn("flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium", pathname === "/dashboard" ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:bg-secondary/60")}><LayoutDashboard className="h-4 w-4" />{item.label}</Link>)}
+      <details open={pathname !== "/dashboard"} className="mt-2">
+        <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-muted-foreground">Records &amp; settings</summary>
+        <div className="mt-1 flex flex-col gap-1">{items.filter(item => item.href !== "/dashboard").map((item) => {
         const isActive = pathname.startsWith(item.href);
         const Icon = item.icon;
         return (
@@ -56,7 +59,8 @@ export function SidebarNav({ user }: { user: Pick<AppUser, "role" | "agentType" 
             {item.label}
           </Link>
         );
-      })}
+      })}</div>
+      </details>
     </nav>
   );
 }

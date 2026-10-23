@@ -106,7 +106,7 @@ export default async function CarriersPage() {
               {connection?.lastError && connection.status === "needs_attention" && (
                 <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{connection.lastError}</p>
               )}
-              {connected && connection && (
+              <details open={!connected || Boolean(connection?.status === "needs_attention" && !connection.syncRequestedAt && !connection.lastError?.startsWith("Sync running."))} className="rounded-md border p-3"><summary className="cursor-pointer text-sm font-medium">{connected ? "Connection settings" : "Connect this account"}</summary><div className="mt-4 space-y-4">{connected && connection && (
                 <div className={carrier === "SunFire" ? "border-t pt-4" : undefined}>
                   {carrier === "SunFire" && <p className="mb-2 text-sm font-medium">Update enrollment data</p>}
                   <ConnectionActions connectionId={connection.id} syncPending={connection.syncRequestedAt !== null} enrollmentSource={carrier === "SunFire"} />
@@ -119,6 +119,7 @@ export default async function CarriersPage() {
                   It is never shown again.
                 </p>
               </div>
+              </div></details>
             </CardContent>
           </Card>
         );
