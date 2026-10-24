@@ -26,8 +26,6 @@ import { OnboardingChecklistCard } from "@/components/dashboard/onboarding-check
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { EnrollmentStatusList } from "@/components/dashboard/enrollment-status-list";
-import { AttentionHome } from "@/components/dashboard/attention-home";
 
 const SCOPE_LABEL = {
   owner: "Carrier statement activity for your personal production and your team.",
@@ -43,7 +41,6 @@ export default async function DashboardPage({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const params = await searchParams;
-  if (params.view !== "overview" && !params.month) return ["owner", "agent"].includes(user.role) ? <EnrollmentStatusList user={user} /> : <AttentionHome user={user} />;
 
   const isOwner = user.role === "owner";
   // RLS scopes every query below to what this user is allowed to see.
@@ -73,10 +70,10 @@ export default async function DashboardPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <Link className="text-sm underline" href="/dashboard">Back to Needs attention</Link>
+      {["owner", "agent"].includes(user.role) && <Link className="inline-flex rounded-md border px-4 py-2 text-sm font-medium" href="/sales">View enrollment payment status</Link>}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Commission overview</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
           <p className="text-sm text-muted-foreground">{SCOPE_LABEL[user.role]}</p>
         </div>
         <Button asChild variant="outline"><Link href={month ? `/payments?month=${month}` : "/payments"}>View commission activity</Link></Button>
