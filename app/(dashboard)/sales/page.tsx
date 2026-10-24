@@ -18,7 +18,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   const query = (params.q ?? "").trim().slice(0, 200).toLowerCase();
   const visible = sales.filter(row => !query || `${row.clientName} ${row.code} ${row.carrier}`.toLowerCase().includes(query));
   return <div className="space-y-5">
-    <div><Link href="/sales" className="text-sm underline">Back to enrollment commissions</Link><h1 className="text-2xl font-semibold">Manage enrollment records</h1><p className="mt-2 text-sm text-muted-foreground">These enrollment records are for reference. You do not need to set a status or add a note for every sale. Items requiring review appear under Needs attention.</p></div>
+    <div><Link href="/sales" className="text-sm underline">Back to enrollments</Link><h1 className="text-2xl font-semibold">Manage enrollment records</h1><p className="mt-2 text-sm text-muted-foreground">These enrollment records are for reference. You do not need to set a status or add a note for every sale. Items requiring review appear under Needs attention.</p></div>
     <p className="text-sm text-muted-foreground">{user.role === "owner" ? "Agent access is managed by the agency. Routine sales do not need manual updates." : "Only sales your agency has assigned to you are shown."}</p>
     <form method="get" className="flex flex-wrap items-end gap-3">
       <input type="hidden" name="view" value="manage" />{params.collection && <input type="hidden" name="collection" value={params.collection} />}
