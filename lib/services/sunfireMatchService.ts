@@ -31,6 +31,7 @@ export async function compareVerifiedEnrollments(user: CurrentUser, records: imp
     return { entryId: entry.id, statementId: entry.statement_id, carrier: entry.carrier, clientName: detail.clientName,
       firstName: field(entry.carrier === "Devoted Health" ? "Member First" : "First Name"),
       lastName: field(entry.carrier === "Devoted Health" ? "Member Last" : "Last Name"), medicareId,
+      plan: field("Plan") || (field("Contract") && field("PBP") ? `${field("Contract")}-${field("PBP").padStart(3, "0")}` : ""),
       effectiveDate: entry.effective_date, statementMonth: entry.statement_month, category: entry.commission_type,
       amountCents: entry.amount_cents, statementFilename: detail.statementFilename };
   });

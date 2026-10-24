@@ -3,7 +3,7 @@ import type { SunfireEnrollment } from "./sunfire";
 export interface CommissionEvidence {
   entryId: string; statementId: string; carrier: string; clientName: string;
   firstName: string; lastName: string; medicareId: string; effectiveDate: string;
-  statementMonth: string; category: string; amountCents: number; statementFilename: string;
+  plan?: string; statementMonth: string; category: string; amountCents: number; statementFilename: string;
 }
 export type MatchStatus = "full" | "strong" | "date" | "identity" | "unmatched" | "no_statements";
 export const matchLabels: Record<MatchStatus, string> = {
@@ -41,7 +41,10 @@ export function compareEnrollmentCommissions(enrollments: SunfireEnrollment[], e
       const fullId = id.length === 11 && id === mbi;
       const partialId = id.length === 5 && mbi.endsWith(id);
       const name = sameName(enrollment, row), date = row.effectiveDate === enrollment.proposedEffectiveDate;
-      const conflict = name && !fullId && !partialId;
+      const planCode = (value: string) => norm(value.match(/[A-Z]\d{4}[- ]\d{3}/i)?.[0] ?? "");
+      const sourcePlan = planCode(row.plan ?? ""), enrollmentPlan = planCode(enrollment.plan);
+      const planConflict = Boolean(sourcePlan && enrollmentPlan && sourcePlan !== enrollmentPlan);
+      const conflict = name && !fullId && !partialId || planConflict;
       if (!fullId && !(partialId && name) && !(name && date)) return null;
       const display = { entryId: row.entryId, statementId: row.statementId, carrier: row.carrier,
         clientName: row.clientName, effectiveDate: row.effectiveDate, statementMonth: row.statementMonth,
@@ -50,8 +53,8 @@ export function compareEnrollmentCommissions(enrollments: SunfireEnrollment[], e
       return { ...display, identifierDisplay: id ? `•••${id.slice(-4)}` : "Not provided", fullId, partialId, name, date, conflict,
         chargeback: row.category === "CHARGEBACK" };
     }).filter((row): row is NonNullable<typeof row> => row !== null);
-    const full = candidates.filter(row => row.fullId && row.name && row.date);
-    const strong = candidates.filter(row => row.partialId && row.name && row.date);
+    const full = candidates.filter(row => row.fullId && row.name && row.date && !row.conflict);
+    const strong = candidates.filter(row => row.partialId && row.name && row.date && !row.conflict);
     const date = candidates.filter(row => row.partialId && row.name && !row.date);
     const status: MatchStatus = full.length ? "full" : strong.length ? "strong" : candidates.some(row => row.fullId || row.conflict) ? "identity" : date.length ? "date" : available.has(carrier) ? "unmatched" : "no_statements";
     return { enrollmentCode: enrollment.code, clientName: `${enrollment.firstName} ${enrollment.lastName}`, carrier,
@@ -61,7 +64,7 @@ export function compareEnrollmentCommissions(enrollments: SunfireEnrollment[], e
       sharedEvidence: false };
   });
   const uses = new Map<string, number>();
-  for (const match of matches) for (const row of match.evidence) uses.set(row.entryId, (uses.get(row.entryId) ?? 0) + 1);
+  for (const match of matches) for (const row of match.evidence.filter(row => (row.fullId || row.partialId) && row.name && row.date && !row.conflict)) uses.set(row.entryId, (uses.get(row.entryId) ?? 0) + 1);
   for (const match of matches) match.sharedEvidence = match.evidence.some(row => (uses.get(row.entryId) ?? 0) > 1);
   return matches;
 }

@@ -1,4 +1,5 @@
 "use server";
+import { appendApplicationOutcome } from "@/lib/repositories/applicationOutcomeRepository";
 import { requireRole } from "@/lib/auth/requireRole";
 import { assignSale, setSaleDisposition } from "@/lib/services/saleDispositionService";
 import { revalidatePath } from "next/cache";
@@ -17,4 +18,11 @@ export async function saveSaleAssignment(form: FormData) {
   await assignSale(user, hash, code, String(form.get("agent") ?? "") || null);
   revalidatePath("/sales");
   redirect(`/sales?collection=${encodeURIComponent(hash)}&q=${encodeURIComponent(code)}`);
+}
+
+export async function saveApplicationOutcome(form: FormData) {
+  const user = await requireRole(["owner", "agent"]);
+  await appendApplicationOutcome(user, String(form.get("owner") ?? ""), String(form.get("collection") ?? ""), String(form.get("code") ?? ""), String(form.get("outcome") ?? ""), String(form.get("note") ?? ""));
+  revalidatePath("/sales"); revalidatePath("/dashboard");
+  redirect("/sales");
 }

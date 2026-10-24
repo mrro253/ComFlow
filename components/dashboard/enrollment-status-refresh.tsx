@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 export function EnrollmentStatusRefresh() {
   const router = useRouter();
   useEffect(() => {
-    const refresh = () => { if (document.visibilityState === "visible") router.refresh(); };
+    const refresh = () => {
+      if (document.visibilityState === "visible" && !document.activeElement?.closest("form")) router.refresh();
+    };
     const interval = setInterval(refresh, 60000);
     document.addEventListener("visibilitychange", refresh);
     return () => { clearInterval(interval); document.removeEventListener("visibilitychange", refresh); };

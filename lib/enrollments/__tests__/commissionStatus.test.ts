@@ -28,9 +28,9 @@ describe("automatic enrollment commission status", () => {
     const matches = compareEnrollmentCommissions([enrollment, { ...enrollment, code: "SECOND" }], [entry()], [enrollment.carrier]);
     expect(matches.map(match => enrollmentCommissionStatus(match).label)).toEqual(["Not paid yet", "Not paid yet"]);
   });
-  it("preserves an explicit no-commission outcome only while no contradictory evidence exists", () => {
+  it("keeps an explicit application outcome when later statement candidates appear", () => {
     expect(status([], true).label).toBe("No commission expected");
-    expect(status([entry()], true).label).toBe("Paid");
-    expect(status([entry({ effectiveDate: "2026-03-01" })], true).label).toBe("Not paid yet");
+    expect(status([entry()], true).label).toBe("No commission expected");
+    expect(status([entry({ effectiveDate: "2026-03-01" })], true).label).toBe("No commission expected");
   });
 });

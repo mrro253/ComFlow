@@ -20,6 +20,17 @@ describe("editable sales scope", () => {
     expect(sales[0].assignedAgentId).toBeNull(); expect(JSON.stringify(sales)).not.toContain(collection.records[0].mbi);
     await expect(listEditableSales(owner, "b".repeat(64))).rejects.toThrow("Collection not found");
   });
+  it("retains older applications and deduplicates refreshed snapshots by application code", async () => {
+    const newHash = "b".repeat(64), oldHash = "c".repeat(64);
+    const original = collection.records[0];
+    const replacement = { ...original, code: "REPLACEMENT", proposedEffectiveDate: "2026-03-01" };
+    mocks.list.mockResolvedValue([{ hash: newHash }, { hash }, { hash: oldHash }]);
+    mocks.collection.mockImplementation(async (_user, reference) => ({ ...collection, records: reference === newHash ? [replacement] : [original] }));
+    const rows = await listEditableSales(owner, undefined, true);
+    expect(rows.map(row => row.code)).toEqual([replacement.code, original.code]);
+    expect(rows[1].versions).toHaveLength(2);
+    expect(rows[0].source?.mbi).toBe(rows[1].source?.mbi);
+  });
   it("shows agents only currently assigned sales, including reassignment and revocation", async () => {
     expect(await listEditableSales(agent)).toEqual([]); expect(mocks.source).not.toHaveBeenCalled();
     mocks.events.mockResolvedValue([assignment]); expect(await listEditableSales(agent)).toHaveLength(1);

@@ -15,8 +15,9 @@ export async function listSunfireCollections(user: CurrentUser) {
   if (!connection) return [];
   const path = sunfireStoragePath({ agencyId: user.agencyId, userId: user.id, connectionId: connection.id }, "0".repeat(64));
   const folder = path.slice(0, path.lastIndexOf("/"));
-  const files = await createAdminClient().storage.from("statements").list(folder, { limit: 50, sortBy: { column: "created_at", order: "desc" } });
+  const files = await createAdminClient().storage.from("statements").list(folder, { limit: 51, sortBy: { column: "created_at", order: "desc" } });
   if (files.error) throw new Error("Could not list collected enrollments.");
+  if ((files.data?.length ?? 0) > 50) throw new Error("Enrollment history exceeds the current collection limit. Older applications have not been discarded.");
   return (files.data ?? []).filter((file) => file.name.endsWith(".json") && sunfireHashPattern.test(file.name.slice(0, -5))).map((file) => ({ hash: file.name.slice(0, -5), collectedAt: file.created_at }));
 }
 export async function readSunfireCollection(user: CurrentUser, hash: string) {
