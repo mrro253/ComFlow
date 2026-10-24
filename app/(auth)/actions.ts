@@ -48,6 +48,11 @@ export async function login(
     return { error: error.message };
   }
 
+  if (!await getCurrentUser()) {
+    await supabase.auth.signOut();
+    return { error: "Your account is unavailable or inactive. Contact your agency owner." };
+  }
+
   redirect(await postAuthRedirectPath());
 }
 

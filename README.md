@@ -1,5 +1,11 @@
 # CommissionFlow
 
+## Carrier readiness review — 2026-10-23
+
+See [the readiness report](docs/carrier-readiness-review.md). All 29 active imported statements / 160 monetary entries reconcile to their saved sources. Repeat/correction SQL regressions pass for Ultimate, UHC and Devoted on the separate synthetic project; real authenticated synthetic sessions verify role/tenant isolation, private PDFs, assigned-agent outcomes and replacement applications. All 532 tests, the application production build and worker TypeScript pass.
+
+The check reproduced inactive-session access, unsafe self-insertion of an agency/Owner profile, and inherited browser execution grants on the intended service-only signup RPC. Review-only migration `0012_active_account_access.sql` fixes those database paths; application guards reject inactive profiles and login clears their session. The migration was rehearsed **only on the synthetic project**, not applied to the working database. Queued/running/sign-in connection labels are now distinct. Persisted per-sync result counts, scheduled collection and UHC live sign-in verification remain follow-ups. Main is unchanged; working imported records are unchanged. Marshall should review the access fixes and migration before wider rollout.
+
 ## Automatic enrollment commission status — 2026-10-23
 
 Agents and owners can now expand **Update this enrollment**, mark **Did not take effect — no commission expected**, and supply a required explanation. Only the owner or the application's currently assigned agent may save; assignment/source integrity is rechecked at mutation time. An append-only application audit records the actor, timestamp and explanation. **Commission expected — undo a previous correction** records a new event rather than deleting history. No policy, commission entry, statement, association or assignment is edited by this action.

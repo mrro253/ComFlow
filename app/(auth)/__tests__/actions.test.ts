@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // vi.mock factories are hoisted above these declarations, so the mocks they
 // reference must be created via vi.hoisted() rather than plain top-level
 // consts (which would be TDZ-inaccessible at hoist time).
-const { signOutMock, revalidatePathMock, redirectMock } = vi.hoisted(() => ({
+const { signOutMock, revalidatePathMock, redirectMock, signInMock } = vi.hoisted(() => ({
+  signInMock: vi.fn().mockResolvedValue({ error: null }),
   signOutMock: vi.fn().mockResolvedValue({ error: null }),
   revalidatePathMock: vi.fn(),
   redirectMock: vi.fn((path: string) => {
@@ -14,7 +15,7 @@ const { signOutMock, revalidatePathMock, redirectMock } = vi.hoisted(() => ({
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({
-    auth: { signOut: signOutMock },
+    auth: { signOut: signOutMock, signInWithPassword: signInMock },
   })),
 }));
 
@@ -39,7 +40,8 @@ vi.mock("next/cache", () => ({
   revalidatePath: revalidatePathMock,
 }));
 
-import { signOut } from "@/app/(auth)/actions";
+import { getCurrentUser } from "@/lib/auth/getCurrentUser";
+import { signOut, login } from "@/app/(auth)/actions";
 
 describe("signOut", () => {
   beforeEach(() => {
@@ -56,5 +58,14 @@ describe("signOut", () => {
     // from showing a stale, cached dashboard render after sign-out.
     expect(revalidatePathMock).toHaveBeenCalledWith("/", "layout");
     expect(redirectMock).toHaveBeenCalledWith("/login");
+  });
+});
+
+describe("inactive account login", () => {
+  it("clears a valid auth session when no active application profile is available", async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue(null); signOutMock.mockClear(); redirectMock.mockClear();
+    const form = new FormData(); form.set("email", "synthetic@example.invalid"); form.set("password", "synthetic-only");
+    expect(await login(undefined, form)).toEqual({ error: "Your account is unavailable or inactive. Contact your agency owner." });
+    expect(signOutMock).toHaveBeenCalledOnce(); expect(redirectMock).not.toHaveBeenCalled();
   });
 });

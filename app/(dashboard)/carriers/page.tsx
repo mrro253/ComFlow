@@ -1,3 +1,4 @@
+import { connectionPresentation } from "@/lib/reporting/connectionStatus";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { canManageCarrierLogin } from "@/lib/auth/carrierAccess";
@@ -12,13 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
-
-const STATUS = {
-  pending: { label: "Saved - not synced yet", variant: "secondary" },
-  active: { label: "Connected", variant: "success" },
-  needs_attention: { label: "Needs attention", variant: "destructive" },
-  disabled: { label: "Disconnected", variant: "outline" },
-} as const;
 
 export default async function CarriersPage() {
   const user = await getCurrentUser();
@@ -62,9 +56,7 @@ export default async function CarriersPage() {
       {connectionCarriers(isOwner).map((carrier) => {
         const connection = mine.find((c) => c.carrier === carrier);
         const connected = connection && connection.status !== "disabled";
-        const status = connection?.status === "needs_attention" && connection.lastError?.startsWith("Sync running.")
-          ? { label: "Sync in progress", variant: "secondary" as const }
-          : connection ? STATUS[connection.status] : null;
+        const status = connection ? connectionPresentation(connection) : null;
         return (
           <Card key={carrier}>
             <CardHeader className="flex-row items-center justify-between space-y-0">
@@ -103,8 +95,8 @@ export default async function CarriersPage() {
               )}
               {carrier === "UnitedHealthcare" && <p className="text-sm text-muted-foreground">Sync downloads available PDF and text reports. Keep the local worker running; complete verification in its browser and open Commissions &gt; Statements and More. New PDFs appear in <Link className="underline" href="/statements">Statements for review</Link>. Existing imported entries stay unchanged.</p>}
               {carrier === "Devoted Health" && <p className="text-sm text-muted-foreground">Sync saves PDF and spreadsheet pairs for review. Keep the local worker running; complete any Devoted verification in its browser window. <Link className="underline" href="/statements/devoted">Review downloaded Devoted statements</Link></p>}
-              {connection?.lastError && connection.status === "needs_attention" && (
-                <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{connection.lastError}</p>
+              {status?.notice && (
+                <p role="status" className={status.variant === "destructive" ? "rounded-md bg-destructive/10 p-3 text-sm text-destructive" : "rounded-md bg-muted/40 p-3 text-sm"}>{status.notice}</p>
               )}
               <details open={!connected || Boolean(connection?.status === "needs_attention" && !connection.syncRequestedAt && !connection.lastError?.startsWith("Sync running."))} className="rounded-md border p-3"><summary className="cursor-pointer text-sm font-medium">{connected ? "Connection settings" : "Connect this account"}</summary><div className="mt-4 space-y-4">{connected && connection && (
                 <div className={carrier === "SunFire" ? "border-t pt-4" : undefined}>
@@ -147,7 +139,7 @@ export default async function CarriersPage() {
                     <TableCell className="font-medium">{nameById.get(c.userId) ?? "Agent"}</TableCell>
                     <TableCell className="text-muted-foreground">{c.carrier}</TableCell>
                     <TableCell>
-                      <Badge variant={STATUS[c.status].variant}>{STATUS[c.status].label}</Badge>
+                      <Badge variant={connectionPresentation(c).variant}>{connectionPresentation(c).label}</Badge>
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
                       {c.lastSuccessfulSyncAt ? formatDate(c.lastSuccessfulSyncAt) : "—"}

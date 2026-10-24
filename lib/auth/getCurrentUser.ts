@@ -26,7 +26,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     .eq("id", authUser.id)
     .single();
 
-  if (error || !profile) return null;
+  if (error || !profile || !profile.active) return null;
 
   return {
     authUserId: authUser.id,
