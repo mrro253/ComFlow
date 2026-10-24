@@ -15,7 +15,7 @@ import {
   totalsByCategory,
   totalsByProducerGroup,
 } from "@/lib/reporting/carrierMetrics";
-import { selectDashboardMonth } from "@/lib/reporting/dashboardMonth";
+import { selectDashboardMonth, selectDashboardYear, selectDashboardQuarter } from "@/lib/reporting/dashboardMonth";
 import { isOnboardingIncomplete } from "@/lib/onboarding";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { BarChartCard } from "@/components/dashboard/bar-chart-card";
@@ -36,7 +36,7 @@ const SCOPE_LABEL = {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string | string[]; view?: string }>;
+  searchParams: Promise<{ month?: string | string[]; view?: string; period?: string; year?: string | string[]; quarter?: string | string[] }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -60,12 +60,19 @@ export default async function DashboardPage({
   const { months, month, unavailable } = selectDashboardMonth(
     transactions.map((tx) => tx.statementMonth), params.month
   );
-  const periodLabel = month ? monthLabel(month) : null;
-  const inMonth = month ? transactions.filter((tx) => tx.statementMonth === month) : [];
+  const annual = params.period === "annual";
+  const quarterly = params.period === "quarterly";
+  const yearView = annual || quarterly;
+  const periodName = quarterly ? "quarter" : annual ? "year" : "month";
+  const annualSelection = selectDashboardYear(transactions.map(tx => tx.statementMonth), params.year);
+  const year = annualSelection.year;
+  const quarterSelection = selectDashboardQuarter(transactions.map(tx => tx.statementMonth), year, params.quarter);
+  const periodLabel = quarterly ? `Q${quarterSelection.quarter} ${year}` : annual ? year : month ? monthLabel(month) : null;
+  const inPeriod = transactions.filter(tx => quarterly ? year !== null && tx.statementMonth >= quarterSelection.start && tx.statementMonth <= quarterSelection.end : annual ? year !== null && tx.statementMonth.startsWith(`${year}-`) : month !== null && tx.statementMonth === month);
   const usersById = new Map(team.map((u) => [u.id, u]));
-  const unassignedCount = inMonth.filter((tx) => tx.userId === null).length;
-  const categories = totalsByCategory(inMonth);
-  const groups = isOwner ? totalsByProducerGroup(inMonth, usersById) : [];
+  const unassignedCount = inPeriod.filter((tx) => tx.userId === null).length;
+  const categories = totalsByCategory(inPeriod);
+  const groups = isOwner ? totalsByProducerGroup(inPeriod, usersById) : [];
   const pendingReview = statementWork.needsAttention.length + statementWork.downloadedPairs.length;
 
   return (
@@ -76,7 +83,7 @@ export default async function DashboardPage({
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
           <p className="text-sm text-muted-foreground">{SCOPE_LABEL[user.role]}</p>
         </div>
-        <Button asChild variant="outline"><Link href={month ? `/payments?month=${month}` : "/payments"}>View commission activity</Link></Button>
+        <Button asChild variant="outline"><Link href={yearView && year ? quarterly ? `/reports?from=${quarterSelection.start}&to=${quarterSelection.end}` : `/reports?from=${year}-01&to=${year}-12` : month ? `/payments?month=${month}` : "/payments"}>{quarterly ? "View quarterly report" : annual ? "View annual report" : "View commission activity"}</Link></Button>
       </div>
 
       {showChecklist && (
@@ -109,40 +116,50 @@ export default async function DashboardPage({
       ) : (
         <>
           <div className="rounded-lg border border-border bg-card p-4 text-sm">
-            <form method="get" className="flex flex-wrap items-end gap-3">
-              <label className="flex min-w-0 flex-col gap-1.5 font-medium">
-                Statement month
+            <nav aria-label="Commission period" className="mb-4 flex gap-2">
+              <Link aria-current={!yearView ? "page" : undefined} className={cn("rounded-md border px-4 py-2", !yearView && "bg-primary text-primary-foreground")} href={month ? `/dashboard?month=${month}` : "/dashboard"}>Monthly</Link>
+              <Link aria-current={quarterly ? "page" : undefined} className={cn("rounded-md border px-4 py-2", quarterly && "bg-primary text-primary-foreground")} href={`/dashboard?period=quarterly${year ? `&year=${year}` : ""}`}>Quarterly</Link>
+              <Link aria-current={annual ? "page" : undefined} className={cn("rounded-md border px-4 py-2", annual && "bg-primary text-primary-foreground")} href={`/dashboard?period=annual${year ? `&year=${year}` : ""}`}>Annual</Link>
+            </nav>
+            {yearView ? <form method="get" className="flex flex-wrap items-end gap-3">
+              <input type="hidden" name="period" value={quarterly ? "quarterly" : "annual"} />
+              <label className="flex flex-col gap-1.5 font-medium">Statement year<select name="year" defaultValue={year ?? ""} key={year} className="h-9 rounded-md border border-input bg-background px-3 text-sm">{annualSelection.years.map(option => <option key={option}>{option}</option>)}</select></label>
+              {quarterly && <label className="flex flex-col gap-1.5 font-medium">Quarter<select name="quarter" defaultValue={String(quarterSelection.quarter)} key={quarterSelection.quarter} className="h-9 rounded-md border border-input bg-background px-3 text-sm">{[1, 2, 3, 4].map(option => <option key={option} value={option}>Q{option}</option>)}</select></label>}
+              <Button type="submit" size="sm">Show {quarterly ? "quarter" : "year"}</Button>
+            </form> : <form method="get" className="flex flex-wrap items-end gap-3">
+              <label className="flex min-w-0 flex-col gap-1.5 font-medium">Statement month
                 <select name="month" defaultValue={month ?? ""} key={month} className="h-9 max-w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm">
-                  {months.map((option) => <option key={option} value={option}>{monthLabel(option)}</option>)}
+                  {months.map(option => <option key={option} value={option}>{monthLabel(option)}</option>)}
                 </select>
               </label>
               <Button type="submit" size="sm">Show month</Button>
-              <Link href="/dashboard?view=overview" className="py-2 text-sm underline underline-offset-4">Latest month</Link>
-            </form>
-            <p className="mt-3 font-medium">Showing statement month: {periodLabel}</p>
-            {unavailable && <p role="status" className="mt-1 text-muted-foreground">That month is not available in your commission activity. Showing your latest available month instead.</p>}
+              <Link href="/dashboard" className="py-2 text-sm underline underline-offset-4">Latest month</Link>
+            </form>}
+            <p className="mt-3 font-medium">{quarterly ? "Showing statement quarter" : annual ? "Showing statement year" : "Showing statement month"}: {periodLabel}</p>
+            {(yearView ? annualSelection.unavailable || quarterly && quarterSelection.unavailable : unavailable) && <p role="status" className="mt-1 text-muted-foreground">That selection is not available in your commission activity. Showing the latest available period instead.</p>}
+            {yearView && <p className="mt-1 text-muted-foreground">Includes imported commission entries from {quarterly ? quarterSelection.monthsOnFile : annualSelection.monthsOnFile} of {quarterly ? 3 : 12} statement months in {periodLabel}. Missing months are not assumed to be zero. Reversals and adjustments are included; this is not a forecast.</p>}
             <p className="mt-1 text-muted-foreground">
-              The commission totals, categories and production breakdown show the selected month. The monthly chart shows all imported months; the statement-review count covers all verified review items across months.
+              The commission totals, categories and production breakdown show the selected {periodName}. The monthly chart shows {yearView ? `imported months in that ${periodName}` : "all imported months"}; the statement-review count covers all verified review items across months.
               One carrier payment can cover several commission entries. These totals are statement activity; bank deposits are not verified here.
               Amounts added or deducted from previous statements can make a statement total different from its commission entries.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Commission total" value={formatCents(sumCents(inMonth))} icon={CircleDollarSign} hint="Carrier-reported entry total, not take-home earnings" />
-            <StatCard label="Commission entries" value={String(inMonth.length)} icon={Hash} hint="Statement lines, not bank deposits" />
+            <StatCard label={quarterly ? "Quarterly commission total" : annual ? "Annual commission total" : "Commission total"} value={formatCents(sumCents(inPeriod))} icon={CircleDollarSign} hint="Carrier-reported entry total, not take-home earnings" />
+            <StatCard label="Commission entries" value={String(inPeriod.length)} icon={Hash} hint="Statement lines, not bank deposits" />
             {isOwner && (
               <>
-                <StatCard label="Unassigned entries" value={String(unassignedCount)} icon={UserX} hint="Entries in this month needing an agent" />
+                <StatCard label="Unassigned entries" value={String(unassignedCount)} icon={UserX} hint={`Entries in this ${periodName} needing an agent`} />
                 <StatCard label="Statements needing review" value={String(pendingReview)} icon={FileText} hint="Files requiring a decision; verified repeat copies excluded" />
               </>
             )}
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <CarrierMonthlyChart {...carrierMonthlySeries(transactions)} />
+            <CarrierMonthlyChart {...carrierMonthlySeries(yearView ? inPeriod : transactions)} />
             {/* BarChartCard plots {month,total}; here the "month" axis carries the payment category. */}
             <BarChartCard
-              title={`Commission categories${month ? ` - ${periodLabel}` : ""}`}
+              title={`Commission categories${periodLabel ? ` - ${periodLabel}` : ""}`}
               data={categories.map((c) => ({ month: c.type, total: c.cents / 100 }))}
               barColor="hsl(var(--chart-2))"
             />

@@ -2,6 +2,8 @@
 
 ## Automatic enrollment commission status — 2026-10-23
 
+The graphs Dashboard also offers Monthly / Quarterly / Annual views. Annual and quarterly totals, entry counts, categories and production groups use the selected statement year or calendar quarter (Q1–Q4) in the session-visible ledger; the monthly carrier chart follows the same period. The page identifies the distinct statement months on file and does not treat missing months as zero or project a full-year amount. The detail link opens Reports with the same annual or quarterly bounds. Monthly links and default behavior are preserved. Year and quarter selection and existing metric/chart regression checks pass (34 targeted tests).
+
 Review branch: `feature/automatic-enrollment-status`. Main remains unchanged.
 
 The main Dashboard retains its graphs and totals. A separate prominent Enrollment commissions view shows Paid, Not paid yet, or Charged back. Explicit did-not-take-effect explanations remain No commission expected. Status is derived from source-verified active imported entries on each request. The visible page refreshes every minute and on return to the tab. No agent acknowledgment, approval, or manual status upkeep is required. Corrections and assignment controls stay under owner-only administration.
