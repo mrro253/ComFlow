@@ -3,6 +3,22 @@ import { createClient } from "@/lib/supabase/server";
 import { digest } from "@/lib/carriers/digest";
 import type { CurrentUser } from "@/types/domain";
 import type { SunfireFollowup } from "@/lib/enrollments/followup";
+import { readAuthorizedSaleSource } from "./saleDispositionRepository";
+
+/** Return only the explanation for an enrollment whose current assignment was verified. */
+export async function readAssignedSaleFollowup(user: CurrentUser, ownerId: string, hash: string, code: string): Promise<SunfireFollowup | undefined> {
+  await readAuthorizedSaleSource(user, ownerId, hash, code);
+  const result = await createAdminClient().from("audit_events").select("details,created_at")
+    .eq("agency_id", user.agencyId).eq("actor_user_id", ownerId).eq("action", "sunfire.enrollment_followup_recorded")
+    .eq("entity_type", "sunfire_collection").eq("entity_id", hash).eq("details->>enrollmentCode", code)
+    .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(1);
+  if (result.error) throw new Error("Could not read enrollment explanation.");
+  const row = result.data?.[0];
+  if (!row) return undefined;
+  const value = row.details as Record<string, unknown>;
+  if (value?.version !== 1 || value.enrollmentCode !== code || value.status !== "did_not_take_effect" || typeof value.note !== "string" || !value.note.trim() || value.note.length > 2000) throw new Error("Invalid enrollment explanation.");
+  return { enrollmentCode: code, status: "did_not_take_effect", note: value.note, recordedAt: row.created_at };
+}
 async function authorize(user: CurrentUser, hash: string) {
   if (!user.active || user.role !== "owner" || !/^[a-f0-9]{64}$/.test(hash)) throw new Error("Active owner and valid collection required.");
   const client = await createClient();

@@ -1,17 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { readSunfireFollowups, appendSunfireFollowup } from "../sunfireFollowupRepository";
+import { readSunfireFollowups, appendSunfireFollowup, readAssignedSaleFollowup } from "../sunfireFollowupRepository";
 import type { CurrentUser } from "@/types/domain";
-const mocks = vi.hoisted(() => ({ owner: vi.fn(), range: vi.fn(), insert: vi.fn(), eq: vi.fn() }));
+const mocks = vi.hoisted(() => ({ owner: vi.fn(), range: vi.fn(), insert: vi.fn(), eq: vi.fn(), source: vi.fn(), limit: vi.fn() }));
+vi.mock("../saleDispositionRepository", () => ({ readAuthorizedSaleSource: mocks.source }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ from: () => {
   const q = { select: () => q, eq: (...args: unknown[]) => { mocks.eq(...args); return q; }, single: mocks.owner }; return q;
 } }) }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ from: () => {
-  const q = { select: () => q, eq: (...args: unknown[]) => { mocks.eq(...args); return q; }, order: () => q, range: mocks.range, insert: mocks.insert }; return q;
+  const q = { select: () => q, eq: (...args: unknown[]) => { mocks.eq(...args); return q; }, order: () => q, range: mocks.range, limit: mocks.limit, insert: mocks.insert }; return q;
 } }) }));
 const user = { id: "owner", agencyId: "agency", role: "owner", active: true } as CurrentUser;
 const hash = "a".repeat(64);
-beforeEach(() => { vi.clearAllMocks(); mocks.owner.mockResolvedValue({ data: { id: user.id }, error: null }); mocks.range.mockResolvedValue({ data: [], error: null }); mocks.insert.mockResolvedValue({ error: null }); });
+beforeEach(() => { vi.clearAllMocks(); mocks.owner.mockResolvedValue({ data: { id: user.id }, error: null }); mocks.range.mockResolvedValue({ data: [], error: null }); mocks.insert.mockResolvedValue({ error: null }); mocks.source.mockResolvedValue({}); mocks.limit.mockResolvedValue({ data: [], error: null }); });
 describe("private append-only SunFire follow-up notes", () => {
+  it("checks the current sale assignment before reading its owner's explanation", async () => {
+    const agent = { ...user, id: "agent", role: "agent" } as CurrentUser;
+    mocks.source.mockRejectedValueOnce(new Error("Sale not assigned"));
+    await expect(readAssignedSaleFollowup(agent, user.id, hash, "EXAMPLE")).rejects.toThrow("not assigned");
+    expect(mocks.limit).not.toHaveBeenCalled();
+    mocks.limit.mockResolvedValue({ data: [{ details: { version: 1, enrollmentCode: "EXAMPLE", status: "did_not_take_effect", note: "Synthetic explanation" }, created_at: "2026-10-23" }], error: null });
+    expect((await readAssignedSaleFollowup(agent, user.id, hash, "EXAMPLE"))?.note).toBe("Synthetic explanation");
+    expect(mocks.eq).toHaveBeenCalledWith("actor_user_id", user.id);
+    expect(mocks.eq).toHaveBeenCalledWith("agency_id", user.agencyId);
+    expect(mocks.eq).toHaveBeenCalledWith("entity_id", hash);
+    expect(mocks.eq).toHaveBeenCalledWith("details->>enrollmentCode", "EXAMPLE");
+  });
   it("checks current owner access and note limits before inserting", async () => {
     await expect(appendSunfireFollowup({ ...user, role: "agent" }, hash, "EXAMPLE", "Synthetic note")).rejects.toThrow("owner");
     await expect(appendSunfireFollowup(user, hash, "EXAMPLE", " ")).rejects.toThrow("note");

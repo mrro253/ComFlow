@@ -1,5 +1,15 @@
 # CommissionFlow
 
+## Automatic enrollment commission status — 2026-10-23
+
+Review branch: `feature/automatic-enrollment-status`. Main remains unchanged.
+
+Home and Enrollments show Paid, Not paid yet, or Charged back. Explicit did-not-take-effect explanations remain No commission expected. Status is derived from source-verified active imported entries on each request. The visible page refreshes every minute and on return to the tab. No agent acknowledgment, approval, or manual status upkeep is required. Corrections and assignment controls stay under owner-only administration.
+
+Matching requires the same carrier, name, full MBI or five-character suffix, and effective date, without shared evidence. Ambiguous matches stay Not paid yet with an explanation. Positive COMMISSION, INITIAL and RENEWAL entries count as paid; negative CHARGEBACK entries take precedence even when other payments exist. Balances, zero amounts and adjustments do not establish payment. These labels describe imported statements, not bank deposits or policy coverage. Missing or invalid source details show an unavailable message rather than invented unpaid statuses. Superseded sources are excluded. Full MBIs stay server-side. Agent source metadata is resolved only after session/RLS authorization of individual transactions; enrollment assignment and explanation access are checked separately.
+
+This does not enable scheduled collection or change import approval rules. Collection still uses Sync now and its worker. No financial records, associations, acknowledgments, assignments or dispositions are changed by the new view. Validation: 493 tests pass, including automatic status transitions, source corrections, ambiguity, and agent access checks.
+
 Commission tracking for Medicare and Medicaid insurance agencies. It pulls
 **carrier commission statements**, turns them into verified transactions, and
 shows each person what the carrier actually paid them (and, for Career agents,

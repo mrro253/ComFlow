@@ -17,9 +17,9 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Needs attention", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Enrollment commissions", icon: LayoutDashboard },
   { href: "/payments", label: "Commission activity", icon: CircleDollarSign },
-  { href: "/sales", label: "Sales records", icon: ClipboardList, roles: ["owner", "agent"] },
+  { href: "/sales", label: "Enrollments", icon: ClipboardList, roles: ["owner", "agent"] },
   { href: "/reports", label: "Reports", icon: ClipboardList },
   { href: "/statements", label: "Statements", icon: FileText, roles: ["owner"] },
   { href: "/carriers", label: "Carriers", icon: KeyRound, roles: ["owner", "agent"] },

@@ -12,6 +12,15 @@ export async function getSunfireMatches(user: CurrentUser, selected?: string) {
   if (selected && !current) throw new Error("SunFire collection not found.");
   if (!current) return { current: null, range: null, matches: [], statementCount: 0, entryCount: 0, sourceNotes: {} as Record<string, string> };
   const collection = await readSunfireCollection(user, current.hash);
+  const verified = await compareVerifiedEnrollments(user, collection.records);
+  return { current, range: { start: collection.start, end: collection.end },
+    matches: verified.matches,
+    statementCount: verified.statementCount, entryCount: verified.entryCount,
+    sourceNotes: verified.sourceNotes };
+}
+
+export async function compareVerifiedEnrollments(user: CurrentUser, records: import("@/lib/enrollments/sunfire").SunfireEnrollment[]) {
+  if (!user.active || !["owner", "agent"].includes(user.role)) throw new Error("Active owner or agent required.");
   const inventory = await loadSunfireMatchInventory(user);
   const details = await loadPaymentDetails(inventory.entries.map(entry => entry.id), user.agencyId);
   if (details.size !== inventory.entries.length || inventory.entries.some(entry => !details.has(entry.id))) throw new Error("Some imported statement details could not be verified. Comparison stopped.");
@@ -27,8 +36,5 @@ export async function getSunfireMatches(user: CurrentUser, selected?: string) {
   });
   const after = await loadSunfireMatchInventory(user);
   if (digest(inventory) !== digest(after)) throw new Error("Commission records changed during the comparison. Reload to review current evidence.");
-  return { current, range: { start: collection.start, end: collection.end },
-    matches: compareEnrollmentCommissions(collection.records, evidence, inventory.statements.map(statement => statement.carrier)),
-    statementCount: inventory.statements.length, entryCount: inventory.entries.length,
-    sourceNotes: Object.fromEntries([...details].map(([id, detail]) => [id, detail.fields.find(field => field.label.toUpperCase() === "NOTES")?.value ?? ""])) };
+  return { matches: compareEnrollmentCommissions(records, evidence, inventory.statements.map(statement => statement.carrier)), statementCount: inventory.statements.length, entryCount: inventory.entries.length, sourceNotes: Object.fromEntries([...details].map(([id, detail]) => [id, detail.fields.find(field => field.label.toUpperCase() === "NOTES")?.value ?? ""])) };
 }

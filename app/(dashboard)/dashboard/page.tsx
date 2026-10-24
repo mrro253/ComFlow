@@ -26,6 +26,7 @@ import { OnboardingChecklistCard } from "@/components/dashboard/onboarding-check
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { EnrollmentStatusList } from "@/components/dashboard/enrollment-status-list";
 import { AttentionHome } from "@/components/dashboard/attention-home";
 
 const SCOPE_LABEL = {
@@ -42,7 +43,7 @@ export default async function DashboardPage({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const params = await searchParams;
-  if (params.view !== "overview" && !params.month) return <AttentionHome user={user} />;
+  if (params.view !== "overview" && !params.month) return ["owner", "agent"].includes(user.role) ? <EnrollmentStatusList user={user} /> : <AttentionHome user={user} />;
 
   const isOwner = user.role === "owner";
   // RLS scopes every query below to what this user is allowed to see.
