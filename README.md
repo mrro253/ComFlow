@@ -1,5 +1,17 @@
 # CommissionFlow
 
+## Marshall: account-access review and approval — 2026-10-24
+
+Please review the account-access fixes on `feature/automatic-enrollment-status` and approve the code and database update before we apply migration [`0012_active_account_access.sql`](supabase/migrations/0012_active_account_access.sql) to the working database.
+
+The readiness check found and reproduced three issues:
+
+- Inactive accounts could retain access through an existing signed-in session. The fixes require an active account in both application and database access checks.
+- A new login could create its own profile in an agency and give itself the Owner role. The fix restricts profile creation to an authorized agency owner or the trusted signup process.
+- A signup function intended only for the server was also callable by ordinary users. The fix removes those permissions while preserving trusted server signup.
+
+All 532 tests and the production build passed. The database fixes were tested only in a separate synthetic environment and **have not been applied to the working database**. Imported records and Main are unchanged. See the [full readiness report](docs/carrier-readiness-review.md) for verification and remaining follow-ups.
+
 ## Carrier readiness review — 2026-10-23
 
 See [the readiness report](docs/carrier-readiness-review.md). All 29 active imported statements / 160 monetary entries reconcile to their saved sources. Repeat/correction SQL regressions pass for Ultimate, UHC and Devoted on the separate synthetic project; real authenticated synthetic sessions verify role/tenant isolation, private PDFs, assigned-agent outcomes and replacement applications. All 532 tests, the application production build and worker TypeScript pass.
