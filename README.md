@@ -1,5 +1,11 @@
 # CommissionFlow
 
+## Interrupted-worker recovery drill — 2026-11-02
+
+Passed a real process-stop/restart drill against the isolated synthetic database/storage project, not the working database or a carrier portal. The test saved a fictional source, killed its worker process, and restarted the actual worker entry point. The restarted worker reclaimed the dead local lock, preserved the source, marked the run interrupted, cleared its journal and processed **zero portal jobs**. An explicit synthetic resume skipped the existing file, leaving one statement and no monetary rows. Newer requests, completed results and disabled connections were preserved. Temporary accounts, agency, source and runtime files were cleaned up.
+
+See [reproduction and limits](docs/worker-recovery-drill.md). The new test command requires explicit synthetic-only configuration and refuses any API other than local port 55431. Existing working-record fingerprints remain unchanged. Monthly scheduling is still disabled; no real connection was queued by this test.
+
 ## Devoted and SunFire updated-worker live checks — 2026-11-02
 
 **Both checks now pass.** After the owner completed SunFire verification, the original reader reached blank enrollment detail tabs. The collector now keeps the authenticated tab, forces a fresh document before reading each application, and restores/rechecks the report after each detail read. A bounded refresh handles one form-load timeout; code/name/MBI/plan/date verification and complete-only storage remain required. The live run verified and privately saved all **19 enrollments** for January 1–November 2, 2026. The app shows 19 rows with masked MBIs and a successful connection state. No commission records were imported. All 597 tests, application/worker TypeScript and application ESLint pass; the scoped test worker is stopped and monthly scheduling remains off. Temporary diagnostic screenshot capture was removed from the code; the private artifact is excluded from Git.

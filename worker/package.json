@@ -9,6 +9,7 @@
     "start": "tsx --env-file=../.env.local src/index.ts",
     "once": "tsx --env-file=../.env.local src/index.ts --once",
     "typecheck": "tsc --noEmit",
+    "test:recovery": "tsx src/recoveryDrill.ts",
     "devoted:download": "tsx src/devotedDownloadOnce.ts"
   },
   "dependencies": {
