@@ -1,5 +1,11 @@
 # CommissionFlow
 
+## Scoped Ultimate live check — 2026-11-02
+
+Ran one authorized Ultimate-only request through the updated worker's claim, local lock/journal, downloader and saved-result path. The run stopped before a verified download summary: outcome `failed`, counts unknown. The source of the portal error is not yet established; a responding public landing page does not verify sign-in. No repeat login was attempted. Monthly scheduling remains off, and UHC/Devoted/SunFire connections were untouched.
+
+Private before/after hashes confirm that existing imported statements, carrier transactions, commission transactions, users, audit rows and every other carrier connection are unchanged. This is not a successful live scheduling acceptance test; enabling monthly collection remains pending a successful scoped run.
+
 ## Local scheduled collection and interruption recovery — 2026-11-02
 
 Review branch `feature/scheduled-sync-recovery` adds opt-in collection of Ultimate and Devoted commission statements on the first day of each month (Eastern time by default). SunFire enrollment collection remains separately daily. **It remains off in the working environment.** UHC is explicitly excluded while its sign-in is paused. No carrier worker, login, download or sync request was run during this change, and no database migration is required.
