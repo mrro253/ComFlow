@@ -38,8 +38,8 @@ export default async function SettingsPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
           <p className="text-sm text-muted-foreground">
             {isOwner
-              ? "Team, CRM, and leftover plan screens. Career levels and rates live under Compensation."
-              : "View-only. Ask an Owner to make changes here."}
+              ? "Team and CRM connections. Career levels and rates live under Compensation."
+              : "Manage your own GHL connection. Your agency owner manages team settings."}
           </p>
         </div>
         {isOwner && (

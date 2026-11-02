@@ -1,4 +1,5 @@
 import { Plug } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -9,9 +10,8 @@ import {
 } from "@/components/ui/card";
 
 /**
- * Informational only. GoHighLevel is an OUTPUT target (match contacts, push
- * statuses) and never a source of payable amounts.
- * TODO: replace with a real connect flow once the GHL output integration is built.
+ * Setup entry point. Contact matching/updates remain disabled; GHL is never
+ * a source of payable amounts.
  */
 export function CrmConnectionCard() {
   return (
@@ -29,7 +29,8 @@ export function CrmConnectionCard() {
       </CardHeader>
       <CardContent className="flex items-center gap-3">
         <span className="text-sm font-medium">GoHighLevel</span>
-        <Badge variant="outline">Coming soon</Badge>
+        <Badge variant="outline">Setup only</Badge>
+        <Link className="rounded-md border px-4 py-2 text-sm font-medium" href="/settings/ghl">Connect GoHighLevel</Link>
       </CardContent>
     </Card>
   );

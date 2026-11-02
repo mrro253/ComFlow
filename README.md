@@ -1,5 +1,13 @@
 # CommissionFlow
 
+## Personal and shared GHL connection setup — 2026-11-02
+
+Review branch `feature/ghl-connection-setup` adds **Settings → GoHighLevel → Connect** at `/settings/ghl` for every active user. An agent can save their own location/token; an agency owner can connect one shared location and map active teammates to GHL users verified in that location. Other agents never need copies of the shared token. Replacing a shared connection clears mappings; the screen explains that before saving.
+
+Tokens are encrypted server-side with connection/agency/user/location binding, stored in a separate service-only table, never redisplayed, and excluded from logs/audit details. Setup uses only fixed-host GET requests for location and user metadata. **No contact read, contact write, note creation, matching job or CRM synchronization is enabled.** Location verification requires `locations.readonly`; shared-user verification also requires `users.readonly`. See [setup and verification](docs/ghl-connection-setup.md).
+
+Migration 0013 was rehearsed with rollback-only synthetic access tests and applied to the backed-up local database. Existing statement, commission, user and audit rows are unchanged. All 608 tests, type/lint checks and the production build pass. Real authenticated synthetic owner/mapped-agent/unmapped-agent page checks pass; owner preview shows masked empty token fields and both setup options. Live GHL token verification awaits a user-entered token. Main is unchanged; source is published to both repositories. Carrier statement retrieval remains manual **Sync now**, as Ryan requested; scheduling remains disabled.
+
 ## Interrupted-worker recovery drill — 2026-11-02
 
 Passed a real process-stop/restart drill against the isolated synthetic database/storage project, not the working database or a carrier portal. The test saved a fictional source, killed its worker process, and restarted the actual worker entry point. The restarted worker reclaimed the dead local lock, preserved the source, marked the run interrupted, cleared its journal and processed **zero portal jobs**. An explicit synthetic resume skipped the existing file, leaving one statement and no monetary rows. Newer requests, completed results and disabled connections were preserved. Temporary accounts, agency, source and runtime files were cleaned up.
