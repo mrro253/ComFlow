@@ -1,5 +1,13 @@
 # CommissionFlow
 
+## Devoted and SunFire updated-worker live checks — 2026-11-02
+
+Devoted completed through the updated scoped worker: **10 pairs found, 9 previously saved, 1 new PDF/workbook pair saved for review, 0 failures**. The signed-in Carrier connections page displays these counts. No new commission records were imported.
+
+SunFire was tested separately and paused without a completed collection. The worker briefly reported verification/sign-in review, then recorded a stopped run; its actual browser screen still needs confirmation before retrying. The authenticated window remains in memory for a controlled retry. This is not a successful SunFire acceptance test. Do not infer zero enrollments or successful collection from that stop.
+
+Private before/after fingerprints match for imported statements, carrier and commission entries, users, audit rows and all connections other than the single connection under test. UHC was not run. Monthly scheduling remains disabled; no credentials, client information, source files or screenshots were committed.
+
 ## Scoped Ultimate live check — 2026-11-02
 
 **Latest result: completed successfully.** The updated worker verified the statement-search controls and checked 2026: 9 found, 9 previously saved, 0 new downloads, 0 failures. Private fingerprints confirm imported statements, carrier/commission entries, users, audit rows and other carrier connections are unchanged. The statement navigator verifies Search/year/month controls, follows an observed trusted link or menu action, and retains a statement popup if needed. It reports a navigation failure separately from unavailable years. Navigation fixes can reload in the retained signed-in browser. The owner preview displays the completed counts correctly. All 593 tests, app/worker TypeScript and application ESLint pass; no page/build changes were needed. The scoped test worker was stopped. Monthly scheduling is still disabled; this successful manual check does not mean unattended first-of-month operation is enabled.
