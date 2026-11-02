@@ -15,10 +15,9 @@ import {
  * Ultimate Health Plans agent portal. Ported from Ryan's prototype
  * (ultimate-sync.js / ultimate-portal.js / ultimate-download.js).
  *
- * UNVERIFIED against the live portal in this repo: the selectors and flow are
- * copied from the working prototype, but this port has not been run end to end.
- * Portal markup changes will break it; keep selectors in this file only.
- * No saved browser sessions: every run logs in fresh and closes the browser.
+ * Portal selectors require scoped live verification after markup changes.
+ * Retain in-memory browser sessions per connection for verification/recovery;
+ * browser cookies are not persisted to disk by this adapter.
  */
 
 const CARRIER = "Ultimate Health Plans";
@@ -256,14 +255,28 @@ export const ultimatePortal: CarrierPortal = {
       sessions.set(options.sessionKey, session);
     }
     const { page } = session;
+    let stage = "opening the login page";
     try {
-      if (!page.url().startsWith("https://enroll.myultimatehp.com/agportal/")) await page.goto(LOGIN_URL);
+      // The SPA can render its login form while background resources still load.
+      if (!page.url().startsWith("https://enroll.myultimatehp.com/agportal/")) {
+        try { await page.goto(LOGIN_URL, { waitUntil: "domcontentloaded" }); }
+        catch (navigationError) {
+          // A SPA navigation can abort after rendering. Continue only with the
+          // actual visible login controls on this exact trusted portal path.
+          const usable = page.url().startsWith("https://enroll.myultimatehp.com/agportal/") &&
+            await page.locator('input[type="password"]:visible').count() === 1 &&
+            await page.getByRole("button", { name: /^LOGIN$/i }).isVisible();
+          if (!usable) throw navigationError;
+        }
+      }
       const menu = page.getByText("Commission Statements", { exact: true }).first();
+      stage = "signing in";
       await options.onProgress?.();
       await automaticCarrierLogin(page, "Ultimate Health Plans", login, () => menu.isVisible(), async (reason) => { await options.onVerification?.(reason); });
 
       for (const year of options.years) {
         options.log(`searching ${year}`);
+        stage = "opening the statement search";
         await menu.click();
         const dropdowns = page.getByRole("combobox");
         await waitUntil(async () => (await dropdowns.first().locator(`option[value="${year}"]`).count()) === 1, {
@@ -273,12 +286,13 @@ export const ultimatePortal: CarrierPortal = {
         await dropdowns.first().selectOption(String(year));
         await dropdowns.nth(1).selectOption("0");
         await page.getByRole("button", { name: "Search" }).click();
+        stage = "reading statement results";
         await syncResults(page, options, summary);
       }
       return summary;
     } catch (error) {
       if (error instanceof SafePortalError) throw error;
-      throw new SafePortalError(safeError(error));
+      throw new SafePortalError(`Ultimate stopped while ${stage}: ${safeError(error)}`);
     }
   },
 };

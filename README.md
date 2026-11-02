@@ -2,6 +2,8 @@
 
 ## Scoped Ultimate live check — 2026-11-02
 
+Follow-up: the initial failure occurred during navigation before credentials were submitted. The adapter now waits for DOM readiness and, after a navigation error, proceeds only if the actual password/login controls are visible on the exact trusted portal path. Synthetic cases block error pages and incomplete forms. A scoped live retest successfully submitted the saved login and reached Commission Statements without manual sign-in. It then stopped because its year-control check did not find 2026. Available-year/control verification is pending; statement downloading is not yet accepted and monthly scheduling stays off. Imported records and other connections still match their private baselines.
+
 Ran one authorized Ultimate-only request through the updated worker's claim, local lock/journal, downloader and saved-result path. The run stopped before a verified download summary: outcome `failed`, counts unknown. The source of the portal error is not yet established; a responding public landing page does not verify sign-in. No repeat login was attempted. Monthly scheduling remains off, and UHC/Devoted/SunFire connections were untouched.
 
 Private before/after hashes confirm that existing imported statements, carrier transactions, commission transactions, users, audit rows and every other carrier connection are unchanged. This is not a successful live scheduling acceptance test; enabling monthly collection remains pending a successful scoped run.
