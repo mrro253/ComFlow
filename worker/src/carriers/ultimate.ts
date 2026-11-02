@@ -254,7 +254,7 @@ export const ultimatePortal: CarrierPortal = {
       session = { browser, page: await context.newPage() };
       sessions.set(options.sessionKey, session);
     }
-    const { page } = session;
+    let { page } = session;
     let stage = "opening the login page";
     try {
       // The SPA can render its login form while background resources still load.
@@ -277,7 +277,13 @@ export const ultimatePortal: CarrierPortal = {
       for (const year of options.years) {
         options.log(`searching ${year}`);
         stage = "opening the statement search";
-        await menu.click();
+        // Reload just navigation fixes while retaining the signed-in browser.
+        const navigationUrl = new URL("./ultimateNavigation.js", import.meta.url);
+        navigationUrl.searchParams.set("retry", String(Date.now()));
+        const navigation = await import(navigationUrl.href) as typeof import("./ultimateNavigation.js");
+        page = await navigation.openUltimateStatements(page, options.log);
+        session.page = page;
+        stage = "checking statement years";
         const dropdowns = page.getByRole("combobox");
         await waitUntil(async () => (await dropdowns.first().locator(`option[value="${year}"]`).count()) === 1, {
           timeout: 15_000,
