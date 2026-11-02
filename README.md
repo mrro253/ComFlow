@@ -1,5 +1,9 @@
 # CommissionFlow
 
+## Repository publishing instruction — 2026-11-02
+
+Ryan requests that all current and future committed updates be pushed to both `ryanb1210/ComFlow` and `mrro253/ComFlow`, using the same branch names. The active checkout fetches from Ryan's repository and has both repositories configured as push destinations for `origin`. Verify both remote branch heads after publishing; report a failed or rejected push rather than claiming both are current. Do not force-push, overwrite divergent work, or merge into Main without separate authorization. This applies to source, tests and documentation only: credentials, backups, downloaded statements and client data remain outside Git. Repository copies do not synchronize database changes, hosting settings, issues or pull-request discussions.
+
 ## Account-access fixes completed locally — 2026-11-02
 
 Ryan authorized completing the account-access review and local rollout without waiting for Marshall. The source is maintained in [Ryan's private repository](https://github.com/ryanb1210/ComFlow), on `feature/automatic-enrollment-status`; Main is unchanged.
