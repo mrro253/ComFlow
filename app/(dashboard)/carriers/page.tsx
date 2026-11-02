@@ -1,4 +1,5 @@
 import { connectionPresentation } from "@/lib/reporting/connectionStatus";
+import { loadSyncResult } from "@/lib/repositories/syncResultRepository";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { canManageCarrierLogin } from "@/lib/auth/carrierAccess";
@@ -41,6 +42,7 @@ export default async function CarriersPage() {
   const mine = connections.filter((c) => c.userId === user.id);
   const others = connections.filter((c) => c.userId !== user.id);
   const isOwner = user.role === "owner";
+  const summaries = new Map(await Promise.all(mine.filter(c => c.carrier !== "SunFire").map(async c => [c.id, await loadSyncResult(c.id, user.agencyId)] as const)));
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,6 +59,7 @@ export default async function CarriersPage() {
         const connection = mine.find((c) => c.carrier === carrier);
         const connected = connection && connection.status !== "disabled";
         const status = connection ? connectionPresentation(connection) : null;
+        const summary = connection ? summaries.get(connection.id) : null;
         return (
           <Card key={carrier}>
             <CardHeader className="flex-row items-center justify-between space-y-0">
@@ -72,6 +75,16 @@ export default async function CarriersPage() {
               {status && <Badge variant={status.variant}>{status.label}</Badge>}
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
+              {connected && carrier !== "SunFire" && <details className="rounded-md border p-3 text-sm">
+                <summary className="cursor-pointer font-medium">Last recorded sync result{summary ? ` · ${formatDate(summary.finishedAt)}` : ""}</summary>
+                <div className="mt-3 space-y-2">
+                  {summary ? <>
+                    <p>{summary.outcome === "completed" ? "Download check finished" : "Sync stopped before a complete result"}</p>
+                    {summary.counts ? <ul className="grid grid-cols-2 gap-2"><li>{summary.counts.found} statements found</li><li>{summary.counts.downloaded} downloads saved</li><li>{summary.counts.skipped} previously saved</li><li>{summary.counts.failed} downloads failed</li></ul> : <p>Complete counts are unavailable. Saved files remain available for review.</p>}
+                    <p className="text-xs text-muted-foreground">This describes the recorded run, not a queued or running update. Downloading does not import commissions; saved files may still need review.</p>
+                  </> : <p className="text-muted-foreground">Detailed results will appear after a sync with the updated worker. No new sync has been run to create these counts.</p>}
+                </div>
+              </details>}
               {carrier === "SunFire" && (
                 <>
                   <p className="text-sm text-muted-foreground">Collect enrollment details from SunFire, then compare them with your imported commissions. Nothing is linked automatically.</p>

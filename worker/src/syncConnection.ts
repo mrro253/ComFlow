@@ -1,4 +1,6 @@
 import { decryptCarrierLogin } from "../../lib/crypto/credentials";
+import { saveSyncResult } from "./syncResult.js";
+import { loginHelpMessage } from "../../lib/carriers/syncResult.js";
 import { storeUhcPair } from "./uhcStorage.js";
 import { syncDevotedConnection } from "./devotedSync.js";
 import { syncSunfireConnection } from "./sunfireSync.js";
@@ -18,6 +20,7 @@ import { statementOwnerUserId } from "./statementOwner.js";
 /** Runs one claimed connection end to end. Never throws: failures are recorded on the connection. */
 export async function syncConnection(db: Db, connection: ConnectionRow): Promise<void> {
   const log = (message: string) => console.log(`[${connection.id.slice(0, 8)}] ${message}`);
+  const startedAt = new Date().toISOString();
 
   try {
     if (connection.carrier === "SunFire") {
@@ -28,6 +31,7 @@ export async function syncConnection(db: Db, connection: ConnectionRow): Promise
     }
     if (connection.carrier === "Devoted Health") {
       const summary = await syncDevotedConnection(db, connection);
+      if (!await saveSyncResult(db, connection, startedAt, summary)) log("Sync summary unavailable; downloaded files are preserved.");
       log(`done: ${JSON.stringify(summary)}`);
       await markConnection(db, connection.id, summary.failed ? { ok: true, warning: "Some Devoted pairs could not be saved. Review downloaded pairs, then retry Sync now." } : { ok: true });
       return;
@@ -49,7 +53,7 @@ export async function syncConnection(db: Db, connection: ConnectionRow): Promise
       years: yearsToSync(),
       sessionKey: connection.id,
       onProgress: async () => { await markConnection(db, connection.id, { ok: false, error: "Sync running. Signing in with your saved carrier login." }); },
-      onVerification: async () => { await markConnection(db, connection.id, { ok: false, error: "Carrier verification or sign-in review is needed. Complete the request in the worker browser; sync continues when ready." }); },
+      onVerification: async (reason) => { await markConnection(db, connection.id, { ok: false, error: loginHelpMessage(reason) }); },
       onUhcPair: (pair) => storeUhcPair(db, connection, statementOwner, pair),
       isKnown: (id) => known.has(id),
       log,
@@ -67,6 +71,7 @@ export async function syncConnection(db: Db, connection: ConnectionRow): Promise
       },
     });
 
+    if (!await saveSyncResult(db, connection, startedAt, summary)) log("Sync summary unavailable; downloaded files are preserved.");
     log(`done: ${JSON.stringify(summary)}`);
     await markConnection(
       db,
@@ -76,6 +81,7 @@ export async function syncConnection(db: Db, connection: ConnectionRow): Promise
         : { ok: true }
     );
   } catch (error) {
+    if (connection.carrier !== "SunFire") await saveSyncResult(db, connection, startedAt, null);
     const message = /decrypt|CREDENTIAL_ENCRYPTION_KEY/i.test(error instanceof Error ? error.message : "")
       ? "The saved login could not be read. Enter your carrier login again."
       : safeError(error);

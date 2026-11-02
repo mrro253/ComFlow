@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ClientCommissionHistory } from "@/components/payments/client-commission-history";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { queryPayments } from "@/app/(dashboard)/payments/actions";
 import type { PaymentLedgerView } from "@/lib/services/paymentLedgerService";
@@ -138,6 +139,8 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
           <p className="mt-2 text-sm">{selected.carrier} · {selected.statementMonth} · {selected.commissionType} · {formatCents(selected.amountCents)}</p>
           <p className="mt-2 text-sm">Product type: {selected.product.label}{selected.product.reportedValue ? ` · As reported: ${selected.product.reportedValue}` : ` · ${selected.product.reason}`}</p>
           <p className="mt-2 text-sm text-muted-foreground">Credited to {personName(selected.userId)}{selected.writingUserId ? ` · Written by ${personName(selected.writingUserId)}` : ""}</p>
+          <ClientCommissionHistory key={selected.id} transactionId={selected.id} />
+          <h3 className="mt-6 text-lg font-semibold">Selected entry’s statement details</h3>
           {selected.sourceDetails ? <>
             <dl className="mt-5 grid gap-4 sm:grid-cols-2">{selected.sourceDetails.fields.map((field, index) => <div key={index} className="min-w-0"><dt className="text-xs text-muted-foreground">{field.label}</dt><dd className="break-words text-sm">{field.value || "Not provided"}</dd></div>)}</dl>
             <p className="mt-5 break-words text-xs text-muted-foreground">{selected.sourceDetails.statementFilename} · Source row {selected.sourceDetails.sourceRow}</p>

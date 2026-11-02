@@ -1,3 +1,5 @@
+import { loadStatementTotalsCheck } from "@/lib/services/statementTotalsService";
+import { StatementTotalsCheckCard } from "@/components/statements/statement-totals-check";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CircleDollarSign, Copy, ExternalLink, FileText, UserX } from "lucide-react";
@@ -77,10 +79,11 @@ export default async function StatementDetailPage({ params }: { params: Promise<
   );
 
   if (statement.status === "imported" || statement.status === "superseded") {
-    const [rows, team, replaced] = await Promise.all([
+    const [rows, team, replaced, totals] = await Promise.all([
       listTransactionsForStatement(statement.id),
       listUsersForAgency(user.agencyId),
       listStatementsSupersededBy(statement.id),
+      loadStatementTotalsCheck(user, statement.id),
     ]);
     const nameById = new Map(team.map((u) => [u.id, `${u.firstName} ${u.lastName}`]));
     return (
@@ -114,17 +117,19 @@ export default async function StatementDetailPage({ params }: { params: Promise<
         )}
         <div className="grid gap-4 sm:grid-cols-3">
           <StatCard label="Statement month" value={statement.statementMonth ?? "—"} icon={FileText} />
-          <StatCard label="Commission entries imported" value={String(statement.transactionCount ?? 0)} icon={Copy} />
+          <StatCard label="Commission entries imported" value={statement.transactionCount === null ? "Not available" : String(statement.transactionCount)} icon={Copy} />
           <StatCard
             label="Statement total"
-            value={formatCents(statement.statementTotalCents ?? 0)}
+            value={statement.statementTotalCents === null ? "Not available" : formatCents(statement.statementTotalCents)}
             icon={CircleDollarSign}
           />
         </div>
-        <StatementTotalBreakdown totalCents={statement.statementTotalCents ?? 0} previousBalanceCents={statement.carriedBalanceCents ?? 0} />
+        {totals && <StatementTotalsCheckCard check={totals.check} historical={statement.status === "superseded"} />}
+        <Link className="text-sm underline" href="/statements/checks">View all statement totals checks</Link>
         <Card>
           <CardHeader>
             <CardTitle>Imported commission entries</CardTitle>
+            {totals?.check.importedCount !== null && totals?.check.importedCount !== undefined && rows.length < totals.check.importedCount && <CardDescription>Showing {rows.length} entries below. The totals check includes all {totals.check.importedCount} readable entries.</CardDescription>}
           </CardHeader>
           <CardContent className="p-0">
             <Table>

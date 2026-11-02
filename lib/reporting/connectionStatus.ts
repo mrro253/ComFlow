@@ -7,6 +7,8 @@ export function connectionPresentation(connection: State) {
   if (connection.syncRequestedAt) return { label: "Update queued", variant: "secondary" as const, notice: "Waiting for the local worker to start this update. Results are not available yet." };
   if (connection.status === "needs_attention") {
     if (connection.lastError?.startsWith("Sync running.")) return { label: "Update in progress", variant: "secondary" as const, notice: connection.lastError };
+    if (connection.lastError?.startsWith("Verification needed.")) return { label: "Needs verification", variant: "secondary" as const, notice: connection.lastError };
+    if (connection.lastError?.startsWith("Sign-in review needed.")) return { label: "Review sign-in", variant: "secondary" as const, notice: connection.lastError };
     return { label: /verification|sign-in review/i.test(connection.lastError ?? "") ? "Sign-in needs attention" : "Needs attention", variant: "destructive" as const,
       notice: connection.lastError || "The last update did not complete. Statement availability has not been confirmed." };
   }

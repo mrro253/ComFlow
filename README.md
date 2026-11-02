@@ -1,5 +1,13 @@
 # CommissionFlow
 
+## Combined review version — 2026-11-02
+
+`feature/combined-review` brings the missing client commission history, statement totals checks and durable carrier sync results into the current automatic-enrollment version. Main is unchanged. [Branch comparison and validation](docs/combined-review.md) records which older work was already included or superseded.
+
+Client history is available inside a Commission activity entry's details, with access refreshed on every request. Statement totals checks are linked from Imported statements and shown in statement details. Carrier cards offer a collapsed last-recorded sync result; queued/running work remains distinct from that previous result. The worker records future Ultimate/UHC/Devoted counts, while SunFire keeps its existing enrollment-collection flow. No sync is run to populate old results, and scheduling is still not enabled.
+
+The existing graphs, annual/quarterly controls, automatic enrollment statuses, application-specific corrections, simplified statement worklists and account-access fixes are preserved. No dependency or migration changes are introduced. Validation: 566 tests pass, worker TypeScript and application ESLint pass. Production build and preview validation are recorded in the linked report. Protected working-record fingerprints match the baseline.
+
 ## Repository publishing instruction — 2026-11-02
 
 Ryan requests that all current and future committed updates be pushed to both `ryanb1210/ComFlow` and `mrro253/ComFlow`, using the same branch names. The active checkout fetches from Ryan's repository and has both repositories configured as push destinations for `origin`. Verify both remote branch heads after publishing; report a failed or rejected push rather than claiming both are current. Do not force-push, overwrite divergent work, or merge into Main without separate authorization. This applies to source, tests and documentation only: credentials, backups, downloaded statements and client data remain outside Git. Repository copies do not synchronize database changes, hosting settings, issues or pull-request discussions.
