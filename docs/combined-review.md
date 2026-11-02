@@ -30,4 +30,6 @@ Branch: `feature/combined-review`, based on the latest `feature/automatic-enroll
 - Worker TypeScript and application ESLint pass.
 - Production build passes. Combined preview runs at `http://localhost:3011`; unauthenticated Dashboard, Commission activity, Enrollments, statement checks and carrier pages redirect to login, and the report API returns 401.
 - Read-only fingerprints of working statements, carrier entries, commission entries, users and audit rows match the pre-integration baseline.
-- Authenticated visual walkthrough of the newly combined screens has not been performed; earlier feature-branch checks are not claimed as a new walkthrough.
+- Owner signed-in walkthrough completed November 2: annual/quarterly dashboard and graphs, enrollment status choices, 29 matching statement totals, statement-detail deduction explanation, client-history load (10 entries for the selected client), and all four connection cards with expandable prior-run results. No mutation or live sync was submitted.
+- The walkthrough caught a malformed UUID validation pattern in the history action. Fixed its missing segment and added authenticated-action/invalid-input regressions. All 569 tests and the production build pass after the fix; the live history retest succeeds without an error.
+- This owner walkthrough does not replace the earlier synthetic role-isolation tests or claim a fresh multi-role browser walkthrough. The private dashboard screenshot stays outside Git.

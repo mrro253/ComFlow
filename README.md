@@ -1,5 +1,9 @@
 # CommissionFlow
 
+## Signed-in combined-preview walkthrough — 2026-11-02
+
+The owner walkthrough verified the retained dashboard graphs and annual/quarterly controls, enrollment status choices, the simplified statement worklists and all 29 statement totals matching with no unavailable checks. It found a malformed UUID validation pattern in the client-history action; corrected the missing segment and added server-action regressions for valid IDs, invalid pages and session authorization. All 569 tests and the rebuilt production app pass; live client history loads 10 entries for the selected client. The statement deduction explanation and expandable recorded-sync result also work. No sync, import, outcome submission or assignment was performed; protected working-record fingerprints remain unchanged. This is an owner walkthrough, not a new multi-role browser verification.
+
 ## Combined review version — 2026-11-02
 
 `feature/combined-review` brings the missing client commission history, statement totals checks and durable carrier sync results into the current automatic-enrollment version. Main is unchanged. [Branch comparison and validation](docs/combined-review.md) records which older work was already included or superseded.
