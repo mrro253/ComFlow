@@ -1,5 +1,17 @@
 # CommissionFlow
 
+## Account-access fixes completed locally — 2026-11-02
+
+Ryan authorized completing the account-access review and local rollout without waiting for Marshall. The source is maintained in [Ryan's private repository](https://github.com/ryanb1210/ComFlow), on `feature/automatic-enrollment-status`; Main is unchanged.
+
+- Rechecked the inactive-account guards, owner-only profile creation and server-only signup permissions. All 532 tests, application TypeScript, ESLint and the production build passed again.
+- Rehearsed migration `0012_active_account_access.sql` and reran the account-access and nine-role database regressions on the separate synthetic project. Fixtures rolled back.
+- Saved a full private database backup outside Git and OneDrive; verified its archive directory is readable. A full restore drill remains a separate launch task.
+- Applied migration 0012 and recorded it in the **local working database** in one transaction. Postchecks confirm ordinary browser roles cannot call privileged signup, the unsafe self-insert policy is gone, and active owner access is preserved.
+- Before/after fingerprints match for every statement, carrier entry, commission entry, user and audit row. No carrier sync, import, assignment or account classification was changed.
+
+The reviewed app is available at `http://localhost:3011`. This completes the three identified account-access fixes locally; it is not a hosted deployment or an independent security review. The older Marshall-approval sections below describe the previous review gate and are superseded for this local rollout by Ryan's authorization.
+
 ## Marshall: account-access review and approval — 2026-10-24
 
 Please review the account-access fixes on `feature/automatic-enrollment-status` and approve the code and database update before we apply migration [`0012_active_account_access.sql`](supabase/migrations/0012_active_account_access.sql) to the working database.

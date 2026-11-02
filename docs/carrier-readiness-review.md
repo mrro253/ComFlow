@@ -1,5 +1,7 @@
 # Carrier readiness review — October 23, 2026
 
+**Update — November 2, 2026:** Ryan authorized the account-access rollout without waiting for Marshall. All 532 tests, application TypeScript, ESLint and the production build passed again. Migration 0012 and the rollback-only account/nine-role regressions passed on the isolated synthetic project. After a full private database backup (archive directory verified; full restore drill still pending), migration 0012 was applied and recorded atomically in the local working database. Postchecks verify the owner-only profile policy, revoked browser signup grants, preserved server signup grant and active owner access. Before/after fingerprints of statements, carrier entries, commission entries, users and audit rows match. The app runs from Ryan's review checkout at port 3011. Main and imported records are unchanged; no hosted deployment or independent review is claimed. The original pending-approval descriptions below are historical.
+
 Review branch: `feature/automatic-enrollment-status`. Main was not changed.
 
 **Result:** Existing source reconciliation, duplicate/correction protection and tested active-user isolation pass. Access-policy fixes are prepared and verified on the separate synthetic project. Marshall should review those fixes and approve migration `0012_active_account_access.sql` before a wider rollout. It has **not** been applied to the working database.
