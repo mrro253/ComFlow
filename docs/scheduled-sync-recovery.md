@@ -9,7 +9,7 @@ Built and tested with synthetic fixtures; **not enabled** in the working configu
 ## Scheduling rules
 
 - Default: off. Set `SCHEDULED_SYNC_ENABLED=true` in the worker environment and run the long-lived worker to opt in. The sample environment retains `false`; no real configuration was edited.
-- Check eligible active connections once per rolling 24 hours from their last attempt. After downtime, queue one overdue attempt rather than replaying every missed day.
+- Ultimate/Devoted commission statements: run only on the first day of each calendar month in `SYNC_SCHEDULE_TIMEZONE` (default `America/New_York`), once per month. A same-month prior attempt suppresses another automatic attempt. The worker must run on that day; if it is off all day, use Sync now or wait until the next first day. No automatic catch-up on other days. SunFire enrollment collection keeps its separate rolling 24-hour schedule.
 - Only Ultimate Health Plans, Devoted Health and SunFire are eligible. UHC remains excluded; ordinary explicitly requested UHC runs still use the existing manual-request flow.
 - An inactive or missing connection owner, pending/disabled/attention connection, malformed/future timestamp, or already queued request prevents automatic queueing.
 - Recheck owner agency/active state before queueing and owner active state again before portal execution. Queue updates compare the observed status, last-attempt time and absence of another request.
@@ -40,6 +40,6 @@ Recovery uses the observed last-attempt timestamp, status and error text as guar
 
 ## Verification
 
-584 tests across 93 files pass, including 15 new synthetic cases for daily eligibility, downtime, paused UHC, attention states, invalid dates, active-owner scoping, competing queue updates, interruption guards, completed-run preservation, private journal durability, corrupt/foreign state and duplicate local workers. Worker TypeScript and application ESLint pass. No new dependency or database migration is introduced.
+586 tests across 93 files pass, including 17 scheduling/recovery synthetic cases for monthly eligibility, timezone boundaries, separate enrollment scheduling, paused UHC, attention states, invalid dates, active-owner scoping, competing queue updates, interruption guards, completed-run preservation, private journal durability, corrupt/foreign state and duplicate local workers. Worker TypeScript and application ESLint pass. No new dependency or database migration is introduced.
 
 The tests do not log in to a carrier, emulate real MFA or start the production worker. Live scheduling/restart verification remains unperformed. A read-only comparison of working statement, carrier-entry, commission-entry, user and audit fingerprints must remain identical before publishing.

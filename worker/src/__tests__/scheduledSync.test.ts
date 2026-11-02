@@ -2,7 +2,7 @@ import { expect, it, vi } from "vitest";
 import { queueScheduledSyncs, recoverInterruptedSync } from "../scheduledSync";
 import type { Db } from "../db";
 
-const connection = { id: "ed230000-0000-4000-8000-000000000123", agency_id: "synthetic-agency", user_id: "synthetic-owner", carrier: "Ultimate Health Plans", status: "active", last_sync_at: "2026-11-01T12:00:00Z", last_successful_sync_at: "2026-11-01T12:00:00Z", sync_requested_at: null, last_error: null };
+const connection = { id: "ed230000-0000-4000-8000-000000000123", agency_id: "synthetic-agency", user_id: "synthetic-owner", carrier: "Ultimate Health Plans", status: "active", last_sync_at: "2026-10-01T12:00:00Z", last_successful_sync_at: "2026-11-01T12:00:00Z", sync_requested_at: null, last_error: null };
 function database(options: { active?: boolean; queued?: boolean; error?: boolean; recovering?: boolean; finished?: boolean } = {}) {
   const operations: { table: string; update?: unknown; filters: unknown[][] }[] = [];
   const db = { from(table: string) {
@@ -17,17 +17,17 @@ function database(options: { active?: boolean; queued?: boolean; error?: boolean
 
 it("queues only after checking active owner scope and guarding against a competing request", async () => {
   const { db, operations } = database();
-  expect(await queueScheduledSyncs(db, new Date("2026-11-02T12:00:00Z"))).toBe(1);
+  expect(await queueScheduledSyncs(db, new Date("2026-11-01T17:00:00Z"))).toBe(1);
   expect(operations.find(x => x.table === "users")?.filters).toEqual(expect.arrayContaining([["eq", "agency_id", connection.agency_id], ["eq", "active", true]]));
   const update = operations.find(x => x.update);
-  expect(update?.update).toEqual({ sync_requested_at: "2026-11-02T12:00:00.000Z" });
+  expect(update?.update).toEqual({ sync_requested_at: "2026-11-01T17:00:00.000Z" });
   expect(update?.filters).toEqual(expect.arrayContaining([["eq", "last_sync_at", connection.last_sync_at], ["is", "sync_requested_at", null], ["eq", "status", "active"]]));
 });
 it("never queues an inactive owner or counts a lost compare-and-set as queued", async () => {
   const inactive = database({ active: false });
-  expect(await queueScheduledSyncs(inactive.db, new Date("2026-11-02T12:00:00Z"))).toBe(0);
+  expect(await queueScheduledSyncs(inactive.db, new Date("2026-11-01T17:00:00Z"))).toBe(0);
   expect(inactive.operations.some(x => x.update)).toBe(false);
-  expect(await queueScheduledSyncs(database({ queued: false }).db, new Date("2026-11-02T12:00:00Z"))).toBe(0);
+  expect(await queueScheduledSyncs(database({ queued: false }).db, new Date("2026-11-01T17:00:00Z"))).toBe(0);
 });
 it("fails closed on an incomplete scan without leaking the database message", async () => {
   const { db, operations } = database({ error: true });

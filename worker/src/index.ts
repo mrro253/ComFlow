@@ -60,7 +60,7 @@ async function main() {
     console.log(`processed ${processed} sync request(s)`);
     return;
   }
-  console.log(`worker polling every ${intervalMs / 1000}s; daily scheduling ${scheduling ? "enabled (UHC excluded)" : "off"} (Ctrl+C to stop)`);
+  console.log(`worker polling every ${intervalMs / 1000}s; scheduled collection ${scheduling ? "enabled (statements: first of month; SunFire: daily; UHC excluded)" : "off"} (Ctrl+C to stop)`);
   for (;;) {
     try {
       await runOnce(runtime);

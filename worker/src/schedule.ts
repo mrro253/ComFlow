@@ -3,13 +3,22 @@ import type { ConnectionRow } from "./db.js";
 const DAY = 24 * 60 * 60 * 1000;
 const AUTOMATIC_CARRIERS = new Set(["Ultimate Health Plans", "Devoted Health", "SunFire"]);
 
-/** Local rolling daily checks; never repeat credential failures or the paused UHC flow. */
-export function scheduledConnectionDue(connection: ConnectionRow, now: Date): boolean {
+/** Statement runs occur only on day one in the operator's configured timezone. */
+export function scheduledConnectionDue(connection: ConnectionRow, now: Date, timeZone = process.env.SYNC_SCHEDULE_TIMEZONE ?? "America/New_York"): boolean {
   if (connection.status !== "active" || connection.sync_requested_at || !AUTOMATIC_CARRIERS.has(connection.carrier)) return false;
   if (!Number.isFinite(now.getTime())) return false;
-  if (!connection.last_sync_at) return true;
-  const previous = Date.parse(connection.last_sync_at);
-  return Number.isFinite(previous) && now.getTime() - previous >= DAY;
+  const previous = connection.last_sync_at ? Date.parse(connection.last_sync_at) : null;
+  if (previous !== null && (!Number.isFinite(previous) || previous > now.getTime())) return false;
+  // Enrollment collection is independent of monthly commission statement collection.
+  if (connection.carrier === "SunFire") return previous === null || now.getTime() - previous >= DAY;
+  const calendar = (date: Date) => {
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+    const value = (type: string) => parts.find(part => part.type === type)?.value;
+    return { month: `${value("year")}-${value("month")}`, day: value("day") };
+  };
+  const current = calendar(now);
+  if (current.day !== "01") return false;
+  return previous === null || calendar(new Date(previous)).month !== current.month;
 }
 
 export interface InterruptedRun { connectionId: string; startedAt: string }

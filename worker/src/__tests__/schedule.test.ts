@@ -4,11 +4,22 @@ import type { ConnectionRow } from "../db";
 
 const now = new Date("2026-11-02T12:00:00Z");
 const connection = { id: "ed230000-0000-4000-8000-000000000123", status: "active", carrier: "Ultimate Health Plans", sync_requested_at: null, last_sync_at: "2026-11-01T12:00:00Z", last_successful_sync_at: "2026-11-01T12:00:00Z", last_error: null } as ConnectionRow;
-describe("rolling daily schedule", () => {
-  it("becomes due at 24 hours and catches up once after downtime", () => {
-    expect(scheduledConnectionDue(connection, now)).toBe(true);
-    expect(scheduledConnectionDue({ ...connection, last_sync_at: "2026-11-02T11:59:00Z" }, now)).toBe(false);
-    expect(scheduledConnectionDue({ ...connection, last_sync_at: "2026-10-01T12:00:00Z" }, now)).toBe(true);
+describe("monthly statement schedule", () => {
+  it("collects only on the first and only once in that local calendar month", () => {
+    const overdue = { ...connection, last_sync_at: "2026-10-01T12:00:00Z" };
+    expect(scheduledConnectionDue(overdue, new Date("2026-11-01T17:00:00Z"))).toBe(true);
+    expect(scheduledConnectionDue(connection, new Date("2026-11-01T17:00:00Z"))).toBe(false);
+    expect(scheduledConnectionDue(overdue, now)).toBe(false);
+    expect(scheduledConnectionDue({ ...overdue, last_sync_at: null }, now)).toBe(false);
+  });
+  it("uses the configured timezone across month boundaries", () => {
+    const overdue = { ...connection, last_sync_at: null };
+    expect(scheduledConnectionDue(overdue, new Date("2026-11-01T02:00:00Z"), "America/New_York")).toBe(false);
+    expect(scheduledConnectionDue(overdue, new Date("2026-11-01T02:00:00Z"), "UTC")).toBe(true);
+    expect(scheduledConnectionDue(overdue, new Date("2026-11-02T02:00:00Z"), "America/New_York")).toBe(true);
+  });
+  it("keeps enrollment collection separate from monthly statements", () => {
+    expect(scheduledConnectionDue({ ...connection, carrier: "SunFire" }, now)).toBe(true);
   });
   it("never schedules paused UHC, unknown carriers or login/disabled/pending states", () => {
     for (const carrier of ["UnitedHealthcare", "Unknown"]) expect(scheduledConnectionDue({ ...connection, carrier }, now)).toBe(false);
