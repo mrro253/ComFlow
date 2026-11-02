@@ -2,9 +2,11 @@
 
 ## Devoted and SunFire updated-worker live checks — 2026-11-02
 
+**Both checks now pass.** After the owner completed SunFire verification, the original reader reached blank enrollment detail tabs. The collector now keeps the authenticated tab, forces a fresh document before reading each application, and restores/rechecks the report after each detail read. A bounded refresh handles one form-load timeout; code/name/MBI/plan/date verification and complete-only storage remain required. The live run verified and privately saved all **19 enrollments** for January 1–November 2, 2026. The app shows 19 rows with masked MBIs and a successful connection state. No commission records were imported. All 597 tests, application/worker TypeScript and application ESLint pass; the scoped test worker is stopped and monthly scheduling remains off. Temporary diagnostic screenshot capture was removed from the code; the private artifact is excluded from Git.
+
 Devoted completed through the updated scoped worker: **10 pairs found, 9 previously saved, 1 new PDF/workbook pair saved for review, 0 failures**. The signed-in Carrier connections page displays these counts. No new commission records were imported.
 
-SunFire was tested separately and paused without a completed collection. The worker briefly reported verification/sign-in review, then recorded a stopped run; its actual browser screen still needs confirmation before retrying. The authenticated window remains in memory for a controlled retry. This is not a successful SunFire acceptance test. Do not infer zero enrollments or successful collection from that stop.
+Earlier SunFire attempts paused without a complete collection. These stopped attempts are superseded by the successful retained-session run above; they were never treated as zero enrollments or successful collections.
 
 Private before/after fingerprints match for imported statements, carrier and commission entries, users, audit rows and all connections other than the single connection under test. UHC was not run. Monthly scheduling remains disabled; no credentials, client information, source files or screenshots were committed.
 
