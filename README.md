@@ -1,5 +1,13 @@
 # CommissionFlow
 
+## Local scheduled collection and interruption recovery — 2026-11-02
+
+Review branch `feature/scheduled-sync-recovery` adds opt-in rolling daily collection for active Ultimate, Devoted and SunFire connections. **It remains off in the working environment.** UHC is explicitly excluded while its sign-in is paused. No carrier worker, login, download or sync request was run during this change, and no database migration is required.
+
+With `SCHEDULED_SYNC_ENABLED=true`, the long-running polling worker queues a due connection after 24 hours since its last attempt, only for an active owner and an active connection without a pending request. Disabled, pending, verification-blocked and failed connections are not automatically retried. `npm run once` processes manual requests only. Existing review-before-import behavior is unchanged.
+
+One local worker per database is enforced with a private process lock and a durable in-flight journal. On restart, an unfinished claim is marked **Update interrupted** with instructions to use Sync now; recovery never resubmits credentials by itself. Completed runs, newer requests and recorded failures are preserved. State-write failures stop that poll before another claim. See [operation, validation and limitations](docs/scheduled-sync-recovery.md). This is local single-machine support, not a distributed or hosted scheduler.
+
 ## Signed-in combined-preview walkthrough — 2026-11-02
 
 The owner walkthrough verified the retained dashboard graphs and annual/quarterly controls, enrollment status choices, the simplified statement worklists and all 29 statement totals matching with no unavailable checks. It found a malformed UUID validation pattern in the client-history action; corrected the missing segment and added server-action regressions for valid IDs, invalid pages and session authorization. All 569 tests and the rebuilt production app pass; live client history loads 10 entries for the selected client. The statement deduction explanation and expandable recorded-sync result also work. No sync, import, outcome submission or assignment was performed; protected working-record fingerprints remain unchanged. This is an owner walkthrough, not a new multi-role browser verification.

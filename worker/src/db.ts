@@ -45,7 +45,7 @@ export async function loadCiphertext(db: Db, connectionId: string): Promise<stri
 }
 
 export async function loadStatementOwner(db: Db, userId: string) {
-  const { data } = await db.from("users").select("id, role, agent_type").eq("id", userId).maybeSingle();
+  const { data } = await db.from("users").select("id, role, agent_type").eq("id", userId).eq("active", true).maybeSingle();
   return data;
 }
 
@@ -129,5 +129,6 @@ export async function markConnection(
       : result.ok
         ? { status: "needs_attention" as const, last_error: result.warning ?? null, last_successful_sync_at: now, last_sync_at: now }
         : { status: "needs_attention" as const, last_error: result.error, last_sync_at: now };
-  await db.from("carrier_connections").update(update).eq("id", id);
+  const { error } = await db.from("carrier_connections").update(update).eq("id", id);
+  if (error) throw new Error("Could not save connection status.");
 }
