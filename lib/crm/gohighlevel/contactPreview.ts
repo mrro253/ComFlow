@@ -3,7 +3,7 @@ import { validateSetupInput,validGhlId } from "./setupClient";
 export interface PreviewContact { id:string; firstName:string; lastName:string; mbi:string|null }
 export interface PreviewEnrollment { code:string; firstName:string; lastName:string; mbi:string; carrier:string; plan:string; proposedEffectiveDate:string }
 export interface ContactCandidate { name:string; evidence:"Full MBI agrees"|"Name only"|"MBI differs" }
-export interface ContactPreviewRow { code:string; name:string; carrier:string; plan:string; effectiveDate:string; status:"MBI agreement"|"Name candidate"|"Multiple candidates"|"Identity conflict"|"No candidate found"|"Search incomplete"|"Name differs"; candidates:ContactCandidate[]; investigation?:string }
+export interface ContactPreviewRow { code:string; name:string; carrier:string; plan:string; effectiveDate:string; status:"MBI agreement"|"Name candidate"|"Multiple candidates"|"Identity conflict"|"No candidate found"|"Search incomplete"|"Name differs"; candidates:ContactCandidate[]; investigation?:string;linked?:boolean }
 const normalizeName=(s:string)=>s.normalize("NFKC").trim().replace(/\s+/g," ").toLocaleLowerCase("en-US");
 export const fullMbi=(s:unknown)=>typeof s==="string"&&/^[A-Z0-9]{11}$/.test(s.replace(/[ -]/g,"").toUpperCase())?s.replace(/[ -]/g,"").toUpperCase():null;
 export function compareContactCandidates(enrollment:PreviewEnrollment, contacts:PreviewContact[], complete:boolean):ContactPreviewRow {

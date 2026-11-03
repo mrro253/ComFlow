@@ -21,7 +21,7 @@ export function CrmConnectionCard() {
           <CardTitle>GoHighLevel</CardTitle>
           <CardDescription>
             Connect your sub-account and see which enrollments have matching GHL contacts.
-            Contact updates and linking are disabled. Commission amounts come only
+            Verified enrollment links stay inside ComFlow; GHL contact updates are disabled. Commission amounts come only
             from carrier statements.
           </CardDescription>
         </div>

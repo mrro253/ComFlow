@@ -1,3 +1,7 @@
+# ComFlow-only GHL enrollment linking - 2026-11-02
+
+The GHL preview now includes a separate action to save verified enrollment/contact links inside ComFlow. Fresh full-MBI checks, reviewed-plan binding, application separation, existing-link conflict protection and idempotent retries are required. GHL contact updates and financial/source record changes remain disabled. See [scope and verification](docs/ghl-contact-preview.md). Earlier read-only-only statements below describe previous checkpoints.
+
 # Read-only GHL contact preview - 2026-11-02
 
 Review branch feature/ghl-contact-preview adds an on-demand enrollment/name-candidate preview under Settings > GoHighLevel. Only contacts assigned to the mapped GHL user are shown. Nothing is linked or written. Full-MBI evidence additionally requires locations/customFields.readonly; missing access stays explicitly name-only. This bounded name search is not an exhaustive identity search. See [preview scope, security and API limits](docs/ghl-contact-preview.md). Earlier setup-only sections below describe prior review checkpoints.
