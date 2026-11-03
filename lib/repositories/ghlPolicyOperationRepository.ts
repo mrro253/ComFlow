@@ -13,7 +13,7 @@ async function change(user:CurrentUser,access:Access,action:string,data:Json){
   const {data:op,error}=await createAdminClient().rpc("manage_ghl_policy_operation",{p_actor:user.id,p_agency:user.agencyId,p_action:action,p_data:data});
   if(error||!op)throw new Error("Policy operation could not be saved. Another update may be running or access may have changed.");return validate(op as unknown as PolicyOperation,user,access);
 }
-export async function preparePolicyOperation(user:CurrentUser,access:Access,plan:StatusWritePlan){return change(user,access,"prepare",{id:randomUUID(),...plan});}
+export async function preparePolicyOperation(user:CurrentUser,access:Access,plan:StatusWritePlan){return change(user,access,"prepare",{id:randomUUID(),...plan} as unknown as Json);}
 export async function readPolicyOperation(user:CurrentUser,access:Access,id:string){
   if(!/^[a-f0-9-]{36}$/i.test(id))throw new Error("Invalid operation.");await scope(user,access);
   const {data,error}=await createAdminClient().from("ghl_policy_operations").select("*").eq("id",id).eq("agency_id",user.agencyId).eq("actor_user_id",user.id).eq("connection_id",access.connectionId).maybeSingle();

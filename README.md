@@ -1,3 +1,7 @@
+# Reviewed GHL plan details - 2026-11-03
+
+The policy update preview now offers grouped review of plan name, effective date and supported policy type changes, with exact prior values saved in a history note before sending. A matched paid application, clear policy dates and explicit per-contact approval are required. Unknown product types remain unchanged. No real plan details were sent during development. See [eligibility, recovery and validation](docs/ghl-policy-details.md). This remains on the review branch; Main is unchanged.
+
 # Reviewed GHL status pilot - 2026-11-03
 
 A separate per-contact review and approval can send an Active status assumption and a prior-status history note. Previewing remains read-only. No real GHL writes have been tested or sent during development. See [pilot behavior and limits](docs/ghl-write-pilot.md). Earlier sections record previous checkpoints.

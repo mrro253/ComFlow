@@ -16,3 +16,9 @@ it("requires one matching body, author and contact when reconciling an operation
 it("does not retry writes or expose upstream error bodies",async()=>{
  const fetcher=vi.fn().mockResolvedValue(new Response("private provider data",{status:403}));vi.stubGlobal("fetch",fetcher);const client=createStatusWriter("Location123","User123",token,"Contact123");await expect(client.createNote("Synthetic")).rejects.toThrow("could not be confirmed");expect(fetcher).toHaveBeenCalledTimes(1);
 });
+
+it("sends only the reviewed plan detail custom fields in one request",async()=>{
+ const fetcher=vi.fn(async()=>new Response(JSON.stringify({succeeded:true,contact:{id:"Contact123"}})));vi.stubGlobal("fetch",fetcher);
+ await createStatusWriter("Location123","User123",token,"Contact123").setDetails({kind:"details",changes:[{key:"plan",fieldId:"PlanField123",label:"Medicare policy name",previous:"Old plan",target:"Example plan"},{key:"date",fieldId:"DateField123",label:"Medicare policy effective date",previous:null,target:"2026-02-01"}]});
+ expect(JSON.parse(String((fetcher.mock.calls as unknown as [string,RequestInit][])[0][1].body))).toEqual({customFields:[{id:"PlanField123",fieldValue:"Example plan"},{id:"DateField123",fieldValue:"2026-02-01"}]});expect(fetcher).toHaveBeenCalledTimes(1);
+});

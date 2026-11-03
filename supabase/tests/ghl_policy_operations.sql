@@ -47,6 +47,17 @@ update public.ghl_policy_operations set lease_until=now()-interval '1 second' wh
 select pg_temp.run('e0140000-0000-4000-8000-000000000001','claim','{"id":"e0140000-0000-4000-8000-000000000504","leaseId":"e0140000-0000-4000-8000-000000000707"}');
 select pg_temp.denied($q$select pg_temp.run('e0140000-0000-4000-8000-000000000001','checkpoint','{"id":"e0140000-0000-4000-8000-000000000504","leaseId":"e0140000-0000-4000-8000-000000000706","phase":"note_pending"}')$q$);
 select pg_temp.denied($q$select pg_temp.run('e0140000-0000-4000-8000-000000000001','prepare',pg_temp.payload()||jsonb_build_object('contactId','SyntheticContact4','code','APP4','reviewHash',repeat('e',64)))$q$);
+-- Details use the same private journal, with one pending operation per contact.
+select pg_temp.run('e0140000-0000-4000-8000-000000000001','prepare',pg_temp.payload()||'{"id":"e0140000-0000-4000-8000-000000000510","contactId":"SyntheticDetails","fieldId":"PolicyDetails","payload":{"kind":"details","changes":[{"key":"plan","fieldId":"SyntheticPlan","label":"Medicare policy name","previous":"Old synthetic plan","target":"New synthetic plan"}]}}');
+select pg_temp.ok((select payload->'changes'->0->>'previous'='Old synthetic plan' from public.ghl_policy_operations where id='e0140000-0000-4000-8000-000000000510'),'details preserve original reviewed value');
+select pg_temp.run('e0140000-0000-4000-8000-000000000001','claim','{"id":"e0140000-0000-4000-8000-000000000510","leaseId":"e0140000-0000-4000-8000-000000000710"}');
+select pg_temp.denied($q$select pg_temp.run('e0140000-0000-4000-8000-000000000001','prepare',pg_temp.payload()||jsonb_build_object('contactId','SyntheticDetails','reviewHash',repeat('e',64)))$q$);
+select pg_temp.run('e0140000-0000-4000-8000-000000000001','checkpoint','{"id":"e0140000-0000-4000-8000-000000000510","leaseId":"e0140000-0000-4000-8000-000000000710","phase":"note_pending"}');
+select pg_temp.run('e0140000-0000-4000-8000-000000000001','checkpoint','{"id":"e0140000-0000-4000-8000-000000000510","leaseId":"e0140000-0000-4000-8000-000000000710","phase":"note_confirmed","noteId":"SyntheticDetailsNote"}');
+select pg_temp.run('e0140000-0000-4000-8000-000000000001','checkpoint','{"id":"e0140000-0000-4000-8000-000000000510","leaseId":"e0140000-0000-4000-8000-000000000710","phase":"completed"}');
+select pg_temp.ok((select count(*)=1 from public.audit_events where action='ghl.policy_details_write_completed'),'details receive a separate completion receipt');
+select pg_temp.denied($q$select pg_temp.run('e0140000-0000-4000-8000-000000000001','prepare',pg_temp.payload()||'{"fieldId":"PolicyDetails"}')$q$);
+select pg_temp.denied($q$select pg_temp.run('e0140000-0000-4000-8000-000000000001','prepare',pg_temp.payload()||'{"fieldId":"PolicyDetails","payload":{"kind":"details","changes":[{"key":"mbi","fieldId":"SyntheticMbi","previous":null,"target":"forbidden"}]}}')$q$);
 update public.users set active=false where id='e0140000-0000-4000-8000-000000000001';
 select pg_temp.denied($q$select pg_temp.run('e0140000-0000-4000-8000-000000000001','prepare',pg_temp.payload())$q$);
 rollback;

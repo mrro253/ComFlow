@@ -39,7 +39,7 @@ it("proposes the existing Active choice from Paid evidence without claiming carr
  const preview=buildPolicyPreview(source,fields,{...contact,values:{StatusField123:"Unknown"}},1,"now",assumed);
  expect(preview.assumedActive).toBe(true);expect(preview.statusProposal).toBe(true);expect(preview.reason).toContain("payment-based assumption");
  expect(preview.fields.find(f=>f.label==="Medicare policy status")?.decision).toContain("Propose Active");expect(preview.noteDraft).toContain("Assumed Active");
- expect(preview.fields.find(f=>f.label==="Medicare policy name")?.decision).toContain("Keep unchanged");
+ expect(preview.detailsProposal).toBe(true); expect(preview.fields.find(f=>f.label==="Medicare policy name")?.decision).toContain("review required");
 });
 it("does not overwrite another/newer GHL policy or choose between multiple applications",()=>{
  const assumed={status:"Active",basis:"commission_reported",statementMonth:"2026-03"} as const;

@@ -1,9 +1,10 @@
+import { parseDetailsPayload,type DetailsPayload } from "./detailsWritePlan";
 import { digest } from "@/lib/carriers/digest";
 import { applicationFingerprint } from "@/lib/enrollments/applicationOutcome";
 import type { CoverageAssumption } from "@/lib/enrollments/coverageAssumption";
 import type { SunfireEnrollment } from "@/lib/enrollments/sunfire";
 import { buildPolicyPreview,type PolicyContact,type PolicyField } from "./policyUpdatePreview";
-export interface StatusWritePlan {connectionId:string;locationId:string;ghlUserId:string;contactId:string;fieldId:string;ownerId:string;sourceHash:string;code:string;sourceFingerprint:string;statementMonth:string;reviewHash:string;snapshotHash:string;previousStatus:string|null}
+export interface StatusWritePlan {connectionId:string;locationId:string;ghlUserId:string;contactId:string;fieldId:string;ownerId:string;sourceHash:string;code:string;sourceFingerprint:string;statementMonth:string;reviewHash:string;snapshotHash:string;previousStatus:string|null;payload?:DetailsPayload}
 export function statusWritePlan(input:{source:SunfireEnrollment;ownerId:string;sourceHash:string;assumption:CoverageAssumption|null;fields:PolicyField[];contact:PolicyContact;applicationCount:number;connectionId:string;locationId:string;ghlUserId:string;contactId:string;previousOverride?:string|null}):StatusWritePlan{
   const matches=input.fields.filter(f=>f.key==="contact.1_policy_status");if(matches.length!==1)throw new Error("Policy status mapping unavailable.");
   const field=matches[0],raw=input.contact.values[field.id];
@@ -16,6 +17,8 @@ export function statusWritePlan(input:{source:SunfireEnrollment;ownerId:string;s
   const plan={connectionId:input.connectionId,locationId:input.locationId,ghlUserId:input.ghlUserId,contactId:input.contactId,fieldId:field.id,ownerId:input.ownerId,sourceHash:input.sourceHash,code:input.source.code,sourceFingerprint:applicationFingerprint(input.source),statementMonth:input.assumption.statementMonth,snapshotHash,previousStatus};
   return {...plan,reviewHash:digest({version:1,...plan})};
 }
-export function statusHistoryNote(op:{id:string;source_code:string;statement_month:string;previous_status:string|null}){
+export function statusHistoryNote(op:{id:string;source_code:string;statement_month:string;previous_status:string|null;payload?:unknown}){
+  const details=parseDetailsPayload(op.payload);
+  if(details)return `ComFlow requested policy details update\n${details.changes.map(c=>`${c.label}: ${c.previous??"Blank"} -> ${c.target}`).join("\n")}\nBasis: SunFire application matched to commission reported for ${op.statement_month}; application details are not carrier-verified coverage.\nEnrollment application: ${op.source_code}\nPrevious values are preserved here before the requested change. Check the current policy fields for applied values.\n[ComFlow operation ${op.id}]`;
   return `ComFlow requested policy status update\nPrevious Medicare policy status: ${op.previous_status??"Blank"}\nRequested policy status: Active\nBasis: commission reported for ${op.statement_month}. Active is an assumption, not carrier-verified coverage.\nEnrollment application: ${op.source_code}\nThis note preserves the prior value before the requested change. Check the current policy field for its applied status.\n[ComFlow operation ${op.id}]`;
 }

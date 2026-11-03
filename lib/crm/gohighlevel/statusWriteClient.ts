@@ -1,3 +1,4 @@
+import { parseDetailsPayload,type DetailsPayload } from "./detailsWritePlan";
 import { validateSetupInput,validGhlId } from "./setupClient";
 import { readGhlPreviewObject } from "./contactPreview";
 async function write(path:string,token:string,method:"POST"|"PUT",body:unknown){
@@ -20,6 +21,12 @@ export function createStatusWriter(locationId:string,userId:string,token:string,
     },
     async createNote(body:string){
       const data=await write(`${path}/notes`,token,"POST",{userId,body});const id=noteId(data.note,body);if(!id)throw new Error("History note creation could not be confirmed.");return id;
+    },
+    async setDetails(payload:DetailsPayload){
+      const changes=parseDetailsPayload(payload)!.changes;
+      const data=await write(path,token,"PUT",{customFields:changes.map(c=>({id:c.fieldId,fieldValue:c.target}))});
+      const contact=data.contact as Record<string,unknown>|undefined;
+      if(data.succeeded===false||data.succeded===false||(contact?.id!==undefined&&contact.id!==contactId))throw new Error("Policy update could not be confirmed.");
     },
     async setActive(fieldId:string){
       if(!validGhlId(fieldId))throw new Error("Verified field required.");
