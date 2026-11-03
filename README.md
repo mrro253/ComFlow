@@ -1,3 +1,7 @@
+# Statement client contact setup - 2026-11-03
+
+The original-statement page can link verified clients and create missing GHL contacts assigned to the mapped agent. Possible duplicates are held; incomplete MBI values are never written as full Medicare numbers. A private creation journal prevents blind POST retries. See [access, duplicate checks and recovery](docs/ghl-statement-contacts.md). This remains on the review branch.
+
 # Original-statement GHL matching - 2026-11-03
 
 GHL matching can now use verified original commission statements without a SunFire enrollment. Open the original-statement check from Policy updates. Full MBI/name or Ultimate name/partial-MBI/effective-date evidence can support a reviewed Active-status update; absent plan names remain unchanged. See [scope, access and recovery](docs/ghl-statement-updates.md). No contacts change during comparison.

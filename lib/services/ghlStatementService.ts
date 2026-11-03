@@ -12,7 +12,7 @@ import type { CurrentUser } from "@/types/domain";
 import type { StatusWritePlan } from "@/lib/crm/gohighlevel/statusWritePlan";
 import type { PolicyOperation } from "@/lib/repositories/ghlPolicyOperationRepository";
 export interface StatementGhlRow {code:string;name:string;carrier:string;effectiveDate:string;month:string;amountCents:number;status:string;basis:string;currentStatus:string;currentDate:string;proposal:boolean;pendingId?:string;busy?:boolean;note:string}
-async function evidence(user:CurrentUser,onlyCode?:string){
+export async function originalStatementEvidence(user:CurrentUser,onlyCode?:string){
  const inventory=await loadSunfireMatchInventory(user);
  const target=onlyCode?inventory.entries.find(e=>`STMT_${e.id.replaceAll("-","")}`===onlyCode):null;
  if(onlyCode&&!target)throw new Error("Statement entry unavailable.");
@@ -28,7 +28,7 @@ async function evidence(user:CurrentUser,onlyCode?:string){
 export async function checkStatementContacts(user:CurrentUser,query="",onlyCode?:string,operation?:PolicyOperation){
  if(query.length>100)throw new Error("Search too long.");
  const access=await ghlPreviewAccess(user);await verifyGhlUser(access.locationId,access.ghlUserId,access.token);
- const source=await evidence(user,onlyCode),fields=await readPolicyFields(access.locationId,access.token),mbiFields=fields.filter(f=>f.key==="contact.medicare_number_mbi");
+ const source=await originalStatementEvidence(user,onlyCode),fields=await readPolicyFields(access.locationId,access.token),mbiFields=fields.filter(f=>f.key==="contact.medicare_number_mbi");
  if(mbiFields.length!==1)throw new Error("MBI mapping unavailable.");
  const groups=new Map<string,typeof source.rows>();
  for(const item of source.rows){const key=[item.entry.carrier,item.entry.carrier_member_id,item.entry.effective_date].join("/");groups.set(key,[...(groups.get(key)??[]),item]);}
