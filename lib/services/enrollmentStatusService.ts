@@ -5,6 +5,7 @@ import { readSunfireFollowups, readAssignedSaleFollowup } from "@/lib/repositori
 import { readApplicationOutcomes } from "@/lib/repositories/applicationOutcomeRepository";
 import { applicationFingerprint } from "@/lib/enrollments/applicationOutcome";
 import { enrollmentCommissionStatus } from "@/lib/enrollments/commissionStatus";
+import { enrollmentGhlStatuses,enrollmentGhlKey,type EnrollmentGhlStatus } from "@/lib/repositories/enrollmentGhlStatusRepository";
 
 /** Derived on every request; no financial records, associations or review receipts are written. */
 export async function listEnrollmentStatuses(user: CurrentUser, selected?: string) {
@@ -17,6 +18,8 @@ export async function listEnrollmentStatuses(user: CurrentUser, selected?: strin
   }
   const outcomes = await Promise.all(sales.map(sale => readApplicationOutcomes(user, sale.ownerId, sale.collectionHash, sale.code)));
   const assignedFollowups = user.role === "agent" ? await Promise.all(sales.map(sale => readAssignedSaleFollowup(user, sale.ownerId, sale.collectionHash, sale.code))) : [];
+  let ghlStatuses:Map<string,EnrollmentGhlStatus>;
+  try {ghlStatuses=await enrollmentGhlStatuses(user,sales);} catch {ghlStatuses=new Map(sales.map(s=>[enrollmentGhlKey(s),"unavailable" as const]));}
   return sales.map((sale, index) => {
     const match = verified.matches[index];
     if (!match || match.enrollmentCode !== sale.code) throw new Error("Enrollment comparison unavailable.");
@@ -27,6 +30,6 @@ export async function listEnrollmentStatuses(user: CurrentUser, selected?: strin
     const status = enrollmentCommissionStatus(match, outcome ? outcome.status === "did_not_take_effect" : legacyNoCommission);
     const { source: _source, versions: _versions, ...display } = sale;
     void _source; void _versions;
-    return { ...display, commission: status, outcomeHistory: outcomes[index].history.map(({ fingerprint: _fingerprint, ...event }) => { void _fingerprint; return event; }), explanation: outcome?.note ?? (status.label === "No commission expected" ? followup?.note : undefined) };
+    return { ...display, ghlStatus:ghlStatuses.get(enrollmentGhlKey(sale))??"unavailable", commission: status, outcomeHistory: outcomes[index].history.map(({ fingerprint: _fingerprint, ...event }) => { void _fingerprint; return event; }), explanation: outcome?.note ?? (status.label === "No commission expected" ? followup?.note : undefined) };
   });
 }

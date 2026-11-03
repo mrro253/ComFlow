@@ -3,7 +3,8 @@ import { listEnrollmentStatuses } from "../enrollmentStatusService";
 import { compareEnrollmentCommissions, type CommissionEvidence } from "@/lib/enrollments/commissionMatches";
 import { syntheticSunfireCollection } from "@/lib/enrollments/__fixtures__/sunfireCollection";
 import type { CurrentUser } from "@/types/domain";
-const mocks = vi.hoisted(() => ({ sales: vi.fn(), compare: vi.fn(), followups: vi.fn(), assigned: vi.fn(), outcomes: vi.fn() }));
+const mocks = vi.hoisted(() => ({ sales: vi.fn(), compare: vi.fn(), followups: vi.fn(), assigned: vi.fn(), outcomes: vi.fn(),ghl:vi.fn() }));
+vi.mock("@/lib/repositories/enrollmentGhlStatusRepository",()=>({enrollmentGhlStatuses:mocks.ghl,enrollmentGhlKey:(s:{ownerId:string;code:string})=>`${s.ownerId}/${s.code}`}));
 vi.mock("@/lib/repositories/applicationOutcomeRepository", () => ({ readApplicationOutcomes: mocks.outcomes }));
 vi.mock("../saleDispositionService", () => ({ listEditableSales: mocks.sales }));
 vi.mock("../sunfireMatchService", () => ({ compareVerifiedEnrollments: mocks.compare }));
@@ -12,8 +13,12 @@ const source = syntheticSunfireCollection().records[0];
 const user = { id: "owner", agencyId: "agency", active: true, role: "owner" } as CurrentUser;
 const sale = { source, ownerId: "owner", collectionHash: "a".repeat(64), code: source.code, clientName: "Example Person", disposition: null };
 const match = (entries: CommissionEvidence[] = []) => ({ matches: compareEnrollmentCommissions([source], entries, []) });
-beforeEach(() => { vi.clearAllMocks(); mocks.sales.mockResolvedValue([sale]); mocks.compare.mockResolvedValue(match()); mocks.followups.mockResolvedValue({}); mocks.assigned.mockResolvedValue(undefined); mocks.outcomes.mockResolvedValue({ history: [], latest: undefined }); });
+beforeEach(() => { vi.clearAllMocks(); mocks.ghl.mockResolvedValue(new Map([[`owner/${source.code}`,"linked"]]));mocks.sales.mockResolvedValue([sale]); mocks.compare.mockResolvedValue(match()); mocks.followups.mockResolvedValue({}); mocks.assigned.mockResolvedValue(undefined); mocks.outcomes.mockResolvedValue({ history: [], latest: undefined }); });
 describe("derived enrollment status service", () => {
+  it("keeps saved GHL link status separate from commission status",async()=>{
+    const rows=await listEnrollmentStatuses(user);expect(rows[0].ghlStatus).toBe("linked");expect(rows[0].commission.label).toBe("Not paid yet");
+    mocks.ghl.mockRejectedValue(new Error("Unavailable"));const unavailable=await listEnrollmentStatuses(user);expect(unavailable[0].ghlStatus).toBe("unavailable");expect(unavailable[0].commission.label).toBe("Not paid yet");
+  });
   it("compares only authorized sources and strips full MBIs from the view model", async () => {
     const rows = await listEnrollmentStatuses(user);
     expect(mocks.sales).toHaveBeenCalledWith(user, undefined, true);
