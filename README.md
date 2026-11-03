@@ -1,3 +1,7 @@
+# Read-only GHL contact preview - 2026-11-02
+
+Review branch feature/ghl-contact-preview adds an on-demand enrollment/name-candidate preview under Settings > GoHighLevel. Only contacts assigned to the mapped GHL user are shown. Nothing is linked or written. Full-MBI evidence additionally requires locations/customFields.readonly; missing access stays explicitly name-only. This bounded name search is not an exhaustive identity search. See [preview scope, security and API limits](docs/ghl-contact-preview.md). Earlier setup-only sections below describe prior review checkpoints.
+
 # CommissionFlow
 
 ## Personal and shared GHL connection setup — 2026-11-02

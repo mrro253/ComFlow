@@ -18,18 +18,18 @@ export function CrmConnectionCard() {
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
         <div>
-          <CardTitle>GoHighLevel (output only)</CardTitle>
+          <CardTitle>GoHighLevel</CardTitle>
           <CardDescription>
-            Planned: match statement clients to GoHighLevel contacts and push policy
-            statuses back. It will never create or change commission amounts - those come
-            only from carrier statements.
+            Connect your sub-account and preview enrollment contact candidates.
+            Contact updates and linking are disabled. Commission amounts come only
+            from carrier statements.
           </CardDescription>
         </div>
         <Plug className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent className="flex items-center gap-3">
         <span className="text-sm font-medium">GoHighLevel</span>
-        <Badge variant="outline">Setup only</Badge>
+        <Badge variant="outline">Read-only preview</Badge>
         <Link className="rounded-md border px-4 py-2 text-sm font-medium" href="/settings/ghl">Connect GoHighLevel</Link>
       </CardContent>
     </Card>
