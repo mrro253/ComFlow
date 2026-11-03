@@ -3,7 +3,7 @@ import { validateSetupInput,validGhlId } from "./setupClient";
 export interface PreviewContact { id:string; firstName:string; lastName:string; mbi:string|null }
 export interface PreviewEnrollment { code:string; firstName:string; lastName:string; mbi:string; carrier:string; plan:string; proposedEffectiveDate:string }
 export interface ContactCandidate { name:string; evidence:"Full MBI agrees"|"Name only"|"MBI differs" }
-export interface ContactPreviewRow { code:string; name:string; carrier:string; plan:string; effectiveDate:string; status:"MBI agreement"|"Name candidate"|"Multiple candidates"|"Identity conflict"|"No candidate found"|"Search incomplete"; candidates:ContactCandidate[] }
+export interface ContactPreviewRow { code:string; name:string; carrier:string; plan:string; effectiveDate:string; status:"MBI agreement"|"Name candidate"|"Multiple candidates"|"Identity conflict"|"No candidate found"|"Search incomplete"|"Name differs"; candidates:ContactCandidate[]; investigation?:string }
 const normalizeName=(s:string)=>s.normalize("NFKC").trim().replace(/\s+/g," ").toLocaleLowerCase("en-US");
 export const fullMbi=(s:unknown)=>typeof s==="string"&&/^[A-Z0-9]{11}$/.test(s.replace(/[ -]/g,"").toUpperCase())?s.replace(/[ -]/g,"").toUpperCase():null;
 export function compareContactCandidates(enrollment:PreviewEnrollment, contacts:PreviewContact[], complete:boolean):ContactPreviewRow {
@@ -28,9 +28,9 @@ export async function readMbiField(locationId:string,token:string):Promise<strin
   const matches=data.customFields.filter((f:Record<string,unknown>)=>f?.fieldKey==="contact.medicare_number_mbi"&&f.model==="contact"&&f.locationId===locationId&&typeof f.id==="string"&&validGhlId(f.id));
   return matches.length===1?matches[0].id:null;
 }
-export async function searchAssignedContacts(locationId:string,ghlUserId:string,token:string,enrollment:PreviewEnrollment,mbiField:string|null) {
+export async function searchAssignedContacts(locationId:string,ghlUserId:string,token:string,enrollment:PreviewEnrollment,mbiField:string|null,search:"full"|"first"|"last"="full") {
   validateSetupInput(locationId,token);if(!validGhlId(ghlUserId))throw new Error("Verified GHL user required.");
-  const query=new URLSearchParams({locationId,query:`${enrollment.firstName} ${enrollment.lastName}`,limit:"100"});
+  const query=new URLSearchParams({locationId,query:search==="first"?enrollment.firstName:search==="last"?enrollment.lastName:`${enrollment.firstName} ${enrollment.lastName}`,limit:"100"});
   const data=await read(`/contacts/?${query}`,token);
   if(!Array.isArray(data.contacts)||data.contacts.length>100)throw new Error("Contact search response unavailable.");
   const ids=new Set<string>();const contacts:PreviewContact[]=[];
@@ -45,4 +45,17 @@ export async function searchAssignedContacts(locationId:string,ghlUserId:string,
   }
   // This bounded name query is not an exhaustive MBI lookup. Full pages stay visibly incomplete.
   return {contacts,complete:data.contacts.length<100&&!(typeof data.count==="number"&&data.count>data.contacts.length)};
+}
+
+export function investigateContactIdentity(enrollment:PreviewEnrollment,contacts:PreviewContact[],complete:boolean):ContactPreviewRow {
+  const row=compareContactCandidates(enrollment,contacts,complete);
+  const sourceMbi=fullMbi(enrollment.mbi);
+  const agreeing=sourceMbi?contacts.filter(contact=>contact.mbi===sourceMbi):[];
+  if(!complete)return {...row,investigation:"A broader name search reached its result limit. The result is not confirmed."};
+  if(agreeing.length>1)return {...row,status:"Multiple candidates",candidates:agreeing.map(c=>({name:`${c.firstName} ${c.lastName}`,evidence:"Full MBI agrees"})),investigation:"Multiple assigned GHL contacts have this full MBI. Nothing linked."};
+  if(agreeing.length===1){
+    const contact=agreeing[0];const sameName=normalizeName(`${contact.firstName} ${contact.lastName}`)===normalizeName(row.name);
+    return {...row,status:sameName?"MBI agreement":"Name differs",candidates:[{name:`${contact.firstName} ${contact.lastName}`,evidence:"Full MBI agrees"}],investigation:sameName?"Broader name searches found an agreeing name and full MBI.":"Full MBI agrees, but the GHL name differs. Review the name before linking."};
+  }
+  return {...row,investigation:"No agreeing full MBI found in first-name and last-name searches of your assigned contacts. This is not an exhaustive search of GHL."};
 }

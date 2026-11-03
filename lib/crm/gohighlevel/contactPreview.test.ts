@@ -1,5 +1,5 @@
 import { afterEach,expect,it,vi } from "vitest";
-import { compareContactCandidates,fullMbi,readMbiField,searchAssignedContacts } from "./contactPreview";
+import { compareContactCandidates,investigateContactIdentity,fullMbi,readMbiField,searchAssignedContacts } from "./contactPreview";
 const sale={code:"APP1",firstName:"Test",lastName:"Person",mbi:"1AB2CD3EF45",carrier:"Synthetic",plan:"Synthetic",proposedEffectiveDate:"2026-01-01"};
 const contact={id:"Contact123",firstName:"TEST",lastName:" Person ",mbi:sale.mbi};
 const token="synthetic-private-token-for-test";
@@ -33,4 +33,11 @@ it("resolves only one exact MBI field key in the verified location",async()=>{
  expect(await readMbiField("Location123",token)).toBe("Field123");
  vi.stubGlobal("fetch",vi.fn().mockResolvedValue(reply({customFields:[field,{...field,id:"Duplicate123"}]})));
  expect(await readMbiField("Location123",token)).toBeNull();
+});
+it("keeps alternate names with matching full MBIs separate from confirmed name matches",()=>{
+ const alias={...contact,firstName:"Alternate"};
+ expect(investigateContactIdentity(sale,[alias],true).status).toBe("Name differs");
+ expect(investigateContactIdentity(sale,[alias,{...contact,id:"Contact456"}],true).status).toBe("Multiple candidates");
+ expect(investigateContactIdentity(sale,[alias],false).status).toBe("Search incomplete");
+ expect(investigateContactIdentity(sale,[{...alias,mbi:null}],true).status).toBe("No candidate found");
 });

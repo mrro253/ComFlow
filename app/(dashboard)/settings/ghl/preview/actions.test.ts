@@ -21,3 +21,7 @@ it("rechecks credentials and assignment before returning a preview",async()=>{
 it("returns only a sanitized preview without persistence",async()=>{
  const result=await previewGhlContacts();expect(result.rows).toHaveLength(1);expect(result.warning).toContain("not confirmed");expect(JSON.stringify(result)).not.toContain(access.token);expect(JSON.stringify(result)).not.toContain("1AB2CD3EF45");expect(m.verify).toHaveBeenCalledWith(access.locationId,access.ghlUserId,access.token);
 });
+it("broadens only unmatched enrollments and compares full MBIs without returning them",async()=>{
+ m.field.mockResolvedValue("Field123");m.search.mockResolvedValueOnce({contacts:[],complete:true}).mockResolvedValue({contacts:[{id:"Contact123",firstName:"Alternate",lastName:"Person",mbi:"1AB2CD3EF45"}],complete:true});
+ const result=await previewGhlContacts(true);expect(result.rows?.[0].status).toBe("Name differs");expect(result.investigated).toBe(true);expect(m.search).toHaveBeenCalledTimes(3);expect(JSON.stringify(result)).not.toContain("1AB2CD3EF45");
+});
