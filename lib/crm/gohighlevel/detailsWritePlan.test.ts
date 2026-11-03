@@ -8,7 +8,7 @@ const input={source,ownerId:"owner",sourceHash:"a".repeat(64),assumption:{status
 it("groups verified details with exact prior values in one private review and note",()=>{
  const p=detailsWritePlan({...input,contact:{...input.contact,values:{PlanField123:"Old plan",DateField123:"2025-01-01",TypeField123:"Medicare Supplement"}}});
  expect(p.payload?.changes).toHaveLength(3);expect(p.payload?.changes[0]).toMatchObject({previous:"Old plan",target:source.plan});expect(JSON.stringify(p)).not.toContain(source.mbi);
- const note=statusHistoryNote({id:"synthetic-operation",source_code:source.code,statement_month:"2026-03",previous_status:null,payload:p.payload});expect(note).toContain("Old plan -> Example Plan");expect(note).toContain("2025-01-01 -> 2026-02-01");expect(note).not.toContain(source.mbi);
+ const note=statusHistoryNote({id:"synthetic-operation",source_code:source.code,statement_month:"2026-03",previous_status:null,payload:p.payload});expect(note).toContain("Previous plan: Old plan | Effective: 01/01/2025 | Terminated: Not available | Type: Medicare Supplement");expect(note).toContain("→ Changed to: Example Plan | Effective: 02/01/2026 | Type: Medicare Advantage");expect(note).not.toContain(source.mbi);
 });
 it("recovers complete or partially applied fields against the original review without accepting unrelated edits",()=>{
  const p=detailsWritePlan(input),payload=p.payload!;
@@ -26,4 +26,17 @@ it("does not invent policy types or resend agreeing values",()=>{
 });
 it("rejects unsafe or duplicate history/field payloads",()=>{
  expect(()=>parseDetailsPayload({kind:"details",changes:[]})).toThrow();const p=detailsWritePlan(input).payload!;expect(()=>parseDetailsPayload({...p,changes:[p.changes[0],p.changes[0]]})).toThrow();expect(()=>detailsWritePlan({...input,source:{...source,plan:"Injected\nline"}})).toThrow();
+});
+
+it("includes an unchanged old effective date and explicit termination date without updating that field",()=>{
+ const p=detailsWritePlan({...input,fields:[...fields,{id:"TermField123",key:"contact.term",name:"Medicare Policy Termination Date",type:"DATE",options:[]}],contact:{...input.contact,values:{PlanField123:"Old plan",DateField123:source.proposedEffectiveDate,TermField123:"2026-05-31",TypeField123:"Medicare Advantage"}}});
+ expect(p.payload!.changes.map(c=>c.key)).toEqual(["plan"]);
+ const note=statusHistoryNote({id:"synthetic",source_code:source.code,statement_month:"2026-03",previous_status:null,payload:p.payload});expect(note).toContain("Effective: 02/01/2026 | Terminated: 05/31/2026");expect(note.split("\n")).toHaveLength(4);
+ expect(JSON.stringify(p.payload!.changes)).not.toContain("TermField123");
+});
+it("does not infer a termination date from the next effective date and keeps legacy recovery notes unchanged",()=>{
+ const p=detailsWritePlan(input);expect(p.payload!.history!.previous.terminationDate).toBeNull();
+ const legacy={kind:"details" as const,changes:p.payload!.changes};
+ expect(detailsWritePlan({...input,detailsOverride:legacy}).payload!.history).toBeUndefined();
+ const note=statusHistoryNote({id:"synthetic",source_code:source.code,statement_month:"2026-03",previous_status:null,payload:legacy});expect(note).toContain("ComFlow requested policy details update");
 });

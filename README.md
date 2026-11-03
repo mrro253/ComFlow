@@ -1,3 +1,7 @@
+# Concise GHL plan history notes - 2026-11-03
+
+New plan-detail reviews show the previous plan, old effective date, recorded termination date and type, followed by the new plan details. Missing termination dates show Not available. Existing GHL notes and old recovery operations retain their original format. See [note rules](docs/ghl-policy-details.md).
+
 # Reviewed GHL plan details - 2026-11-03
 
 The policy update preview now offers grouped review of plan name, effective date and supported policy type changes, with exact prior values saved in a history note before sending. A matched paid application, clear policy dates and explicit per-contact approval are required. Unknown product types remain unchanged. No real plan details were sent during development. See [eligibility, recovery and validation](docs/ghl-policy-details.md). This remains on the review branch; Main is unchanged.

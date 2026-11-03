@@ -1,4 +1,4 @@
-import { detailsWritePlan } from "./detailsWritePlan";
+import { detailsWritePlan,terminationFields } from "./detailsWritePlan";
 import { fullMbi,readGhlPreviewObject } from "./contactPreview";
 import { validateSetupInput,validGhlId } from "./setupClient";
 import type { SunfireEnrollment } from "@/lib/enrollments/sunfire";
@@ -33,7 +33,7 @@ export async function readPolicyContact(locationId:string,userId:string,token:st
   const mbiValues=c.customFields.filter(f=>f?.id===mbiFields[0].id);
   const mbi=mbiValues.length===1?fullMbi(mbiValues[0].value):null;
   if(!mbi)throw new Error("Full MBI cannot be verified.");
-  const allowed=new Set(fields.filter(f=>definitions.some(d=>"key" in d?d.key===f.key:d.name===f.name)).map(f=>f.id));
+  const allowed=new Set([...fields.filter(f=>definitions.some(d=>"key" in d?d.key===f.key:d.name===f.name)),...terminationFields(fields)].map(f=>f.id));
   const values:Record<string,unknown>={};
   for(const f of c.customFields){if(f&&typeof f.id==="string"&&allowed.has(f.id)){if(Object.hasOwn(values,f.id))throw new Error("Duplicate field value.");values[f.id]=f.value;}}
   return {firstName:typeof c.firstName==="string"?c.firstName.slice(0,200):"",lastName:typeof c.lastName==="string"?c.lastName.slice(0,200):"",mbi,values};

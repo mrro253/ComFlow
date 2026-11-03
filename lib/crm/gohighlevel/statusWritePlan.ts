@@ -19,6 +19,11 @@ export function statusWritePlan(input:{source:SunfireEnrollment;ownerId:string;s
 }
 export function statusHistoryNote(op:{id:string;source_code:string;statement_month:string;previous_status:string|null;payload?:unknown}){
   const details=parseDetailsPayload(op.payload);
+  if(details?.history){
+    const h=details.history,date=(v:string|null)=>v?`${v.slice(5,7)}/${v.slice(8,10)}/${v.slice(0,4)}`:"Not available";
+    const describe=(p:typeof h.previous,old:boolean)=>`${p.plan??"Not listed"} | Effective: ${date(p.effectiveDate)}${old?` | Terminated: ${date(p.terminationDate)}`:""} | Type: ${p.type??"Not listed"}`;
+    return `Updated by ComFlow — ${date(h.date)}\nPrevious plan: ${describe(h.previous,true)}\n→ Changed to: ${describe(h.next,false)}\n[ComFlow operation ${op.id}]`;
+  }
   if(details)return `ComFlow requested policy details update\n${details.changes.map(c=>`${c.label}: ${c.previous??"Blank"} -> ${c.target}`).join("\n")}\nBasis: SunFire application matched to commission reported for ${op.statement_month}; application details are not carrier-verified coverage.\nEnrollment application: ${op.source_code}\nPrevious values are preserved here before the requested change. Check the current policy fields for applied values.\n[ComFlow operation ${op.id}]`;
   return `ComFlow requested policy status update\nPrevious Medicare policy status: ${op.previous_status??"Blank"}\nRequested policy status: Active\nBasis: commission reported for ${op.statement_month}. Active is an assumption, not carrier-verified coverage.\nEnrollment application: ${op.source_code}\nThis note preserves the prior value before the requested change. Check the current policy field for its applied status.\n[ComFlow operation ${op.id}]`;
 }

@@ -3,13 +3,19 @@ import { fullMbi } from "./contactPreview";
 import { applicationFingerprint } from "@/lib/enrollments/applicationOutcome";
 import type { statusWritePlan,StatusWritePlan } from "./statusWritePlan";
 export interface DetailChange {key:"plan"|"date"|"type";fieldId:string;label:string;previous:string|null;target:string}
-export interface DetailsPayload {kind:"details";changes:DetailChange[]}
+export interface PolicyNoteDetails {plan:string|null;effectiveDate:string|null;terminationDate:string|null;type:string|null}
+export interface DetailsPayload {kind:"details";changes:DetailChange[];history?:{version:2;date:string;previous:PolicyNoteDetails;next:PolicyNoteDetails}}
+export function terminationFields<T extends {name:string;type:string}>(fields:T[]){return fields.filter(f=>f.type==="DATE"&&["Medicare Policy Termination Date","Medicare Policy Term Date"].includes(f.name));}
 export function parseDetailsPayload(raw:unknown):DetailsPayload|null {
  if(raw===undefined||raw===null)return null;
  const p=raw as DetailsPayload,labels={plan:"Medicare policy name",date:"Medicare policy effective date",type:"Medicare policy type"};
  if(p.kind!=="details"||!Array.isArray(p.changes)||p.changes.length<1||p.changes.length>3)throw new Error("Invalid details operation.");
  if(new Set(p.changes.map(c=>c.key)).size!==p.changes.length||new Set(p.changes.map(c=>c.fieldId)).size!==p.changes.length)throw new Error("Duplicate details field.");
  for(const c of p.changes)if(!Object.hasOwn(labels,c.key)||c.label!==labels[c.key]||!/^[A-Za-z0-9]{6,80}$/.test(c.fieldId)||typeof c.target!=="string"||!c.target.trim()||c.target.length>1000||/[\r\n\x00-\x1f]/.test(c.target)||(c.previous!==null&&(typeof c.previous!=="string"||c.previous.length>1000||/[\r\n\x00-\x1f]/.test(c.previous))))throw new Error("Invalid detail value.");
+ if(p.history){
+  if(p.history.version!==2||!dateOnly(p.history.date))throw new Error("Invalid history format.");
+  for(const snapshot of [p.history.previous,p.history.next]){if(!snapshot)throw new Error("History details required.");for(const k of ["plan","effectiveDate","terminationDate","type"] as const){const v=snapshot[k];if(v!==null&&(typeof v!=="string"||v.length>1000||/[\r\n\x00-\x1f]/.test(v)))throw new Error("Invalid history value.");if((k==="effectiveDate"||k==="terminationDate")&&v!==null&&!dateOnly(v))throw new Error("Invalid history date.");}}
+ }
  return p;
 }
 function dateOnly(value:string){
@@ -30,7 +36,10 @@ export function detailsWritePlan(input:Parameters<typeof statusWritePlan>[0]&{de
  if(values[0]&&values[0].trim().toLowerCase()!==input.source.plan.trim().toLowerCase()&&!oldDate)throw new Error("Different existing policy has no verified date.");
  const changes:DetailChange[]=[];
  specs.forEach((s,i)=>{if(!s.target)return;const field=s.matches[0];if(s.type==="SINGLE_OPTIONS"&&!field.options.includes(s.target))throw new Error("Dropdown option unavailable.");if((s.key==="date"?oldDate:values[i])!==s.target)changes.push({key:s.key,fieldId:field.id,label:s.label,previous:values[i],target:s.target});});
- const payload=parseDetailsPayload({kind:"details",changes})!;
+ const termFields=terminationFields(input.fields),termRaw=termFields.length===1?contact.values[termFields[0].id]:null;
+ const previous:PolicyNoteDetails={plan:values[0],effectiveDate:oldDate,terminationDate:typeof termRaw==="string"?dateOnly(termRaw):null,type:values[2]};
+ const history={version:2 as const,date:input.detailsOverride?.history?.date??new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()),previous,next:{...previous,plan:input.source.plan,effectiveDate:sourceDate,type:specs[2].target??previous.type,terminationDate:null}};
+ const payload=parseDetailsPayload({kind:"details",changes,...(input.detailsOverride&&!input.detailsOverride.history?{}:{history})})!;
  if(input.detailsOverride&&digest(payload)!==digest(input.detailsOverride))throw new Error("Reviewed details changed.");
  // Missing and explicit blank targets share one canonical snapshot during readback.
  for(const c of payload.changes)contact.values[c.fieldId]=c.previous;
