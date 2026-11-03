@@ -1,3 +1,7 @@
+# Read-only GHL policy update preview - 2026-11-02
+
+Settings > GoHighLevel now offers a policy update preview for linked enrollments, including current GHL fields and draft-only reference/history notes. Existing values are preserved because submitted SunFire applications do not confirm current coverage. There is no send/apply action and no new permission is required. See [scope, access checks and evidence limits](docs/ghl-policy-update-preview.md).
+
 # ComFlow-only GHL enrollment linking - 2026-11-02
 
 The GHL preview now includes a separate action to save verified enrollment/contact links inside ComFlow. Fresh full-MBI checks, reviewed-plan binding, application separation, existing-link conflict protection and idempotent retries are required. GHL contact updates and financial/source record changes remain disabled. See [scope and verification](docs/ghl-contact-preview.md). Earlier read-only-only statements below describe previous checkpoints.

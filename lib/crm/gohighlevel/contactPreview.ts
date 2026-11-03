@@ -13,7 +13,7 @@ export function compareContactCandidates(enrollment:PreviewEnrollment, contacts:
   return {code:enrollment.code,name,carrier:enrollment.carrier,plan:enrollment.plan,effectiveDate:enrollment.proposedEffectiveDate,status,candidates};
 }
 // Only fixed-host GET endpoints. Raw provider content and secrets are never returned or logged.
-async function read(path:string, token:string) {
+export async function readGhlPreviewObject(path:string, token:string) {
   try {
     const response=await fetch(`https://services.leadconnectorhq.com${path}`,{method:"GET",redirect:"error",cache:"no-store",signal:AbortSignal.timeout(15000),headers:{Authorization:`Bearer ${token}`,Version:"2021-07-28",Accept:"application/json"}});
     if(!response.ok||Number(response.headers.get("content-length")??0)>1000000)throw new Error();
@@ -23,7 +23,7 @@ async function read(path:string, token:string) {
 }
 export async function readMbiField(locationId:string,token:string):Promise<string|null> {
   validateSetupInput(locationId,token);
-  const data=await read(`/locations/${encodeURIComponent(locationId)}/customFields?model=contact`,token);
+  const data=await readGhlPreviewObject(`/locations/${encodeURIComponent(locationId)}/customFields?model=contact`,token);
   if(!Array.isArray(data.customFields))throw new Error("Field definitions unavailable.");
   const matches=data.customFields.filter((f:Record<string,unknown>)=>f?.fieldKey==="contact.medicare_number_mbi"&&f.model==="contact"&&f.locationId===locationId&&typeof f.id==="string"&&validGhlId(f.id));
   return matches.length===1?matches[0].id:null;
@@ -31,7 +31,7 @@ export async function readMbiField(locationId:string,token:string):Promise<strin
 export async function searchAssignedContacts(locationId:string,ghlUserId:string,token:string,enrollment:PreviewEnrollment,mbiField:string|null,search:"full"|"first"|"last"="full") {
   validateSetupInput(locationId,token);if(!validGhlId(ghlUserId))throw new Error("Verified GHL user required.");
   const query=new URLSearchParams({locationId,query:search==="first"?enrollment.firstName:search==="last"?enrollment.lastName:`${enrollment.firstName} ${enrollment.lastName}`,limit:"100"});
-  const data=await read(`/contacts/?${query}`,token);
+  const data=await readGhlPreviewObject(`/contacts/?${query}`,token);
   if(!Array.isArray(data.contacts)||data.contacts.length>100)throw new Error("Contact search response unavailable.");
   const ids=new Set<string>();const contacts:PreviewContact[]=[];
   for(const raw of data.contacts) {

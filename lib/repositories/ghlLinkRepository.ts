@@ -23,6 +23,14 @@ export async function savedGhlLinks(user:CurrentUser,access:Access,links:GhlEnro
   for(const link of links)if(await saved(user,access,link))codes.push(`${link.ownerId}/${link.code}`);
   return codes;
 }
+export async function readGhlEnrollmentLink(user:CurrentUser,access:Access,ref:{ownerId:string;code:string}){
+  await check(user,access);
+  const {data,error}=await createAdminClient().from("audit_events").select("details").eq("id",enrollmentLinkId(user.agencyId,user.id,access.connectionId,ref)).eq("agency_id",user.agencyId).eq("actor_user_id",user.id).eq("action",action).eq("entity_type","sunfire_enrollment").maybeSingle();
+  if(error)throw new Error("Saved link unavailable.");if(!data)return null;
+  const d=data.details as Record<string,unknown>|null;
+  if(!d||d.version!==1||d.connectionId!==access.connectionId||d.locationId!==access.locationId||d.ghlUserId!==access.ghlUserId||d.ownerId!==ref.ownerId||d.code!==ref.code||d.basis!=="fresh_full_mbi_verified"||typeof d.contactId!=="string"||!/^[A-Za-z0-9]{6,80}$/.test(d.contactId))throw new Error("Saved link requires recheck.");
+  return {contactId:d.contactId};
+}
 export async function appendGhlLinks(user:CurrentUser,access:Access,links:GhlEnrollmentLink[]){
   // Append-only records in the existing audit trail. No financial, enrollment-source or GHL rows change.
   let added=0;

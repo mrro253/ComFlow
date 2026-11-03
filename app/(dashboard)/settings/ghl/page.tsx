@@ -15,6 +15,7 @@ export default async function GhlSetupPage() {
     <Link className="text-sm underline" href="/settings">Back to Settings</Link><h1 className="text-2xl font-semibold">GoHighLevel setup</h1>
     <p>Connect a sub-account once, then assign yourself or your teammates by GHL User ID.</p><p>Your connection supports a read-only contact preview. Contacts are read only when you run the preview. Verified enrollment links can be saved inside ComFlow. GHL contact updates and notes are disabled.</p>
     <Link href="/settings/ghl/preview" className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Preview contact matches — read only</Link>
+    <Link href="/settings/ghl/updates" className="inline-flex rounded-md border px-4 py-2 text-sm font-medium">Preview policy updates — read only</Link>
     <section className="rounded-lg border p-5 space-y-3"><h2 className="text-lg font-semibold">{user.role==="owner"?"Step 1: Connect your GHL sub-account":"Your agency connection"}</h2>
       {shared ? <p>Verified: {shared.location_name} · Sub-account Location ID: {shared.location_id}</p>:<p>Connect this once for yourself or your agency. After saving, assign yourself and any teammates using their GHL User IDs. Assigned agents do not need a Location ID or token.</p>}
       {user.role==="owner" ? <>
