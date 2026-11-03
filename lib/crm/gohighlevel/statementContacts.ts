@@ -29,6 +29,11 @@ export function decideStatementContact(e:CommissionEvidence,directory:DirectoryC
  if(own.length===1&&possible.filter(c=>c.assignedTo===ghlUserId&&c.mbi===own[0].mbi).length===1)return {kind:"link" as const,contactId:own[0].id,reason:full?"Full MBI agrees; contact belongs to the mapped agent.":"Name, partial MBI and effective date agree."};
  return {kind:"blocked" as const,reason:verified.some(c=>c.assignedTo!==ghlUserId)?"A possible existing contact belongs to another GHL user; no duplicate created.":"A possible existing contact needs identity review; no duplicate created."};
 }
+export function uniquePartialDateContact(e:CommissionEvidence,directory:DirectoryContact[],userId:string,dateField:string){
+ const suffix=e.medicareId.replace(/[ -]/g,"").toUpperCase();if(e.carrier!=="Ultimate Health Plans"||!/^[A-Z0-9]{5}$/.test(suffix))return null;
+ const found=directory.filter(c=>c.assignedTo===userId&&!!c.mbi?.endsWith(suffix)&&typeof c.values[dateField]==="string"&&/^\d{4}-\d{2}-\d{2}(?:T00:00:00(?:\.000)?Z)?$/.test(c.values[dateField] as string)&&(c.values[dateField] as string).slice(0,10)===e.effectiveDate);
+ return found.length===1?found[0]:null;
+}
 export interface StatementIdentityBridge {name:string;carrier:string;date:string;mbi:string;contactId:string}
 export function verifiedStatementBridge(e:CommissionEvidence,directory:DirectoryContact[],userId:string,bridges:StatementIdentityBridge[]){
  const names=statementNames(e),id=e.medicareId.replace(/[ -]/g,"").toUpperCase();

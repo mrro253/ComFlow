@@ -19,3 +19,7 @@ export async function reviewHeldStatementContacts():Promise<{rows?:StatementCont
 export async function linkVerifiedHeldContacts():Promise<{rows?:StatementContactResult[];error?:string}>{
  try{return {rows:await syncStatementContacts(await requireRole(["owner"]),false,true)};}catch{return {error:"Linking paused. Recheck the current evidence before resuming. No new contacts are created by this review action."};}
 }
+
+export async function confirmStatementNamePairs(pairs:{sourceName:string;contactName:string}[]):Promise<{rows?:StatementContactResult[];error?:string}>{
+ try{return {rows:await syncStatementContacts(await requireRole(["owner"]),false,true,pairs)};}catch{return {error:"Name confirmation stopped. Partial MBI, policy date, assignment and original evidence must still agree."};}
+}

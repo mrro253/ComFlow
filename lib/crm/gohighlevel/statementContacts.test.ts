@@ -1,5 +1,5 @@
 import { afterEach,expect,it,vi } from "vitest";
-import { decideStatementContact,verifiedStatementBridge,createStatementContact,readContactDirectory,type DirectoryContact } from "./statementContacts";
+import { decideStatementContact,uniquePartialDateContact,verifiedStatementBridge,createStatementContact,readContactDirectory,type DirectoryContact } from "./statementContacts";
 import type { CommissionEvidence } from "@/lib/enrollments/commissionMatches";
 const e={carrier:"Ultimate Health Plans",firstName:"Example",lastName:"Person",clientName:"Example Person",medicareId:"5MK73",effectiveDate:"2026-03-01"} as CommissionEvidence;
 const c:DirectoryContact={id:"Contact123",firstName:"Example",lastName:"Person",assignedTo:"User123",mbi:"1EG4TE5MK73",source:"",values:{DateField123:"2026-03-01"}};
@@ -38,4 +38,12 @@ it("uses a prior verified full-MBI link only when original statement identity, c
  for(const changed of [{...bridge,date:"2025-01-01"},{...bridge,carrier:"Other"},{...bridge,name:"OTHERPERSON"},{...bridge,mbi:"9AB2CD3EF45"}])expect(verifiedStatementBridge(e,[c],"User123",[changed])).toBeNull();
  expect(verifiedStatementBridge(e,[{...c,assignedTo:"OtherUser"}],"User123",[bridge])).toBeNull();
  expect(verifiedStatementBridge(e,[c,{...c,id:"Duplicate123"}],"User123",[bridge,{...bridge,contactId:"Duplicate123"}])).toBeNull();
+});
+
+it("a name confirmation still requires a unique assigned partial-MBI/date match",()=>{
+ const alias={...c,firstName:"Different"};expect(uniquePartialDateContact(e,[alias],"User123","DateField123")?.id).toBe(c.id);
+ expect(uniquePartialDateContact(e,[{...alias,mbi:"9AB2CD3EF45"}],"User123","DateField123")).toBeNull();
+ expect(uniquePartialDateContact(e,[{...alias,values:{DateField123:"2025-01-01"}}],"User123","DateField123")).toBeNull();
+ expect(uniquePartialDateContact(e,[alias,{...alias,id:"Duplicate123"}],"User123","DateField123")).toBeNull();
+ expect(uniquePartialDateContact(e,[{...alias,assignedTo:"OtherUser"}],"User123","DateField123")).toBeNull();
 });

@@ -9,7 +9,7 @@ import { loadSunfireMatchInventory } from "@/lib/repositories/sunfireMatchReposi
 import { readPolicyFields } from "@/lib/crm/gohighlevel/policyUpdatePreview";
 import { readGhlPreviewObject,fullMbi } from "@/lib/crm/gohighlevel/contactPreview";
 import { verifyGhlUser } from "@/lib/crm/gohighlevel/setupClient";
-import { decideStatementContact,readContactDirectory,createStatementContact,verifiedStatementBridge } from "@/lib/crm/gohighlevel/statementContacts";
+import { decideStatementContact,readContactDirectory,createStatementContact,verifiedStatementBridge,uniquePartialDateContact } from "@/lib/crm/gohighlevel/statementContacts";
 import { statementName,statementNames } from "@/lib/crm/gohighlevel/statementMatch";
 import { digest } from "@/lib/carriers/digest";
 import type { CurrentUser } from "@/types/domain";
@@ -17,7 +17,7 @@ import type { Database } from "@/types/database";
 type Operation=Database["public"]["Tables"]["ghl_statement_contact_operations"]["Row"];
 export interface StatementContactResult {name:string;carrier:string;effectiveDate:string;result:"Linked"|"Created and linked"|"Already linked"|"Needs review";reason:string;candidates?:{name:string;nameAgrees:boolean;fullMbiAgrees:boolean;partialMbiAgrees:boolean;effectiveDate:string;dateAgrees:boolean;memberIdAgrees:boolean}[]}
 const uuid=(key:string)=>{const h=digest(key);return `${h.slice(0,8)}-${h.slice(8,12)}-5${h.slice(13,16)}-a${h.slice(17,20)}-${h.slice(20,32)}`;};
-export async function syncStatementContacts(user:CurrentUser,reviewOnly=false,linkOnly=false){
+export async function syncStatementContacts(user:CurrentUser,reviewOnly=false,linkOnly=false,confirmedPairs:{sourceName:string;contactName:string}[]=[]){
  if(!user.active||user.role!=="owner")throw new Error("The credited owner must run this contact setup.");
  const access=await ghlPreviewAccess(user);await verifyGhlUser(access.locationId,access.ghlUserId,access.token);
  const source=await originalStatementEvidence(user),fields=await readPolicyFields(access.locationId,access.token),mbiFields=fields.filter(f=>f.key==="contact.medicare_number_mbi"&&f.type==="TEXT"),dates=fields.filter(f=>f.name==="Medicare Policy Effective Date"&&f.type==="DATE");
@@ -28,11 +28,28 @@ export async function syncStatementContacts(user:CurrentUser,reviewOnly=false,li
  if(groups.size>100)throw new Error("Contact setup limit exceeded.");
  const sales=await listEditableSales(user,undefined,true),bridges:{name:string;carrier:string;date:string;mbi:string;contactId:string}[]=[];
  for(const sale of sales){if(!sale.source||sale.ownerId!==user.id)continue;const link=await readGhlEnrollmentLink(user,access,sale),mbi=fullMbi(sale.source.mbi);if(link&&mbi)bridges.push({name:statementName(sale.source.firstName+sale.source.lastName),carrier:canonicalEnrollmentCarrier(sale.source.carrier),date:sale.source.proposedEffectiveDate,mbi,contactId:link.contactId});}
+ if(!Array.isArray(confirmedPairs)||confirmedPairs.length>10||confirmedPairs.some(p=>typeof p?.sourceName!=="string"||typeof p?.contactName!=="string"||!p.sourceName||!p.contactName||p.sourceName.length>200||p.contactName.length>200))throw new Error("Invalid name confirmation.");
+ const confirmationRows=await db.from("audit_events").select("details").eq("agency_id",user.agencyId).eq("actor_user_id",user.id).eq("action","ghl.statement_name_confirmed").eq("details->>connectionId",access.connectionId).limit(1000);if(confirmationRows.error)throw new Error("Name confirmations unavailable.");
+ const confirmations=(confirmationRows.data??[]).map(r=>r.details as Record<string,unknown>);
  const output:StatementContactResult[]=[];
+ function aliasProof(e:typeof source.rows[number]["row"],c:typeof directory[number]){
+  const rows=source.rows.filter(i=>i.entry.carrier===e.carrier&&i.entry.carrier_member_id===source.rows.find(i=>i.row.entryId===e.entryId)!.entry.carrier_member_id&&i.entry.effective_date===e.effectiveDate);
+  return {version:1,connectionId:access.connectionId,ghlUserId:access.ghlUserId,sourceFingerprint:digest(rows),sourceNameHash:digest(statementName(statementNames(e).firstName+statementNames(e).lastName)),contactId:c.id,contactNameHash:digest(statementName(c.firstName+c.lastName)),mbiHash:digest(c.mbi),effectiveDate:e.effectiveDate};
+ }
+
  function decisionFor(e:typeof source.rows[number]["row"]){
   const contactId=verifiedStatementBridge(e,directory,access.ghlUserId,bridges);
   if(contactId)return {kind:"link" as const,contactId,reason:"Original statement identity and date agree with an existing verified enrollment/contact link."};
-  return decideStatementContact(e,directory,access.ghlUserId,dates[0].id);
+  const regular=decideStatementContact(e,directory,access.ghlUserId,dates[0].id);if(regular.kind!=="blocked")return regular;
+  const suffix=e.medicareId.replace(/[ -]/g,"").toUpperCase();
+  if(e.carrier==="Ultimate Health Plans"&&/^[A-Z0-9]{5}$/.test(suffix)){
+   const c=uniquePartialDateContact(e,directory,access.ghlUserId,dates[0].id);
+   if(c){const proof=aliasProof(e,c),sourceName=statementName(statementNames(e).firstName+statementNames(e).lastName);
+    const authorized=confirmedPairs.some(p=>statementName(p.sourceName)===sourceName&&statementName(p.contactName)===statementName(c.firstName+c.lastName));
+    if(authorized||confirmations.some(p=>digest(p)===digest(proof)))return {kind:"link" as const,contactId:c.id,reason:"Owner confirmed the name difference; partial MBI and effective date agree.",aliasProof:proof};
+   }
+  }
+  return regular;
  }
 
  const hydrated=new Set<string>();
@@ -66,6 +83,10 @@ export async function syncStatementContacts(user:CurrentUser,reviewOnly=false,li
     output.push({...base,result:"Needs review",reason:decision.reason,candidates});continue;
    }
    if(linkOnly&&decision.kind==="create"&&(!op||op.phase==="prepared")){output.push({...base,result:"Needs review",reason:"No verified existing contact; this review does not create new contacts."});continue;}
+   if(decision.kind==="link"&&"aliasProof" in decision&&decision.aliasProof){
+    await fresh();const proof=decision.aliasProof;
+    if(!confirmations.some(p=>digest(p)===digest(proof))){const savedConfirmation=await db.from("audit_events").insert({id:uuid(`${user.agencyId}/${user.id}/${digest(proof)}`),agency_id:user.agencyId,actor_user_id:user.id,action:"ghl.statement_name_confirmed",entity_type:"statement_contact_confirmation",entity_id:digest(proof),details:proof});if(savedConfirmation.error&&savedConfirmation.error.code!=="23505")throw new Error("Name confirmation could not be saved.");confirmations.push(proof);}
+   }
    if(!op&&decision.kind==="blocked"){output.push({...base,result:"Needs review",reason:decision.reason});continue;}
    if(!op){const inserted=await db.from("ghl_statement_contact_operations").insert({id:randomUUID(),agency_id:user.agencyId,actor_user_id:user.id,connection_id:access.connectionId,ghl_user_id:access.ghlUserId,source_entry_id:e.entryId,identity_hash:identity}).select("*").single();if(inserted.error||!inserted.data)throw new Error("Contact operation already exists; refresh before retrying.");op=inserted.data;}
    lease=randomUUID();const claimed=await db.from("ghl_statement_contact_operations").update({lease_id:lease,lease_until:new Date(Date.now()+300000).toISOString(),updated_at:new Date().toISOString()}).eq("id",op.id).eq("actor_user_id",user.id).or(`lease_until.is.null,lease_until.lt.${new Date().toISOString()}`).select("*").maybeSingle();if(claimed.error||!claimed.data)throw new Error("Contact operation is already running.");op=claimed.data;
