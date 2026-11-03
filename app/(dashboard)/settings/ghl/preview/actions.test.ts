@@ -19,5 +19,5 @@ it("rechecks credentials and assignment before returning a preview",async()=>{
  m.access.mockResolvedValueOnce(access).mockResolvedValueOnce({...access,ghlUserId:"ChangedUser"});expect(await previewGhlContacts()).not.toHaveProperty("rows");
 });
 it("returns only a sanitized preview without persistence",async()=>{
- const result=await previewGhlContacts();expect(result.rows).toHaveLength(1);expect(result.warning).toContain("unconfirmed");expect(JSON.stringify(result)).not.toContain(access.token);expect(JSON.stringify(result)).not.toContain("1AB2CD3EF45");expect(m.verify).toHaveBeenCalledWith(access.locationId,access.ghlUserId,access.token);
+ const result=await previewGhlContacts();expect(result.rows).toHaveLength(1);expect(result.warning).toContain("not confirmed");expect(JSON.stringify(result)).not.toContain(access.token);expect(JSON.stringify(result)).not.toContain("1AB2CD3EF45");expect(m.verify).toHaveBeenCalledWith(access.locationId,access.ghlUserId,access.token);
 });

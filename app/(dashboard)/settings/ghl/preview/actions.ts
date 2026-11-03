@@ -25,6 +25,6 @@ export async function previewGhlContacts():Promise<ContactPreviewState> {
     if(current.id!==user.id||current.agencyId!==user.agencyId)throw new Error();
     const latest=await ghlPreviewAccess(current);
     if(latest.connectionId!==access.connectionId||latest.locationId!==access.locationId||latest.ghlUserId!==access.ghlUserId||latest.token!==access.token)throw new Error();
-    return {rows,checkedAt:new Date().toISOString(),warning:field?"Name searches only: different names or contacts assigned to someone else may not appear. MBI agreement is evidence for review, not a saved link.":"MBI comparison unavailable. Add locations/customFields.readonly and ensure the Medicare Number (MBI) field exists. These are unconfirmed name candidates only."};
+    return {rows,checkedAt:new Date().toISOString(),warning:field?"Name searches only: different names or contacts assigned to someone else may not appear. Matched contacts have agreeing names and full MBIs. Nothing is linked yet.":"MBI comparison unavailable. Add locations/customFields.readonly and ensure the Medicare Number (MBI) field exists. These contacts match by name only; their identities are not confirmed."};
   } catch {return {error:"Preview unavailable. Check your saved connection, your GHL user assignment and read permissions, then try again. No records were changed."};}
 }
