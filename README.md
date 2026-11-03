@@ -1,3 +1,7 @@
+# Held statement-match review - 2026-11-03
+
+The original-statement page now shows evidence for held contacts and can link newly verified existing contacts without creating contacts or changing policy fields. Exact full-MBI matches tolerate name formatting; partial identifiers retain name/date checks, with optional corroboration from a previously verified enrollment/contact link. See [review rules](docs/ghl-statement-contacts.md).
+
 # Statement client contact setup - 2026-11-03
 
 The original-statement page can link verified clients and create missing GHL contacts assigned to the mapped agent. Possible duplicates are held; incomplete MBI values are never written as full Medicare numbers. A private creation journal prevents blind POST retries. See [access, duplicate checks and recovery](docs/ghl-statement-contacts.md). This remains on the review branch.

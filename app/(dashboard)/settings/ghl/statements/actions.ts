@@ -11,3 +11,11 @@ export async function previewStatementContacts(query:string):Promise<StatementCh
  try{const user=await requireRole(["owner","agent"]),result=await checkStatementContacts(user,query.trim());const current=await requireRole(["owner","agent"]);if(current.id!==user.id||current.agencyId!==user.agencyId)throw new Error();return {rows:result.rows};}
  catch{return {error:"Original-statement comparison unavailable. Check source files, GHL assignment and read permissions. No GHL changes were sent."};}
 }
+
+export async function reviewHeldStatementContacts():Promise<{rows?:StatementContactResult[];error?:string}>{
+ try{return {rows:(await syncStatementContacts(await requireRole(["owner"]),true)).filter(r=>r.result==="Needs review")};}catch{return {error:"Held-match review unavailable. No new contact or link was saved."};}
+}
+
+export async function linkVerifiedHeldContacts():Promise<{rows?:StatementContactResult[];error?:string}>{
+ try{return {rows:await syncStatementContacts(await requireRole(["owner"]),false,true)};}catch{return {error:"Linking paused. Recheck the current evidence before resuming. No new contacts are created by this review action."};}
+}

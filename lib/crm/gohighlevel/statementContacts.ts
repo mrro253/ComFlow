@@ -24,9 +24,16 @@ export function decideStatementContact(e:CommissionEvidence,directory:DirectoryC
  if(!n.firstName.trim()||!n.lastName.trim()||(!full&&!partial))return {kind:"blocked" as const,reason:"Statement identity is incomplete."};
  const possible=directory.filter(c=>statementName(c.firstName+c.lastName)===name||(full&&c.mbi===full)||(partial&&c.mbi?.endsWith(partial))||(statementName(c.lastName)===statementName(n.lastName)&&statementName(c.firstName)[0]===statementName(n.firstName)[0]));
  if(!possible.length)return {kind:"create" as const,reason:"No possible existing contact in the complete GHL location."};
- const verified=possible.filter(c=>statementName(c.firstName+c.lastName)===name&&((full&&c.mbi===full)||(partial&&c.mbi?.endsWith(partial)&&typeof c.values[dateField]==="string"&&/^\d{4}-\d{2}-\d{2}(?:T00:00:00(?:\.000)?Z)?$/.test(c.values[dateField] as string)&&(c.values[dateField] as string).slice(0,10)===e.effectiveDate)));
- if(verified.length===1&&possible.length===1&&verified[0].assignedTo===ghlUserId)return {kind:"link" as const,contactId:verified[0].id,reason:full?"Name and full MBI agree.":"Name, partial MBI and effective date agree."};
+ const verified=possible.filter(c=>(full&&c.mbi===full)||(partial&&statementName(c.firstName+c.lastName)===name&&c.mbi?.endsWith(partial)&&typeof c.values[dateField]==="string"&&/^\d{4}-\d{2}-\d{2}(?:T00:00:00(?:\.000)?Z)?$/.test(c.values[dateField] as string)&&(c.values[dateField] as string).slice(0,10)===e.effectiveDate));
+ const own=verified.filter(c=>c.assignedTo===ghlUserId);
+ if(own.length===1&&possible.filter(c=>c.assignedTo===ghlUserId&&c.mbi===own[0].mbi).length===1)return {kind:"link" as const,contactId:own[0].id,reason:full?"Full MBI agrees; contact belongs to the mapped agent.":"Name, partial MBI and effective date agree."};
  return {kind:"blocked" as const,reason:verified.some(c=>c.assignedTo!==ghlUserId)?"A possible existing contact belongs to another GHL user; no duplicate created.":"A possible existing contact needs identity review; no duplicate created."};
+}
+export interface StatementIdentityBridge {name:string;carrier:string;date:string;mbi:string;contactId:string}
+export function verifiedStatementBridge(e:CommissionEvidence,directory:DirectoryContact[],userId:string,bridges:StatementIdentityBridge[]){
+ const names=statementNames(e),id=e.medicareId.replace(/[ -]/g,"").toUpperCase();
+ const ids=new Set(bridges.filter(b=>b.name===statementName(names.firstName+names.lastName)&&b.carrier===e.carrier&&b.date===e.effectiveDate&&(fullMbi(id)?b.mbi===fullMbi(id):e.carrier==="Ultimate Health Plans"&&id.length===5&&b.mbi.endsWith(id))&&directory.some(c=>c.id===b.contactId&&c.assignedTo===userId&&c.mbi===b.mbi)).map(b=>b.contactId));
+ return ids.size===1?[...ids][0]:null;
 }
 export async function createStatementContact(locationId:string,userId:string,token:string,e:CommissionEvidence,mbiField:string,operationId:string){
  validateSetupInput(locationId,token);if(!validGhlId(userId)||!validGhlId(mbiField)||!/^[a-f0-9-]{36}$/.test(operationId))throw new Error("Invalid contact destination.");
