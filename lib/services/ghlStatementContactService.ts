@@ -17,7 +17,7 @@ import type { Database } from "@/types/database";
 type Operation=Database["public"]["Tables"]["ghl_statement_contact_operations"]["Row"];
 export interface StatementContactResult {name:string;carrier:string;effectiveDate:string;result:"Linked"|"Created and linked"|"Already linked"|"Needs review";reason:string;candidates?:{name:string;nameAgrees:boolean;fullMbiAgrees:boolean;partialMbiAgrees:boolean;effectiveDate:string;dateAgrees:boolean;memberIdAgrees:boolean}[]}
 const uuid=(key:string)=>{const h=digest(key);return `${h.slice(0,8)}-${h.slice(8,12)}-5${h.slice(13,16)}-a${h.slice(17,20)}-${h.slice(20,32)}`;};
-export async function syncStatementContacts(user:CurrentUser,reviewOnly=false,linkOnly=false,confirmedPairs:{sourceName:string;contactName:string}[]=[]){
+export async function syncStatementContacts(user:CurrentUser,reviewOnly=false,linkOnly=false,confirmedPairs:{sourceName:string;contactName:string}[]=[],statementId?:string){
  if(!user.active||user.role!=="owner")throw new Error("The credited owner must run this contact setup.");
  const access=await ghlPreviewAccess(user);await verifyGhlUser(access.locationId,access.ghlUserId,access.token);
  const source=await originalStatementEvidence(user),fields=await readPolicyFields(access.locationId,access.token),mbiFields=fields.filter(f=>f.key==="contact.medicare_number_mbi"&&f.type==="TEXT"),dates=fields.filter(f=>f.name==="Medicare Policy Effective Date"&&f.type==="DATE");
@@ -65,6 +65,7 @@ export async function syncStatementContacts(user:CurrentUser,reviewOnly=false,li
 
  async function fresh(){const current=await ghlPreviewAccess(user);if(digest(current)!==digest(access)||digest(await loadSunfireMatchInventory(user))!==digest(source.inventory)||digest(await listEditableSales(user,undefined,true))!==digest(sales))throw new Error("Connection or statement access changed.");}
  for(const [sourceKey,items]of groups){
+  if(statementId&&!items.some(i=>i.entry.statement_id===statementId))continue;
   const item=[...items].sort((a,b)=>b.row.statementMonth.localeCompare(a.row.statementMonth))[0],e=item.row,names=statementNames(e),base={name:e.clientName,carrier:e.carrier,effectiveDate:e.effectiveDate};
   if(items.some(i=>i.entry.user_id!==user.id)){output.push({...base,result:"Needs review",reason:"Statement is not credited to the current owner."});continue;}
   const id=e.medicareId.replace(/[ -]/g,"").toUpperCase(),identity=digest(fullMbi(id)?{mbi:fullMbi(id)}:{name:statementName(names.firstName+names.lastName),partial:id,carrier:e.carrier});

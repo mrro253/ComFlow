@@ -41,6 +41,8 @@ export interface Database {
   };
   public: {
     Tables: {
+      ghl_import_automation_settings: TableShape<{agency_id:string;actor_user_id:string;connection_id:string;enabled:boolean;updated_at:string},"enabled"|"updated_at">;
+      ghl_import_jobs: TableShape<{id:string;agency_id:string;actor_user_id:string;connection_id:string;location_id:string;ghl_user_id:string;statement_id:string;state:"queued"|"running"|"completed"|"needs_attention"|"cancelled";attempts:number;lease_id:string|null;lease_until:string|null;next_attempt_at:string;summary:Json;last_error:string|null;created_at:string;updated_at:string},"id"|"state"|"attempts"|"lease_id"|"lease_until"|"next_attempt_at"|"summary"|"last_error"|"created_at"|"updated_at">;
       ghl_statement_contact_operations: TableShape<{id:string;agency_id:string;actor_user_id:string;connection_id:string;ghl_user_id:string;source_entry_id:string;identity_hash:string;phase:"prepared"|"create_pending"|"created"|"linked";contact_id:string|null;lease_id:string|null;lease_until:string|null;created_at:string;updated_at:string},"phase"|"contact_id"|"lease_id"|"lease_until"|"created_at"|"updated_at">;
       ghl_statement_contact_links: TableShape<{id:string;agency_id:string;actor_user_id:string;connection_id:string;ghl_user_id:string;source_entry_id:string;source_key:string;contact_id:string;operation_id:string;created_at:string},"created_at">;
       ghl_policy_operations: TableShape<{id:string;agency_id:string;actor_user_id:string;connection_id:string;location_id:string;ghl_user_id:string;contact_id:string;field_id:string;payload?:Json|null;source_owner_id:string;source_hash:string;source_code:string;source_fingerprint:string;statement_month:string;review_hash:string;snapshot_hash:string;previous_status:string|null;phase:"prepared"|"note_pending"|"note_confirmed"|"field_pending"|"completed"|"cancelled";note_id:string|null;lease_id:string|null;lease_until:string|null;last_error:string|null;created_at:string;updated_at:string},"phase"|"note_id"|"lease_id"|"lease_until"|"last_error"|"created_at"|"updated_at">;
@@ -581,6 +583,7 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      claim_ghl_import_job: {Args:{p_job:string;p_lease:string};Returns:Json};
       manage_ghl_policy_operation: {Args:{p_actor:string;p_agency:string;p_action:string;p_data:Json};Returns:Json};
       manage_ghl_connection: { Args: { p_actor: string; p_agency: string; p_action: string; p_data: Json }; Returns: undefined };
       get_my_agency_id: {

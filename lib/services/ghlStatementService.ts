@@ -25,14 +25,14 @@ export async function originalStatementEvidence(user:CurrentUser,onlyCode?:strin
  const after=await loadSunfireMatchInventory(user);if(digest(inventory)!==digest(after))throw new Error("Statement evidence changed.");
  return {inventory,rows};
 }
-export async function checkStatementContacts(user:CurrentUser,query="",onlyCode?:string,operation?:PolicyOperation){
+export async function checkStatementContacts(user:CurrentUser,query="",onlyCode?:string,operation?:PolicyOperation,statementId?:string){
  if(query.length>100)throw new Error("Search too long.");
  const access=await ghlPreviewAccess(user);await verifyGhlUser(access.locationId,access.ghlUserId,access.token);
  const source=await originalStatementEvidence(user,onlyCode),fields=await readPolicyFields(access.locationId,access.token),mbiFields=fields.filter(f=>f.key==="contact.medicare_number_mbi");
  if(mbiFields.length!==1)throw new Error("MBI mapping unavailable.");
  const groups=new Map<string,typeof source.rows>();
  for(const item of source.rows){const key=[item.entry.carrier,item.entry.carrier_member_id,item.entry.effective_date].join("/");groups.set(key,[...(groups.get(key)??[]),item]);}
- const selected=[...groups.values()].map(items=>({items,latest:[...items].sort((a,b)=>b.row.statementMonth.localeCompare(a.row.statementMonth)||a.entry.id.localeCompare(b.entry.id))[0]})).filter(g=>(!query||g.latest.row.clientName.toLowerCase().includes(query.toLowerCase()))&&(!onlyCode||g.items.some(i=>`STMT_${i.entry.id.replaceAll("-","")}`===onlyCode)));
+ const selected=[...groups.values()].map(items=>({items,latest:[...items].sort((a,b)=>b.row.statementMonth.localeCompare(a.row.statementMonth)||a.entry.id.localeCompare(b.entry.id))[0]})).filter(g=>(!statementId||g.items.some(i=>i.entry.statement_id===statementId))&&(!query||g.latest.row.clientName.toLowerCase().includes(query.toLowerCase()))&&(!onlyCode||g.items.some(i=>`STMT_${i.entry.id.replaceAll("-","")}`===onlyCode)));
  if(selected.length>100)throw new Error("Search a smaller group of statement clients.");
  const output:StatementGhlRow[]=[];let context:undefined|{access:typeof access;sale:{clientName:string};plan:StatusWritePlan;actual:string|null};
  for(const group of selected){const item=onlyCode?group.items.find(i=>`STMT_${i.entry.id.replaceAll("-","")}`===onlyCode)!:group.latest,e=item.row,code=`STMT_${e.entryId.replaceAll("-","")}`,names=statementNames(e);

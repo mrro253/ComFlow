@@ -1,3 +1,4 @@
+import { processGhlImportJobs } from "./ghlImportJobs.js";
 import { claimConnection, createDb, listRequestedConnectionIds, loadStatementOwner, markConnection } from "./db.js";
 import { syncConnection } from "./syncConnection.js";
 import { queueScheduledSyncs, recoverInterruptedSync } from "./scheduledSync.js";
@@ -44,6 +45,7 @@ async function runOnce(runtime: Runtime): Promise<number> {
     await runtime.write(null);
     processed++;
   }
+  await processGhlImportJobs(db);
   return processed;
 }
 

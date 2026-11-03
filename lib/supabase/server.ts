@@ -1,3 +1,5 @@
+import { ghlImportActor } from "@/lib/automation/ghlImportContext";
+import { createAdminClient } from "./admin";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
@@ -12,6 +14,7 @@ export type TypedSupabaseClient = SupabaseClient<Database>;
  * Handlers. Reads/writes the auth cookie via Next.js's `cookies()` API.
  */
 export async function createClient() {
+  if(await ghlImportActor())return createAdminClient();
   const cookieStore = await cookies();
 
   return createServerClient<Database>(

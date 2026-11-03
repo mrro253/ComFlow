@@ -10,7 +10,8 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {"@/*": ["../*"]}
   },
-  "include": ["src/**/*.ts", "../lib/crypto/credentials.ts", "../types/database.ts"]
+  "include": ["src/**/*.ts", "../lib/crypto/credentials.ts", "../types/database.ts", "../types/pdf-parse.d.ts"]
 }

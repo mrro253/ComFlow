@@ -4,7 +4,7 @@ const m=vi.hoisted(()=>({access:vi.fn(),admin:vi.fn(),source:vi.fn(),read:vi.fn(
 vi.mock("../ghlPreviewRepository",()=>({ghlPreviewAccess:m.access}));
 vi.mock("../saleDispositionRepository",()=>({readAuthorizedSaleSource:m.source}));
 vi.mock("@/lib/supabase/admin",()=>({createAdminClient:m.admin}));
-const access={connectionId:"Connection123",locationId:"Location123",ghlUserId:"User123",token:"synthetic-token"};
+const access={connectionId:"Connection123",locationId:"Location123",locationName:"Synthetic location",ghlUserId:"User123",token:"synthetic-token"};
 const user={id:"actor",agencyId:"agency",active:true,role:"agent"} as Parameters<typeof appendGhlLinks>[0];
 const link={ownerId:"owner",collectionHash:"a".repeat(64),code:"APP1",contactId:"Contact123",nameDiffers:false};
 const details={version:1,...link,locationId:access.locationId,ghlUserId:access.ghlUserId};

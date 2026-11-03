@@ -9,6 +9,8 @@
     "start": "tsx --env-file=../.env.local src/index.ts",
     "once": "tsx --env-file=../.env.local src/index.ts --once",
     "typecheck": "tsc --noEmit",
+    "ghl:start": "tsx --env-file=../.env.local src/ghlImportWorker.ts",
+    "ghl:once": "tsx --env-file=../.env.local src/ghlImportWorker.ts --once",
     "test:recovery": "tsx src/recoveryDrill.ts",
     "devoted:download": "tsx src/devotedDownloadOnce.ts"
   },

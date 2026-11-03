@@ -1,3 +1,5 @@
+import { GhlImportAutomation } from "@/components/settings/ghl-import-automation";
+import { ghlAutomationState } from "./automationActions";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
@@ -11,11 +13,13 @@ export default async function GhlSetupPage() {
   try {setup=await listGhlSetup();} catch {return <div className="space-y-4"><h1 className="text-2xl font-semibold">GoHighLevel setup</h1><p>Secure connection setup is waiting for its database update. No token has been requested or saved.</p></div>;}
   const personal=setup.connections.find(c=>c.mode==="personal"&&c.user_id===user.id),shared=setup.connections.find(c=>c.mode==="shared");
   const team=user.role==="owner"?(await listUsersForAgency(user.agencyId)).filter(p=>p.active).map(p=>({id:p.id,name:`${p.firstName} ${p.lastName}`})):[];
+  let automation:Awaited<ReturnType<typeof ghlAutomationState>>|null=null;if(user.role==="owner"&&shared){try{automation=await ghlAutomationState();}catch{/* Setup remains usable while migration is pending. */}}
   return <div className="max-w-3xl space-y-6">
     <Link className="text-sm underline" href="/settings">Back to Settings</Link><h1 className="text-2xl font-semibold">GoHighLevel setup</h1>
-    <p>Connect a sub-account once, then assign yourself or your teammates by GHL User ID.</p><p>Your connection supports a read-only contact preview. Contacts are read only when you run the preview. Verified enrollment links can be saved inside ComFlow. GHL contact updates and notes are disabled.</p>
+    <p>Connect a sub-account once, then assign yourself or your teammates by GHL User ID.</p><p>Manage matching and policy updates here. Automatic processing can run after future statement imports; uncertain matches remain available for review.</p>
     <Link href="/settings/ghl/preview" className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Preview contact matches — read only</Link>
     <Link href="/settings/ghl/updates" className="inline-flex rounded-md border px-4 py-2 text-sm font-medium">Review policy updates</Link>
+    {automation&&<GhlImportAutomation initial={automation}/>}
     <section className="rounded-lg border p-5 space-y-3"><h2 className="text-lg font-semibold">{user.role==="owner"?"Step 1: Connect your GHL sub-account":"Your agency connection"}</h2>
       {shared ? <p>Verified: {shared.location_name} · Sub-account Location ID: {shared.location_id}</p>:<p>Connect this once for yourself or your agency. After saving, assign yourself and any teammates using their GHL User IDs. Assigned agents do not need a Location ID or token.</p>}
       {user.role==="owner" ? <>

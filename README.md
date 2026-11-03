@@ -1,3 +1,7 @@
+# Automatic GHL processing after imports - 2026-11-03
+
+GHL setup now supports automatic contact linking, missing-contact creation and supported policy/history updates after each new statement import. A durable queue, existing identity safeguards and recovery journals handle duplicate and interrupted runs. Only policies touched by the import are processed; existing statements are not retroactively queued. Manual carrier Sync now remains unchanged. See [setup, access, retries and validation](docs/ghl-import-automation.md). This remains on the review branch.
+
 # Held statement-match review - 2026-11-03
 
 The original-statement page now shows evidence for held contacts and can link newly verified existing contacts without creating contacts or changing policy fields. Exact full-MBI matches tolerate name formatting; partial identifiers retain name/date checks, with optional corroboration from a previously verified enrollment/contact link. See [review rules](docs/ghl-statement-contacts.md).

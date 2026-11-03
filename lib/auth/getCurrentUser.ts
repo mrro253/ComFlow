@@ -1,3 +1,4 @@
+import { ghlImportActor } from "@/lib/automation/ghlImportContext";
 import { createClient } from "@/lib/supabase/server";
 import type { CurrentUser } from "@/types/domain";
 import { mapUserRow } from "@/lib/repositories/userRepository";
@@ -12,6 +13,7 @@ import { mapUserRow } from "@/lib/repositories/userRepository";
  * through this instead of querying Supabase auth directly.
  */
 export async function getCurrentUser(): Promise<CurrentUser | null> {
+  const actor=await ghlImportActor();if(actor)return {authUserId:actor.id,...mapUserRow(actor)};
   const supabase = await createClient();
 
   const {

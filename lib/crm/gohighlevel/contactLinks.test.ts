@@ -12,7 +12,8 @@ it("refuses partial, conflicting, duplicate or incomplete identity evidence",()=
 });
 it("keeps new applications separate and binds reviews to exact contacts and configuration",()=>{
  expect(enrollmentLinkId("agency","actor","connection",link)).not.toBe(enrollmentLinkId("agency","actor","connection",{...link,code:"APP2"}));
- expect(enrollmentLinkId("agency","actor","connection",link)).toBe(enrollmentLinkId("agency","actor","connection",{...link,contactId:"OtherContact"}));
+ const changedContact={...link,contactId:"OtherContact"};
+ expect(enrollmentLinkId("agency","actor","connection",link)).toBe(enrollmentLinkId("agency","actor","connection",changedContact));
  expect(linkReviewHash("connection","user",[link])).not.toBe(linkReviewHash("connection","user",[{...link,contactId:"OtherContact"}]));
  expect(linkReviewHash("connection","user",[link])).not.toBe(linkReviewHash("OtherConnection","user",[link]));
 });
