@@ -41,6 +41,7 @@ export interface Database {
   };
   public: {
     Tables: {
+      ghl_policy_operations: TableShape<{id:string;agency_id:string;actor_user_id:string;connection_id:string;location_id:string;ghl_user_id:string;contact_id:string;field_id:string;source_owner_id:string;source_hash:string;source_code:string;source_fingerprint:string;statement_month:string;review_hash:string;snapshot_hash:string;previous_status:string|null;phase:"prepared"|"note_pending"|"note_confirmed"|"field_pending"|"completed"|"cancelled";note_id:string|null;lease_id:string|null;lease_until:string|null;last_error:string|null;created_at:string;updated_at:string},"phase"|"note_id"|"lease_id"|"lease_until"|"last_error"|"created_at"|"updated_at">;
       ghl_connections: TableShape<{ id: string; agency_id: string; user_id: string; mode: "personal" | "shared"; location_id: string; location_name: string; verified_at: string; created_at: string }, "verified_at" | "created_at">;
       ghl_credentials: TableShape<{ connection_id: string; ciphertext: string }>;
       ghl_agent_mappings: TableShape<{ connection_id: string; agency_id: string; user_id: string; ghl_user_id: string; verified_at: string }, "verified_at">;
@@ -578,6 +579,7 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      manage_ghl_policy_operation: {Args:{p_actor:string;p_agency:string;p_action:string;p_data:Json};Returns:Json};
       manage_ghl_connection: { Args: { p_actor: string; p_agency: string; p_action: string; p_data: Json }; Returns: undefined };
       get_my_agency_id: {
         Args: Record<string, never>;

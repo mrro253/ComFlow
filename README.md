@@ -1,3 +1,7 @@
+# Reviewed GHL status pilot - 2026-11-03
+
+A separate per-contact review and approval can send an Active status assumption and a prior-status history note. Previewing remains read-only. No real GHL writes have been tested or sent during development. See [pilot behavior and limits](docs/ghl-write-pilot.md). Earlier sections record previous checkpoints.
+
 # Paid enrollments assume Active - 2026-11-03
 
 User-approved rule: an enrollment currently marked Paid from supported positive commission evidence is shown as Assumed active - commission reported. The GHL preview can propose the existing Active choice using that assumption, while protecting newer/different existing policies and ambiguous applications. Missing payments and chargebacks do not imply Inactive; no-commission-expected outcomes remain unchanged. This is derived display/proposal logic only: no GHL or imported record is written. See [policy preview rules](docs/ghl-policy-update-preview.md).

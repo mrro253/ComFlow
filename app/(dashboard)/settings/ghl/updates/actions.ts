@@ -7,7 +7,8 @@ import { listEnrollmentStatuses } from "@/lib/services/enrollmentStatusService";
 import { verifyGhlUser } from "@/lib/crm/gohighlevel/setupClient";
 import { buildPolicyPreview,readPolicyContact,readPolicyFields,type PolicyPreviewRow,type PolicyContact } from "@/lib/crm/gohighlevel/policyUpdatePreview";
 import { digest } from "@/lib/carriers/digest";
-export interface PolicyUpdateState {error?:string;rows?:PolicyPreviewRow[];skipped?:number;checkedAt?:string}
+import { pendingPolicyOperations } from "@/lib/repositories/ghlPolicyOperationRepository";
+export interface PolicyUpdateState {error?:string;rows?:PolicyPreviewRow[];skipped?:number;checkedAt?:string;writesAvailable?:boolean;writeMessage?:string;pending?:{id:string;code:string;name:string;phase:string;busy:boolean}[]}
 export async function previewPolicyUpdates():Promise<PolicyUpdateState>{
   try{
     const user=await requireRole(["owner","agent"]),access=await ghlPreviewAccess(user);
@@ -37,6 +38,12 @@ export async function previewPolicyUpdates():Promise<PolicyUpdateState>{
     const freshStatuses=await listEnrollmentStatuses(current);
     const assumptionHash=(list:typeof statuses)=>digest(list.map(s=>({owner:s.ownerId,code:s.code,assumption:s.assumedCoverage})));
     if(assumptionHash(statuses)!==assumptionHash(freshStatuses))throw new Error();
-    return {rows,skipped:sales.length-refs.length,checkedAt};
+    let writesAvailable=false,writeMessage:string|undefined,pending:PolicyUpdateState["pending"]=[];
+    try{
+      const operations=await pendingPolicyOperations(current,latest);writesAvailable=true;
+      const allowed=new Map(sales.map(s=>[`${s.ownerId}/${s.code}`,s.clientName]));
+      pending=operations.filter(op=>allowed.has(`${op.source_owner_id}/${op.source_code}`)).map(op=>({id:op.id,code:op.source_code,name:allowed.get(`${op.source_owner_id}/${op.source_code}`)!,phase:op.phase,busy:!!op.lease_until&&Date.parse(op.lease_until)>Date.now()}));
+    }catch{writeMessage="Write controls are currently unavailable. The read-only comparison still works.";}
+    return {rows,skipped:sales.length-refs.length,checkedAt,writesAvailable,writeMessage,pending};
   }catch{return {error:"Policy preview unavailable. Check your saved user assignment, linked contact identities and contact/custom-field read permissions, then try again. No contacts, notes or ComFlow records were changed."};}
 }

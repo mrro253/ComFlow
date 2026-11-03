@@ -2,6 +2,7 @@ import { beforeEach,expect,it,vi } from "vitest";
 import { previewPolicyUpdates } from "./actions";
 const m=vi.hoisted(()=>({user:vi.fn(),access:vi.fn(),link:vi.fn(),sales:vi.fn(),verify:vi.fn(),fields:vi.fn(),contact:vi.fn(),statuses:vi.fn()}));
 vi.mock("@/lib/services/enrollmentStatusService",()=>({listEnrollmentStatuses:m.statuses}));
+vi.mock("@/lib/repositories/ghlPolicyOperationRepository",()=>({pendingPolicyOperations:vi.fn(async()=>[])}));
 vi.mock("@/lib/auth/requireRole",()=>({requireRole:m.user}));vi.mock("@/lib/repositories/ghlPreviewRepository",()=>({ghlPreviewAccess:m.access}));vi.mock("@/lib/repositories/ghlLinkRepository",()=>({readGhlEnrollmentLink:m.link}));vi.mock("@/lib/services/saleDispositionService",()=>({listEditableSales:m.sales}));vi.mock("@/lib/crm/gohighlevel/setupClient",()=>({verifyGhlUser:m.verify,validateSetupInput:vi.fn(),validGhlId:vi.fn()}));
 vi.mock("@/lib/crm/gohighlevel/policyUpdatePreview",async(importOriginal)=>({...await importOriginal<typeof import("@/lib/crm/gohighlevel/policyUpdatePreview")>(),readPolicyFields:m.fields,readPolicyContact:m.contact}));
 const source={code:"APP1",firstName:"Synthetic",lastName:"Person",carrier:"ULTIMATE HEALTH PLAN, INC.",plan:"Synthetic plan",mbi:"1AB2CD3EF45",proposedEffectiveDate:"2026-01-01",submittedDate:"2025-12-01",status:"completed",identityVerified:true,coverageConfirmed:false};

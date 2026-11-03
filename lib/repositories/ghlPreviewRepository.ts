@@ -14,5 +14,5 @@ export async function ghlPreviewAccess(user:CurrentUser) {
   // Session-scoped metadata and self mapping must succeed before accessing the encrypted secret.
   const {data:secret,error:secretError}=await createAdminClient().from("ghl_credentials").select("ciphertext").eq("connection_id",connection.id).single();
   if(secretError||!secret)throw new Error("Connection unavailable.");
-  return {connectionId:connection.id,locationId:connection.location_id,ghlUserId:mapping.ghl_user_id,token:decryptGhlToken(secret.ciphertext,{id:connection.id,agencyId:connection.agency_id,userId:connection.user_id,locationId:connection.location_id})};
+  return {connectionId:connection.id,locationId:connection.location_id,locationName:connection.location_name,ghlUserId:mapping.ghl_user_id,token:decryptGhlToken(secret.ciphertext,{id:connection.id,agencyId:connection.agency_id,userId:connection.user_id,locationId:connection.location_id})};
 }
