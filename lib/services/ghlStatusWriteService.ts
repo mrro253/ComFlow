@@ -1,3 +1,4 @@
+import { checkStatementContacts } from "./ghlStatementService";
 import { detailsWritePlan,parseDetailsPayload,type DetailChange } from "@/lib/crm/gohighlevel/detailsWritePlan";
 import { randomUUID } from "node:crypto";
 import type { CurrentUser } from "@/types/domain";
@@ -13,6 +14,7 @@ import { createStatusWriter } from "@/lib/crm/gohighlevel/statusWriteClient";
 import { executeStatusWrite } from "@/lib/crm/gohighlevel/statusWriteEngine";
 
 async function context(user:CurrentUser,code:string,operation?:PolicyOperation,details=false){
+  if(code.startsWith("STMT_")){const result=await checkStatementContacts(user,"",code,operation);if(!result.context)throw new Error("No verified statement update.");return result.context;}
   if(!/^[A-Za-z0-9_-]{1,100}$/.test(code))throw new Error("Invalid application.");
   const access=await ghlPreviewAccess(user);await verifyGhlUser(access.locationId,access.ghlUserId,access.token);
   const sales=await listEditableSales(user,undefined,true),matches=sales.filter(s=>s.code===code);

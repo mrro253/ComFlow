@@ -1,3 +1,7 @@
+# Original-statement GHL matching - 2026-11-03
+
+GHL matching can now use verified original commission statements without a SunFire enrollment. Open the original-statement check from Policy updates. Full MBI/name or Ultimate name/partial-MBI/effective-date evidence can support a reviewed Active-status update; absent plan names remain unchanged. See [scope, access and recovery](docs/ghl-statement-updates.md). No contacts change during comparison.
+
 # Concise GHL plan history notes - 2026-11-03
 
 New plan-detail reviews show the previous plan, old effective date, recorded termination date and type, followed by the new plan details. Missing termination dates show Not available. Existing GHL notes and old recovery operations retain their original format. See [note rules](docs/ghl-policy-details.md).

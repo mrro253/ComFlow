@@ -19,6 +19,7 @@ export function statusWritePlan(input:{source:SunfireEnrollment;ownerId:string;s
 }
 export function statusHistoryNote(op:{id:string;source_code:string;statement_month:string;previous_status:string|null;payload?:unknown}){
   const details=parseDetailsPayload(op.payload);
+  if(op.source_code.startsWith("STMT_"))return `Policy status: ${op.previous_status??"Not listed"} → Active\nUpdated by ComFlow based on commission reported for ${op.statement_month}.\n[ComFlow operation ${op.id}]`;
   if(details?.history){
     const h=details.history,date=(v:string|null)=>v?`${v.slice(5,7)}/${v.slice(8,10)}/${v.slice(0,4)}`:"Not available";
     const describe=(p:typeof h.previous,old:boolean)=>`${p.plan??"Not listed"} | Effective: ${date(p.effectiveDate)}${old?` | Terminated: ${date(p.terminationDate)}`:""} | Type: ${p.type??"Not listed"}`;
