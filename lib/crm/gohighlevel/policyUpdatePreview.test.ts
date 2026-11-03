@@ -8,7 +8,7 @@ const contact={firstName:"Example",lastName:"Person",mbi:source.mbi,values:{Plan
 afterEach(()=>vi.unstubAllGlobals());
 it("preserves current policy fields despite proposed dates or commission activity",()=>{
  const preview=buildPolicyPreview(source,fields,contact,1,"2026-11-02T00:00:00Z");
- expect(preview.fields.find(f=>f.label==="Medicare policy status")).toMatchObject({current:"Active",enrollment:"Coverage status not verified",decision:"Keep existing value"});
+ expect(preview.fields.find(f=>f.label==="Medicare policy status")).toMatchObject({current:"Active",enrollment:"No status assumption",decision:"Keep existing value"});
  expect(preview.fields.find(f=>f.label==="Medicare policy name")?.decision).toContain("current coverage not confirmed");
  expect(preview.fields.find(f=>f.label==="Medicare policy effective date")?.current).toBe("2027-01-01");
  expect(JSON.stringify(preview)).not.toContain(source.mbi);expect(JSON.stringify(preview)).not.toContain("PRIVATE-MEMBER-ID");expect(preview.noteDraft).toContain("not proof");expect(preview.historyDraft).toContain("not being declared historical");
@@ -33,4 +33,18 @@ it("rejects duplicate metadata and keeps foreign location fields out",async()=>{
  const raw={id:"Field123",name:"Plan",fieldKey:"contact.1_policy_name",dataType:"TEXT",model:"contact",locationId:"Location123"};
  vi.stubGlobal("fetch",vi.fn().mockResolvedValue(new Response(JSON.stringify({customFields:[raw,{...raw,id:"Foreign123",locationId:"OtherLocation"}]}))));expect(await readPolicyFields("Location123","synthetic-private-token-for-test")).toHaveLength(1);
  vi.stubGlobal("fetch",vi.fn().mockResolvedValue(new Response(JSON.stringify({customFields:[raw,raw]}))));await expect(readPolicyFields("Location123","synthetic-private-token-for-test")).rejects.toThrow("Duplicate");
+});
+it("proposes the existing Active choice from Paid evidence without claiming carrier verification",()=>{
+ const assumed={status:"Active",basis:"commission_reported",statementMonth:"2026-03"} as const;
+ const preview=buildPolicyPreview(source,fields,{...contact,values:{StatusField123:"Unknown"}},1,"now",assumed);
+ expect(preview.assumedActive).toBe(true);expect(preview.statusProposal).toBe(true);expect(preview.reason).toContain("payment-based assumption");
+ expect(preview.fields.find(f=>f.label==="Medicare policy status")?.decision).toContain("Propose Active");expect(preview.noteDraft).toContain("Assumed Active");
+ expect(preview.fields.find(f=>f.label==="Medicare policy name")?.decision).toContain("Keep unchanged");
+});
+it("does not overwrite another/newer GHL policy or choose between multiple applications",()=>{
+ const assumed={status:"Active",basis:"commission_reported",statementMonth:"2026-03"} as const;
+ const current={...contact,values:{...contact.values,StatusField123:"Unknown"}};
+ expect(buildPolicyPreview(source,fields,current,1,"now",assumed).statusProposal).toBe(false);
+ expect(buildPolicyPreview(source,fields,{...contact,values:{StatusField123:"Unknown"}},2,"now",assumed).statusProposal).toBe(false);
+ expect(buildPolicyPreview(source,fields,{...contact,values:{StatusField123:"Active"}},1,"now",assumed).statusProposal).toBe(false);
 });

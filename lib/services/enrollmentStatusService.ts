@@ -5,6 +5,7 @@ import { readSunfireFollowups, readAssignedSaleFollowup } from "@/lib/repositori
 import { readApplicationOutcomes } from "@/lib/repositories/applicationOutcomeRepository";
 import { applicationFingerprint } from "@/lib/enrollments/applicationOutcome";
 import { enrollmentCommissionStatus } from "@/lib/enrollments/commissionStatus";
+import { paidCoverageAssumption } from "@/lib/enrollments/coverageAssumption";
 import { enrollmentGhlStatuses,enrollmentGhlKey,type EnrollmentGhlStatus } from "@/lib/repositories/enrollmentGhlStatusRepository";
 
 /** Derived on every request; no financial records, associations or review receipts are written. */
@@ -30,6 +31,6 @@ export async function listEnrollmentStatuses(user: CurrentUser, selected?: strin
     const status = enrollmentCommissionStatus(match, outcome ? outcome.status === "did_not_take_effect" : legacyNoCommission);
     const { source: _source, versions: _versions, ...display } = sale;
     void _source; void _versions;
-    return { ...display, ghlStatus:ghlStatuses.get(enrollmentGhlKey(sale))??"unavailable", commission: status, outcomeHistory: outcomes[index].history.map(({ fingerprint: _fingerprint, ...event }) => { void _fingerprint; return event; }), explanation: outcome?.note ?? (status.label === "No commission expected" ? followup?.note : undefined) };
+    return { ...display, assumedCoverage:paidCoverageAssumption(status),ghlStatus:ghlStatuses.get(enrollmentGhlKey(sale))??"unavailable", commission: status, outcomeHistory: outcomes[index].history.map(({ fingerprint: _fingerprint, ...event }) => { void _fingerprint; return event; }), explanation: outcome?.note ?? (status.label === "No commission expected" ? followup?.note : undefined) };
   });
 }

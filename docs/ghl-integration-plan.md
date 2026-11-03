@@ -1,3 +1,7 @@
+# November 3 rule update
+
+Ryan has explicitly approved Paid -> Assumed Active as a business assumption for the same enrollment. ComFlow displays the basis and matching statement month; the policy preview can propose Active without claiming carrier-verified coverage. Newer/different GHL policies remain protected, and GHL writes are still disabled. Missing payments and chargebacks do not infer Inactive. This supersedes the earlier planning restriction on deriving an Active assumption from a payment, but does not authorize other policy-field changes or GHL writes. See [current policy preview](ghl-policy-update-preview.md).
+
 # GHL integration: agreed behavior and implementation review
 
 **November 2 update:** Personal and owner-managed shared connection setup is implemented on `feature/ghl-connection-setup`; see [setup, isolation tests and current limits](ghl-connection-setup.md). The planning-only statement below is historical for connection setup. Contact matching, contact/status updates and notes remain unimplemented and disabled. No GHL contacts have been read or changed.

@@ -1,3 +1,7 @@
+# Paid enrollments assume Active - 2026-11-03
+
+User-approved rule: an enrollment currently marked Paid from supported positive commission evidence is shown as Assumed active - commission reported. The GHL preview can propose the existing Active choice using that assumption, while protecting newer/different existing policies and ambiguous applications. Missing payments and chargebacks do not imply Inactive; no-commission-expected outcomes remain unchanged. This is derived display/proposal logic only: no GHL or imported record is written. See [policy preview rules](docs/ghl-policy-update-preview.md).
+
 # Read-only GHL policy update preview - 2026-11-02
 
 Settings > GoHighLevel now offers a policy update preview for linked enrollments, including current GHL fields and draft-only reference/history notes. Existing values are preserved because submitted SunFire applications do not confirm current coverage. There is no send/apply action and no new permission is required. See [scope, access checks and evidence limits](docs/ghl-policy-update-preview.md).
