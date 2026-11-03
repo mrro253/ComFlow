@@ -2,6 +2,8 @@
 
 ## Personal and shared GHL connection setup — 2026-11-02
 
+Setup labels distinguish **GHL Location ID (Sub-account)**, found in **Settings → Business Profile**, from **GHL User ID (Person)**, found in **Users**. Contextual field hints and the setup guide explain the difference; saved summaries use the same terminology. This wording change does not alter access, saved IDs, credentials or contacts.
+
 Review branch `feature/ghl-connection-setup` adds **Settings → GoHighLevel → Connect** at `/settings/ghl` for every active user. An agent can save their own location/token; an agency owner can connect one shared location and map active teammates to GHL users verified in that location. Other agents never need copies of the shared token. Replacing a shared connection clears mappings; the screen explains that before saving.
 
 Tokens are encrypted server-side with connection/agency/user/location binding, stored in a separate service-only table, never redisplayed, and excluded from logs/audit details. Setup uses only fixed-host GET requests for location and user metadata. **No contact read, contact write, note creation, matching job or CRM synchronization is enabled.** Location verification requires `locations.readonly`; shared-user verification also requires `users.readonly`. See [setup and verification](docs/ghl-connection-setup.md).
