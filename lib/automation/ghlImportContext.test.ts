@@ -2,8 +2,14 @@ import { beforeEach,expect,it,vi } from "vitest";
 import { withGhlImportScope,ghlImportActor } from "./ghlImportContext";
 const m=vi.hoisted(()=>({from:vi.fn()}));vi.mock("@/lib/supabase/admin",()=>({createAdminClient:()=>({from:m.from})}));
 const scope={jobId:"job",leaseId:"lease",actorId:"owner",agencyId:"agency"};
-let disabled=false,expired=false;
-beforeEach(()=>{disabled=false;expired=false;m.from.mockImplementation((table:string)=>{const chain:Record<string,unknown>={};for(const key of ["select","eq","is","gt"])chain[key]=vi.fn(()=>chain);chain.maybeSingle=async()=>({error:null,data:table==="ghl_import_jobs"?(expired?null:{connection_id:"connection",statement_id:"statement",location_id:"Location123",ghl_user_id:"User123"}):table==="users"?{id:"owner",agency_id:"agency",role:"owner",active:true}:table==="ghl_import_automation_settings"&&disabled?null:{id:"verified"}});chain.limit=async()=>({error:null,data:[{id:"entry"}]});return chain;});});
+let disabled=false,expired=false,role="owner";
+beforeEach(()=>{disabled=false;expired=false;role="owner";m.from.mockImplementation((table:string)=>{const chain:Record<string,unknown>={};for(const key of ["select","eq","is","gt","in"])chain[key]=vi.fn(()=>chain);chain.maybeSingle=async()=>({error:null,data:table==="ghl_import_jobs"?(expired?null:{connection_id:"connection",statement_id:"statement",location_id:"Location123",ghl_user_id:"User123"}):table==="users"?{id:"owner",agency_id:"agency",role,active:true}:table==="ghl_import_automation_settings"&&disabled?null:{id:"verified"}});chain.limit=async()=>({error:null,data:[{id:"entry"}]});return chain;});});
 it("never grants background access outside a validated async job context",async()=>{expect(await ghlImportActor()).toBeNull();expect(m.from).not.toHaveBeenCalled();await withGhlImportScope(scope,async()=>expect((await ghlImportActor())?.id).toBe("owner"));expect(await ghlImportActor()).toBeNull();});
 it("rejects expired/changed leases and disabled automation before returning an actor",async()=>{expired=true;await expect(withGhlImportScope(scope,ghlImportActor)).rejects.toThrow("lease");expired=false;disabled=true;await expect(withGhlImportScope(scope,ghlImportActor)).rejects.toThrow("access changed");});
 it("keeps simultaneous job identities isolated",async()=>{await Promise.all([withGhlImportScope(scope,ghlImportActor),withGhlImportScope({...scope,actorId:"another"},ghlImportActor)]);const filters=m.from.mock.results.filter(r=>r.type==="return").map(r=>(r.value as {eq:ReturnType<typeof vi.fn>}).eq.mock.calls).flat();expect(filters).toContainEqual(["actor_user_id","owner"]);expect(filters).toContainEqual(["actor_user_id","another"]);});
+
+it("retains the agent role and requires an explicit supported-role filter",async()=>{
+ role="agent";const actor=await withGhlImportScope(scope,ghlImportActor);expect(actor?.role).toBe("agent");
+ const q=m.from.mock.results.find((r,i)=>m.from.mock.calls[i][0]==="users")?.value;
+ expect(q.in).toHaveBeenCalledWith("role",["owner","agent"]);
+});

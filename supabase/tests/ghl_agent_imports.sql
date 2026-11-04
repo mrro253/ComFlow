@@ -1,0 +1,50 @@
+-- Isolated synthetic runtime only. All fixtures, operations and receipts roll back.
+\set ON_ERROR_STOP on
+do $$ begin if current_setting('readiness.synthetic_only',true) is distinct from 'on' then raise exception 'Synthetic-only runner required'; end if; end $$;
+begin;
+create function pg_temp.ok(value boolean,label text) returns void language plpgsql as $$ begin if value is distinct from true then raise exception 'GHL journal failure: %',label; end if; end $$;
+create function pg_temp.denied(statement text) returns void language plpgsql as $$ begin begin execute statement;exception when others then return;end;raise exception 'Expected journal rejection';end $$;
+create function pg_temp.payload() returns jsonb language sql as $$select jsonb_build_object('id','e0140000-0000-4000-8000-000000000501','connectionId','e0140000-0000-4000-8000-000000000303','locationId','SyntheticLocation','ghlUserId','SyntheticOwner','contactId','SyntheticContact1','fieldId','SyntheticStatus','ownerId','e0140000-0000-4000-8000-000000000001','sourceHash',repeat('a',64),'code','APP1','sourceFingerprint',repeat('b',64),'statementMonth','2026-03','reviewHash',repeat('c',64),'snapshotHash',repeat('d',64),'previousStatus','Unknown')$$;
+create function pg_temp.run(actor uuid,action text,data jsonb) returns void language plpgsql as $$ begin perform public.manage_ghl_policy_operation(actor,'e0140000-0000-4000-8000-000000000100',action,data);end $$;
+insert into public.agencies(id,name) values('e0140000-0000-4000-8000-000000000100','Synthetic write A'),('e0140000-0000-4000-8000-000000000200','Synthetic write B');
+insert into auth.users(id,email) values('e0140000-0000-4000-8000-000000000001','write-owner@synthetic.invalid'),('e0140000-0000-4000-8000-000000000002','write-agent@synthetic.invalid'),('e0140000-0000-4000-8000-000000000004','write-foreign@synthetic.invalid');
+insert into public.users(id,agency_id,email,first_name,last_name,role,agent_type,active) values
+ ('e0140000-0000-4000-8000-000000000001','e0140000-0000-4000-8000-000000000100','write-owner@synthetic.invalid','Synthetic','Owner','owner','independent',true),
+ ('e0140000-0000-4000-8000-000000000002','e0140000-0000-4000-8000-000000000100','write-agent@synthetic.invalid','Synthetic','Agent','agent','independent',true),
+ ('e0140000-0000-4000-8000-000000000004','e0140000-0000-4000-8000-000000000200','write-foreign@synthetic.invalid','Synthetic','Foreign','owner','independent',true);
+select public.manage_ghl_connection('e0140000-0000-4000-8000-000000000001','e0140000-0000-4000-8000-000000000100','save','{"id":"e0140000-0000-4000-8000-000000000303","mode":"shared","locationId":"SyntheticLocation","locationName":"Synthetic location","ciphertext":"v1.synthetic"}');
+select public.manage_ghl_connection('e0140000-0000-4000-8000-000000000001','e0140000-0000-4000-8000-000000000100','map','{"id":"e0140000-0000-4000-8000-000000000303","userId":"e0140000-0000-4000-8000-000000000001","ghlUserId":"SyntheticOwner"}');
+select public.manage_ghl_connection('e0140000-0000-4000-8000-000000000001','e0140000-0000-4000-8000-000000000100','map','{"id":"e0140000-0000-4000-8000-000000000303","userId":"e0140000-0000-4000-8000-000000000002","ghlUserId":"SyntheticAgent"}');
+
+insert into auth.users(id,email) values('e0140000-0000-4000-8000-000000000003','write-agent2@synthetic.invalid');
+insert into public.users(id,agency_id,email,first_name,last_name,role,agent_type,active) values('e0140000-0000-4000-8000-000000000003','e0140000-0000-4000-8000-000000000100','write-agent2@synthetic.invalid','Synthetic','Agent2','agent','independent',true);
+select public.manage_ghl_connection('e0140000-0000-4000-8000-000000000001','e0140000-0000-4000-8000-000000000100','map','{"id":"e0140000-0000-4000-8000-000000000303","userId":"e0140000-0000-4000-8000-000000000003","ghlUserId":"SyntheticAgent2"}');
+insert into public.ghl_import_automation_settings(agency_id,actor_user_id,connection_id,enabled) select agency_id,id,'e0140000-0000-4000-8000-000000000303',true from public.users where id in ('e0140000-0000-4000-8000-000000000002','e0140000-0000-4000-8000-000000000003');
+insert into public.commission_statements(id,agency_id,user_id,carrier,statement_month,source,file_hash) values('e0190000-0000-4000-8000-000000000301','e0140000-0000-4000-8000-000000000100',null,'Synthetic','2026-03','upload',repeat('a',64));
+insert into public.carrier_transactions(id,agency_id,statement_id,carrier,statement_month,carrier_member_id,effective_date,commission_type,amount_cents,transaction_key,user_id) values
+('e0190000-0000-4000-8000-000000000401','e0140000-0000-4000-8000-000000000100','e0190000-0000-4000-8000-000000000301','Synthetic','2026-03','SYNTHETIC1','2026-03-01','COMMISSION',100,'agent-source-1','e0140000-0000-4000-8000-000000000002'),
+('e0190000-0000-4000-8000-000000000402','e0140000-0000-4000-8000-000000000100','e0190000-0000-4000-8000-000000000301','Synthetic','2026-03','SYNTHETIC2','2026-03-01','COMMISSION',100,'agent-source-2','e0140000-0000-4000-8000-000000000003');
+update public.commission_statements set status='imported' where id='e0190000-0000-4000-8000-000000000301';
+select pg_temp.ok((select count(*)=2 from public.ghl_import_jobs),'one team import queues one job per credited enabled agent');
+select pg_temp.ok((select count(*)=1 from public.ghl_import_jobs where actor_user_id='e0140000-0000-4000-8000-000000000002' and ghl_user_id='SyntheticAgent'),'agent A job uses own mapping');
+select pg_temp.ok((select count(*)=1 from public.ghl_import_jobs where actor_user_id='e0140000-0000-4000-8000-000000000003' and ghl_user_id='SyntheticAgent2'),'agent B job uses own mapping');
+select pg_temp.ok(public.claim_ghl_import_job((select id from public.ghl_import_jobs where actor_user_id='e0140000-0000-4000-8000-000000000002'),gen_random_uuid()) is not null,'active agent can claim own credited import');
+select pg_temp.run('e0140000-0000-4000-8000-000000000002','prepare',pg_temp.payload()||jsonb_build_object('ghlUserId','SyntheticAgent','ownerId','e0140000-0000-4000-8000-000000000002','code','STMT_e0190000000040008000000000000401'));
+select pg_temp.denied($q$select pg_temp.run('e0140000-0000-4000-8000-000000000003','claim',jsonb_build_object('id','e0140000-0000-4000-8000-000000000501','leaseId',gen_random_uuid()))$q$);
+select pg_temp.denied($q$select public.assert_ghl_policy_source('e0140000-0000-4000-8000-000000000003','e0140000-0000-4000-8000-000000000100','e0140000-0000-4000-8000-000000000003',repeat('a',64),'STMT_e0190000000040008000000000000401')$q$);
+select pg_temp.denied($q$select public.assert_ghl_policy_source('e0140000-0000-4000-8000-000000000004','e0140000-0000-4000-8000-000000000200','e0140000-0000-4000-8000-000000000004',repeat('a',64),'STMT_e0190000000040008000000000000401')$q$);
+select pg_temp.denied($q$select public.assert_ghl_policy_source('e0140000-0000-4000-8000-000000000002','e0140000-0000-4000-8000-000000000100','e0140000-0000-4000-8000-000000000002',repeat('b',64),'STMT_e0190000000040008000000000000401')$q$);
+insert into public.ghl_statement_contact_operations(id,agency_id,actor_user_id,connection_id,ghl_user_id,source_entry_id,identity_hash) values('e0190000-0000-4000-8000-000000000601','e0140000-0000-4000-8000-000000000100','e0140000-0000-4000-8000-000000000002','e0140000-0000-4000-8000-000000000303','SyntheticAgent','e0190000-0000-4000-8000-000000000401',repeat('f',64));
+select pg_temp.denied($q$insert into public.ghl_statement_contact_operations(id,agency_id,actor_user_id,connection_id,ghl_user_id,source_entry_id,identity_hash) values(gen_random_uuid(),'e0140000-0000-4000-8000-000000000100','e0140000-0000-4000-8000-000000000003','e0140000-0000-4000-8000-000000000303','SyntheticAgent2','e0190000-0000-4000-8000-000000000401',repeat('e',64))$q$);
+update public.ghl_agent_mappings set ghl_user_id='ChangedAgent2' where user_id='e0140000-0000-4000-8000-000000000003';
+select pg_temp.ok(public.claim_ghl_import_job((select id from public.ghl_import_jobs where actor_user_id='e0140000-0000-4000-8000-000000000003'),gen_random_uuid()) is null,'changed mapping cancels queued job');
+select pg_temp.ok((select state='cancelled' from public.ghl_import_jobs where actor_user_id='e0140000-0000-4000-8000-000000000003'),'changed assignment is not retried');
+-- Assigned SunFire applications retain their original owner and require a current explicit agent assignment.
+insert into public.audit_events(agency_id,actor_user_id,action,entity_type,entity_id,details,created_at) values('e0140000-0000-4000-8000-000000000100','e0140000-0000-4000-8000-000000000001','sunfire.sale_assigned','sunfire_collection',repeat('a',64),jsonb_build_object('ownerId','e0140000-0000-4000-8000-000000000001','enrollmentCode','APP1','agentId','e0140000-0000-4000-8000-000000000002'),now());
+select pg_temp.run('e0140000-0000-4000-8000-000000000002','prepare',pg_temp.payload()||jsonb_build_object('id','e0140000-0000-4000-8000-000000000502','contactId','AnotherContact123','ghlUserId','SyntheticAgent'));
+insert into public.audit_events(agency_id,actor_user_id,action,entity_type,entity_id,details,created_at) values('e0140000-0000-4000-8000-000000000100','e0140000-0000-4000-8000-000000000001','sunfire.sale_assigned','sunfire_collection',repeat('a',64),jsonb_build_object('ownerId','e0140000-0000-4000-8000-000000000001','enrollmentCode','APP1','agentId','e0140000-0000-4000-8000-000000000003'),now()+interval '1 second');
+select pg_temp.denied($q$select pg_temp.run('e0140000-0000-4000-8000-000000000002','claim',jsonb_build_object('id','e0140000-0000-4000-8000-000000000502','leaseId',gen_random_uuid()))$q$);
+update public.users set active=false where id='e0140000-0000-4000-8000-000000000002';
+select pg_temp.denied($q$select pg_temp.run('e0140000-0000-4000-8000-000000000002','claim',jsonb_build_object('id','e0140000-0000-4000-8000-000000000501','leaseId',gen_random_uuid()))$q$);
+select pg_temp.ok(not has_function_privilege('authenticated','public.assert_ghl_policy_source(uuid,uuid,uuid,text,text)','EXECUTE'),'source guard is not callable by browser');
+rollback;

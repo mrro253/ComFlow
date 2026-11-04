@@ -18,7 +18,7 @@ type Operation=Database["public"]["Tables"]["ghl_statement_contact_operations"][
 export interface StatementContactResult {name:string;carrier:string;effectiveDate:string;result:"Linked"|"Created and linked"|"Already linked"|"Needs review";reason:string;candidates?:{name:string;nameAgrees:boolean;fullMbiAgrees:boolean;partialMbiAgrees:boolean;effectiveDate:string;dateAgrees:boolean;memberIdAgrees:boolean}[]}
 const uuid=(key:string)=>{const h=digest(key);return `${h.slice(0,8)}-${h.slice(8,12)}-5${h.slice(13,16)}-a${h.slice(17,20)}-${h.slice(20,32)}`;};
 export async function syncStatementContacts(user:CurrentUser,reviewOnly=false,linkOnly=false,confirmedPairs:{sourceName:string;contactName:string}[]=[],statementId?:string){
- if(!user.active||user.role!=="owner")throw new Error("The credited owner must run this contact setup.");
+ if(!user.active||!["owner","agent"].includes(user.role))throw new Error("The active credited owner or agent must run this contact setup.");
  const access=await ghlPreviewAccess(user);await verifyGhlUser(access.locationId,access.ghlUserId,access.token);
  const source=await originalStatementEvidence(user),fields=await readPolicyFields(access.locationId,access.token),mbiFields=fields.filter(f=>f.key==="contact.medicare_number_mbi"&&f.type==="TEXT"),dates=fields.filter(f=>f.name==="Medicare Policy Effective Date"&&f.type==="DATE");
  if(mbiFields.length!==1||dates.length!==1)throw new Error("Identity field mappings are ambiguous.");
@@ -27,7 +27,7 @@ export async function syncStatementContacts(user:CurrentUser,reviewOnly=false,li
  for(const item of source.rows){const key=digest([item.entry.carrier,item.entry.carrier_member_id,item.entry.effective_date]);groups.set(key,[...(groups.get(key)??[]),item]);}
  if(groups.size>100)throw new Error("Contact setup limit exceeded.");
  const sales=await listEditableSales(user,undefined,true),bridges:{name:string;carrier:string;date:string;mbi:string;contactId:string}[]=[];
- for(const sale of sales){if(!sale.source||sale.ownerId!==user.id)continue;const link=await readGhlEnrollmentLink(user,access,sale),mbi=fullMbi(sale.source.mbi);if(link&&mbi)bridges.push({name:statementName(sale.source.firstName+sale.source.lastName),carrier:canonicalEnrollmentCarrier(sale.source.carrier),date:sale.source.proposedEffectiveDate,mbi,contactId:link.contactId});}
+ for(const sale of sales){if(!sale.source||(user.role==="agent"?sale.assignedAgentId!==user.id:sale.ownerId!==user.id))continue;const link=await readGhlEnrollmentLink(user,access,sale),mbi=fullMbi(sale.source.mbi);if(link&&mbi)bridges.push({name:statementName(sale.source.firstName+sale.source.lastName),carrier:canonicalEnrollmentCarrier(sale.source.carrier),date:sale.source.proposedEffectiveDate,mbi,contactId:link.contactId});}
  if(!Array.isArray(confirmedPairs)||confirmedPairs.length>10||confirmedPairs.some(p=>typeof p?.sourceName!=="string"||typeof p?.contactName!=="string"||!p.sourceName||!p.contactName||p.sourceName.length>200||p.contactName.length>200))throw new Error("Invalid name confirmation.");
  const confirmationRows=await db.from("audit_events").select("details").eq("agency_id",user.agencyId).eq("actor_user_id",user.id).eq("action","ghl.statement_name_confirmed").eq("details->>connectionId",access.connectionId).limit(1000);if(confirmationRows.error)throw new Error("Name confirmations unavailable.");
  const confirmations=(confirmationRows.data??[]).map(r=>r.details as Record<string,unknown>);
@@ -46,7 +46,7 @@ export async function syncStatementContacts(user:CurrentUser,reviewOnly=false,li
    const c=uniquePartialDateContact(e,directory,access.ghlUserId,dates[0].id);
    if(c){const proof=aliasProof(e,c),sourceName=statementName(statementNames(e).firstName+statementNames(e).lastName);
     const authorized=confirmedPairs.some(p=>statementName(p.sourceName)===sourceName&&statementName(p.contactName)===statementName(c.firstName+c.lastName));
-    if(authorized||confirmations.some(p=>digest(p)===digest(proof)))return {kind:"link" as const,contactId:c.id,reason:"Owner confirmed the name difference; partial MBI and effective date agree.",aliasProof:proof};
+    if(authorized||confirmations.some(p=>digest(p)===digest(proof)))return {kind:"link" as const,contactId:c.id,reason:"Account holder confirmed the name difference; partial MBI and effective date agree.",aliasProof:proof};
    }
   }
   return regular;
@@ -67,7 +67,7 @@ export async function syncStatementContacts(user:CurrentUser,reviewOnly=false,li
  for(const [sourceKey,items]of groups){
   if(statementId&&!items.some(i=>i.entry.statement_id===statementId))continue;
   const item=[...items].sort((a,b)=>b.row.statementMonth.localeCompare(a.row.statementMonth))[0],e=item.row,names=statementNames(e),base={name:e.clientName,carrier:e.carrier,effectiveDate:e.effectiveDate};
-  if(items.some(i=>i.entry.user_id!==user.id)){output.push({...base,result:"Needs review",reason:"Statement is not credited to the current owner."});continue;}
+  if(items.some(i=>i.entry.user_id!==user.id)){output.push({...base,result:"Needs review",reason:"Statement is not credited to your account."});continue;}
   const id=e.medicareId.replace(/[ -]/g,"").toUpperCase(),identity=digest(fullMbi(id)?{mbi:fullMbi(id)}:{name:statementName(names.firstName+names.lastName),partial:id,carrier:e.carrier});
   if(items.some(i=>{const n=statementNames(i.row);return statementName(n.firstName+n.lastName)!==statementName(names.firstName+names.lastName)||i.row.medicareId.replace(/[ -]/g,"").toUpperCase()!==id;})){output.push({...base,result:"Needs review",reason:"Conflicting original statement identity."});continue;}
   let lease:string|undefined,op:Operation|undefined;

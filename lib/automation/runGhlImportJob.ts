@@ -28,7 +28,7 @@ export async function processGhlImportJob(jobId:string){
    if(!imported.length)throw new Error("No authorized imported entries.");
    const affectedCodes=new Set<string>();
    for(const sale of await listEditableSales(user,undefined,true)){
-    const s=sale.source;if(!s||sale.ownerId!==user.id)continue;
+    const s=sale.source;if(!s||(user.role==="agent"?sale.assignedAgentId!==user.id:sale.ownerId!==user.id))continue;
     if(imported.some(({row:e})=>{const n=statementNames(e),id=e.medicareId.replace(/[ -]/g,"").toUpperCase();return canonicalEnrollmentCarrier(s.carrier)===e.carrier&&s.proposedEffectiveDate===e.effectiveDate&&!!fullMbi(s.mbi)&&(fullMbi(id)?fullMbi(id)===fullMbi(s.mbi):id.length===5&&e.carrier==="Ultimate Health Plans"&&s.mbi.endsWith(id)&&statementName(n.firstName+n.lastName)===statementName(s.firstName+s.lastName));}))affectedCodes.add(sale.code);
    }
    async function heartbeat(){await ghlImportActor();const r=await db.from("ghl_import_jobs").update({lease_until:new Date(Date.now()+1800000).toISOString(),updated_at:new Date().toISOString()}).eq("id",job.id).eq("lease_id",leaseId).eq("state","running").gt("lease_until",new Date().toISOString()).select("id").maybeSingle();if(r.error||!r.data)throw new Error("Job lease changed.");}

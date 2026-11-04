@@ -31,3 +31,10 @@ it("rechecks statement and connection snapshots and exposes paused operations fo
  m.pending.mockResolvedValue([{source_code:code,id:"Operation123",lease_until:null}]);expect((await checkStatementContacts(user)).rows[0].pendingId).toBe("Operation123");
  m.access.mockResolvedValueOnce({connectionId:"First",locationId:"Location123",ghlUserId:"User123",token:"synthetic"});await expect(checkStatementContacts(user)).rejects.toThrow("Connection access changed");
 });
+
+it("allows a credited agent's statement update but denies another agent's credit",async()=>{
+ const agent={...user,role:"agent" as const};
+ expect((await checkStatementContacts(agent,"",code)).context?.plan.ownerId).toBe(agent.id);
+ m.inventory.mockResolvedValue({statements:[{id:"statement",file_hash:"a".repeat(64)}],entries:[{...entry,user_id:"other-agent"}]});
+ const result=await checkStatementContacts(agent,"",code);expect(result.context).toBeUndefined();expect(result.rows[0].proposal).toBe(false);
+});

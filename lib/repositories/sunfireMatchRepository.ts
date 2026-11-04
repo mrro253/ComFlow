@@ -15,7 +15,7 @@ export async function loadSunfireMatchInventory(user: CurrentUser) {
     // transactions first, then resolve only their active imported source metadata.
     for (let offset = 0; ; offset += 500) {
       if (offset >= 10000) throw new Error("Commission scope is too large.");
-      const result = await session.from("carrier_transactions").select("*").eq("agency_id", user.agencyId).is("superseded_at", null).order("id").range(offset, offset + 499);
+      const result = await session.from("carrier_transactions").select("*").eq("agency_id", user.agencyId).eq("user_id", user.id).is("superseded_at", null).order("id").range(offset, offset + 499);
       if (result.error) throw new Error("Could not read commission entries.");
       entries.push(...(result.data ?? []));
       if ((result.data?.length ?? 0) < 500) break;

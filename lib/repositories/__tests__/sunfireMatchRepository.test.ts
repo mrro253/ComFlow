@@ -19,6 +19,7 @@ describe("SunFire comparison inventory scope", () => {
   it("authorizes agent rows through session RLS before resolving shared source metadata", async () => {
     const result = await loadSunfireMatchInventory({ ...user, role: "agent" });
     expect(result.entries).toHaveLength(500);
+    expect(mock.filters).toContainEqual(["carrier_transactions", "user_id", user.id]);
     expect(mock.source).toHaveBeenCalledWith("id", ["shared-source", "retired-source"]);
     expect(mock.filters).toContainEqual(["admin", "commission_statements", "agency_id", user.agencyId]);
     expect(mock.filters).toContainEqual(["admin", "commission_statements", "status", "imported"]);

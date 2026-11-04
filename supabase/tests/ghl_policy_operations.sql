@@ -34,7 +34,7 @@ select pg_temp.denied($q$select pg_temp.run('e0140000-0000-4000-8000-00000000000
 select pg_temp.run('e0140000-0000-4000-8000-000000000001','checkpoint','{"id":"e0140000-0000-4000-8000-000000000501","leaseId":"e0140000-0000-4000-8000-000000000702","phase":"note_confirmed","noteId":"SyntheticNote"}');
 select pg_temp.run('e0140000-0000-4000-8000-000000000001','checkpoint','{"id":"e0140000-0000-4000-8000-000000000501","leaseId":"e0140000-0000-4000-8000-000000000702","phase":"field_pending"}');
 select pg_temp.run('e0140000-0000-4000-8000-000000000001','checkpoint','{"id":"e0140000-0000-4000-8000-000000000501","leaseId":"e0140000-0000-4000-8000-000000000702","phase":"completed"}');
-select pg_temp.ok((select count(*)=1 from public.audit_events where action='ghl.policy_status_write_completed'),'one durable completion receipt');
+select pg_temp.ok((select count(*)=1 from public.audit_events where agency_id='e0140000-0000-4000-8000-000000000100' and action='ghl.policy_status_write_completed'),'one durable completion receipt');
 select pg_temp.denied($q$select pg_temp.run('e0140000-0000-4000-8000-000000000001','checkpoint','{"id":"e0140000-0000-4000-8000-000000000501","leaseId":"e0140000-0000-4000-8000-000000000702","phase":"completed"}')$q$);
 insert into public.audit_events(agency_id,actor_user_id,action,entity_type,entity_id,created_at,details) values('e0140000-0000-4000-8000-000000000100','e0140000-0000-4000-8000-000000000001','sunfire.sale_assigned','sunfire_collection',repeat('a',64),'2026-11-03 10:00Z','{"ownerId":"e0140000-0000-4000-8000-000000000001","enrollmentCode":"AGENT1","agentId":"e0140000-0000-4000-8000-000000000002"}');
 select pg_temp.run('e0140000-0000-4000-8000-000000000002','prepare',pg_temp.payload()||'{"id":"e0140000-0000-4000-8000-000000000503","contactId":"SyntheticContact3","code":"AGENT1","ghlUserId":"SyntheticAgent"}');
@@ -55,7 +55,7 @@ select pg_temp.denied($q$select pg_temp.run('e0140000-0000-4000-8000-00000000000
 select pg_temp.run('e0140000-0000-4000-8000-000000000001','checkpoint','{"id":"e0140000-0000-4000-8000-000000000510","leaseId":"e0140000-0000-4000-8000-000000000710","phase":"note_pending"}');
 select pg_temp.run('e0140000-0000-4000-8000-000000000001','checkpoint','{"id":"e0140000-0000-4000-8000-000000000510","leaseId":"e0140000-0000-4000-8000-000000000710","phase":"note_confirmed","noteId":"SyntheticDetailsNote"}');
 select pg_temp.run('e0140000-0000-4000-8000-000000000001','checkpoint','{"id":"e0140000-0000-4000-8000-000000000510","leaseId":"e0140000-0000-4000-8000-000000000710","phase":"completed"}');
-select pg_temp.ok((select count(*)=1 from public.audit_events where action='ghl.policy_details_write_completed'),'details receive a separate completion receipt');
+select pg_temp.ok((select count(*)=1 from public.audit_events where agency_id='e0140000-0000-4000-8000-000000000100' and action='ghl.policy_details_write_completed'),'details receive a separate completion receipt');
 select pg_temp.denied($q$select pg_temp.run('e0140000-0000-4000-8000-000000000001','prepare',pg_temp.payload()||'{"fieldId":"PolicyDetails"}')$q$);
 select pg_temp.denied($q$select pg_temp.run('e0140000-0000-4000-8000-000000000001','prepare',pg_temp.payload()||'{"fieldId":"PolicyDetails","payload":{"kind":"details","changes":[{"key":"mbi","fieldId":"SyntheticMbi","previous":null,"target":"forbidden"}]}}')$q$);
 update public.users set active=false where id='e0140000-0000-4000-8000-000000000001';

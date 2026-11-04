@@ -13,7 +13,7 @@ export default async function GhlSetupPage() {
   try {setup=await listGhlSetup();} catch {return <div className="space-y-4"><h1 className="text-2xl font-semibold">GoHighLevel setup</h1><p>Secure connection setup is waiting for its database update. No token has been requested or saved.</p></div>;}
   const personal=setup.connections.find(c=>c.mode==="personal"&&c.user_id===user.id),shared=setup.connections.find(c=>c.mode==="shared");
   const team=user.role==="owner"?(await listUsersForAgency(user.agencyId)).filter(p=>p.active).map(p=>({id:p.id,name:`${p.firstName} ${p.lastName}`})):[];
-  let automation:Awaited<ReturnType<typeof ghlAutomationState>>|null=null;if(user.role==="owner"&&shared){try{automation=await ghlAutomationState();}catch{/* Setup remains usable while migration is pending. */}}
+  let automation:Awaited<ReturnType<typeof ghlAutomationState>>|null=null;if(["owner","agent"].includes(user.role)&&shared){try{automation=await ghlAutomationState();}catch{/* Setup remains usable while migration is pending. */}}
   return <div className="max-w-3xl space-y-6">
     <Link className="text-sm underline" href="/settings">Back to Settings</Link><h1 className="text-2xl font-semibold">GoHighLevel setup</h1>
     <p>Connect a sub-account once, then assign yourself or your teammates by GHL User ID.</p><p>Manage matching and policy updates here. Automatic processing can run after future statement imports; uncertain matches remain available for review.</p>
@@ -24,7 +24,7 @@ export default async function GhlSetupPage() {
       {shared ? <p>Verified: {shared.location_name} · Sub-account Location ID: {shared.location_id}</p>:<p>Connect this once for yourself or your agency. After saving, assign yourself and any teammates using their GHL User IDs. Assigned agents do not need a Location ID or token.</p>}
       {user.role==="owner" ? <>
         <details open={!shared}><summary className="cursor-pointer font-medium">{shared?"Manage connection":"Enter sub-account connection details"}</summary>{shared && <><p className="my-3 text-sm">Replacing this connection clears its user assignments. Assign users again afterward.</p><GhlManageForm id={shared.id} action="disconnect"/></>}<div className="mt-3"><GhlConnectForm mode="shared"/></div></details>
-      </>:<p className="text-sm">{setup.mappings.some(m=>m.user_id===user.id)?"Your shared-location mapping is saved. Contact access is not enabled yet.":"Your agency owner handles setup. Ask them to assign your ComFlow account using your GHL User ID from GHL → Users. You do not need to enter a Location ID or token."}</p>}
+      </>:<p className="text-sm">{setup.mappings.some(m=>m.user_id===user.id)?"Your GHL User ID is assigned. Matching and automatic updates use only your credited commissions and contacts assigned to you in GHL.":"Your agency owner handles setup. Ask them to assign your ComFlow account using your GHL User ID from GHL → Users. You do not need to enter a Location ID or token."}</p>}
     </section>
     {user.role==="owner" && <section className="rounded-lg border p-5 space-y-3">
       <h2 className="text-lg font-semibold">Step 2: Assign yourself or teammates</h2>
