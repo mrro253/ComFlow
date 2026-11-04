@@ -1,3 +1,7 @@
+# Online test environment readiness - 2026-11-03
+
+Ryan's GitHub repository administration is confirmed. The active database is local; Ryan confirmed that Supabase/Vercel accounts have not been created. New Ryan-owned cloud setup is needed; the web host has not been selected. The audit identifies statement-upload limits, the separate GHL worker, carrier-browser verification, test-only secrets and complete backup requirements. See [account findings and online test setup checklist](docs/online-test-environment-readiness.md). Documentation only on the review branch; nothing was deployed or migrated.
+
 # GHL sync results - 2026-11-03
 
 Open GHL sync results from GHL setup, policy updates or original-statement matching. Each recent import run shows the statement carrier/month, policy links verified, contacts created, policy updates verified and plain explanations for items left unchanged. Waiting, automatic retry, processing, stopped and needs-attention states are distinct. Results refresh automatically while pending and remain scoped to the current account. Existing imports are not replayed. Review branch only. See [results and access rules](docs/ghl-import-automation.md).
