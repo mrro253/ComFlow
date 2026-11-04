@@ -8,11 +8,13 @@ export function enrollmentCommissionStatus(match: EnrollmentCommissionMatch, noE
   const payments = evidence.filter(row => !row.chargeback && row.amountCents > 0 && ["COMMISSION", "INITIAL", "RENEWAL"].includes(row.category));
   // Keep reversals visible even when another month contains a positive commission.
   const label = noExpected ? "No commission expected" : chargebacks.length ? "Charged back" : payments.length ? "Paid" : "Not paid yet";
-  const reason = label === "Charged back" ? "The carrier reported a commission reversal. Other commission entries may also exist."
+  const reason = label === "Charged back" ? "The carrier reported a chargeback. Positive commission entries may also exist."
     : label === "Paid" ? "A matching commission appears on an imported statement. This does not confirm a bank deposit."
     : label === "No commission expected" ? match.evidence.length ? "This application is marked as not taking effect. Possible statement entries remain visible below; a later application has its own status." : "This enrollment did not take effect."
     : match.sharedEvidence || match.status === "date" || match.status === "identity" ? "A possible statement entry could not be confidently matched to this enrollment."
     : match.status === "no_statements" ? "No statements for this carrier are on file yet."
     : "No matching commission appears in the statements currently on file. It may arrive on a later statement.";
-  return { label, reason, evidence, paidCents: payments.reduce((sum, row) => sum + row.amountCents, 0), chargedBackCents: chargebacks.reduce((sum, row) => sum + row.amountCents, 0) };
+  const waitingReason = label !== "Not paid yet" ? null : match.sharedEvidence || match.status === "date" || match.status === "identity" ? "match_unverified" as const : match.status === "no_statements" ? "no_statements" as const : "not_reported" as const;
+  const outcomeConflict = noExpected && evidence.some(row => row.amountCents !== 0);
+  return { label, reason, waitingReason, outcomeConflict, evidence, paidCents: payments.reduce((sum, row) => sum + row.amountCents, 0), chargedBackCents: chargebacks.reduce((sum, row) => sum + row.amountCents, 0) };
 }

@@ -34,3 +34,9 @@ describe("automatic enrollment commission status", () => {
     expect(status([entry({ effectiveDate: "2026-03-01" })], true).label).toBe("No commission expected");
   });
 });
+
+it("explains missing statement coverage and preserves visible conflicts with an explicit outcome",()=>{
+ const missing=compareEnrollmentCommissions([enrollment],[],[])[0];expect(enrollmentCommissionStatus(missing).waitingReason).toBe("no_statements");
+ expect(status([entry()],true).outcomeConflict).toBe(true);expect(status([entry()],true).label).toBe("No commission expected");
+ expect(status([entry()]).waitingReason).toBeNull();
+});

@@ -1,3 +1,7 @@
+# Enrollment and GHL read-only review - 2026-11-03
+
+Enrollments now explains why a commission is not paid yet and keeps GHL details/corrections out of the main payment view. A new saved-only GHL coverage page covers original-statement policies without requiring SunFire. Existing-data checks found 19 applications, 41 saved links across 53 statement policies, 12 held identities and three unsent Active proposals. No records or GHL contacts changed. See [findings, page responsibilities and remaining limits](docs/enrollment-and-ghl-readonly-review.md). Review branch only.
+
 # Online test environment readiness - 2026-11-03
 
 Ryan's GitHub repository administration is confirmed. The active database is local; Ryan confirmed that Supabase/Vercel accounts have not been created. New Ryan-owned cloud setup is needed; the web host has not been selected. The audit identifies statement-upload limits, the separate GHL worker, carrier-browser verification, test-only secrets and complete backup requirements. See [account findings and online test setup checklist](docs/online-test-environment-readiness.md). Documentation only on the review branch; nothing was deployed or migrated.
