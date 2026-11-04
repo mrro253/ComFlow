@@ -5,7 +5,7 @@ function fixture(){
  const d:ImportAutomationDependencies={heartbeat:vi.fn(async()=>{}),affectedCodes:new Set(["Affected"]),contacts:vi.fn(async()=>{order.push("contacts");return [{result:"Created and linked"},{result:"Needs review"}];}),recover:vi.fn(async()=>{order.push("recover");return 1;}),policyPreview:vi.fn(async()=>++preview===1?[{code:"Affected",detailsProposal:true,statusProposal:false},{code:"Unrelated",detailsProposal:true,statusProposal:true}]:[{code:"Affected",statusProposal:true},{code:"Unrelated",statusProposal:true}]),statementPreview:vi.fn(async()=>[{code:"Statement",proposal:true},{code:"Held",proposal:false}]),send:vi.fn(async(code,details)=>{order.push(`${code}/${details}`);return {changed:true,fieldCount:details?3:1};})};return {d,order};
 }
 it("links/creates before updates, recovers uncertain operations first, and limits updates to affected policies",async()=>{
- const {d,order}=fixture();expect(await runGhlImportPipeline(d)).toEqual({policies:2,linked:1,created:1,held:1,operationsCompleted:4,fieldsChanged:5});expect(order).toEqual(["contacts","recover","Affected/true","Affected/false","Statement/false"]);expect(d.send).not.toHaveBeenCalledWith("Unrelated",expect.anything());expect(d.send).not.toHaveBeenCalledWith("Held",expect.anything());
+ const {d,order}=fixture();expect(await runGhlImportPipeline(d)).toEqual({policies:2,linked:1,created:1,held:1,operationsCompleted:4,fieldsChanged:5,holdReasons:[{reason:"identity",count:1}]});expect(order).toEqual(["contacts","recover","Affected/true","Affected/false","Statement/false"]);expect(d.send).not.toHaveBeenCalledWith("Unrelated",expect.anything());expect(d.send).not.toHaveBeenCalledWith("Held",expect.anything());
 });
 it("stops after uncertain recovery or a lost write response rather than sending later proposals",async()=>{
  const f=fixture();f.d.recover=vi.fn().mockRejectedValue(new Error("uncertain note"));await expect(runGhlImportPipeline(f.d)).rejects.toThrow();expect(f.d.send).not.toHaveBeenCalled();
@@ -13,4 +13,11 @@ it("stops after uncertain recovery or a lost write response rather than sending 
 });
 it("rechecks the job lease before each external step",async()=>{
  const f=fixture();f.d.heartbeat=vi.fn().mockRejectedValue(new Error("revoked"));await expect(runGhlImportPipeline(f.d)).rejects.toThrow();expect(f.d.contacts).not.toHaveBeenCalled();expect(f.d.send).not.toHaveBeenCalled();
+});
+
+it("stores only fixed hold categories and counts, including unsupported policy updates",async()=>{
+ const f=fixture();f.d.contacts=vi.fn().mockResolvedValue([{result:"Needs review",reason:"A contact belongs to another GHL user - private client data"}]);
+ f.d.policyPreview=vi.fn().mockResolvedValue([{code:"Affected",statusProposal:false,fields:[{label:"Medicare policy name",decision:"Keep unchanged - current coverage not confirmed"}]}]);
+ f.d.statementPreview=vi.fn().mockResolvedValue([{code:"Held",proposal:false,note:"Contact identity agrees, but policy effective dates differ."}]);
+ const result=await runGhlImportPipeline(f.d);expect(result.holdReasons).toEqual([{reason:"assignment",count:1},{reason:"unsupported",count:1},{reason:"date",count:1}]);expect(JSON.stringify(result)).not.toContain("private client data");
 });

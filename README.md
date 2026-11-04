@@ -1,3 +1,7 @@
+# GHL sync results - 2026-11-03
+
+Open GHL sync results from GHL setup, policy updates or original-statement matching. Each recent import run shows the statement carrier/month, policy links verified, contacts created, policy updates verified and plain explanations for items left unchanged. Waiting, automatic retry, processing, stopped and needs-attention states are distinct. Results refresh automatically while pending and remain scoped to the current account. Existing imports are not replayed. Review branch only. See [results and access rules](docs/ghl-import-automation.md).
+
 # Agent-specific GHL automation - 2026-11-03
 
 Mapped agents can enable automatic GHL processing for their own credited commissions. Shared statements create separate jobs per enabled producer; contacts, links, notes and updates stay bound to that producer's GHL User ID. Current source ownership, revoked assignments and disabled accounts are rechecked before writes. Validated with 701 tests, both type checks, the preview build, five isolated SQL suites and two-agent/owner import rehearsals with no real GHL requests. See [access and validation](docs/ghl-import-automation.md). Review branch only; Main is unchanged.
