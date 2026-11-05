@@ -1,3 +1,4 @@
+import {commissionCreditRows} from "@/lib/reporting/commissionCredit";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
@@ -26,10 +27,11 @@ export default async function ReportsPage({
   const from = monthParam(params.from);
   const to = monthParam(params.to);
 
-  const [transactions, team] = await Promise.all([
+  const [visibleTransactions, team] = await Promise.all([
     listVisibleTransactions(),
     listUsersForAgency(user.agencyId),
   ]);
+  const transactions=commissionCreditRows(user,visibleTransactions);
   const nameById = new Map(team.map((u) => [u.id, `${u.firstName} ${u.lastName}`]));
   const payments = transactions.map((tx) => ({
     statementMonth: tx.statementMonth,

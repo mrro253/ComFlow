@@ -1,3 +1,4 @@
+import {commissionCreditRows} from "@/lib/reporting/commissionCredit";
 import { listVisibleTransactions } from "@/lib/repositories/statementRepository";
 import { clientCommissionHistory } from "@/lib/reporting/clientCommissionHistory";
 import { canAccessStatement } from "@/lib/auth/statementAccess";
@@ -5,7 +6,7 @@ import type { CurrentUser } from "@/types/domain";
 
 /** Refresh access on every request, including pagination. No source parsing, writes, or shared cache. */
 export async function loadClientCommissionHistory(user: CurrentUser, transactionId: string, page = 1) {
-  const visible = await listVisibleTransactions();
+  const visible = commissionCreditRows(user,await listVisibleTransactions());
   const history = clientCommissionHistory(visible, transactionId, page);
   if (!history) return null;
   return { ...history, rows: history.rows.map((row) => ({

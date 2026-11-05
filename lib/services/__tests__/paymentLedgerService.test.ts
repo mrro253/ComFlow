@@ -43,7 +43,7 @@ describe("payment ledger service", () => {
     expect(mocks.details).toHaveBeenCalledWith([], "agency-1");
   });
   it("disables the owner-only unassigned filter for agent requests", async () => {
-    const view = await loadPaymentLedger({ ...user, role: "agent" }, { unassigned: true });
+    const view = await loadPaymentLedger({ ...user, id:"agent-1", role: "agent" }, { unassigned: true });
     expect(view.filters.unassigned).toBe(false); expect(view.count).toBe(60);
   });
   it("rejects invalid filters before reading any records", async () => {

@@ -1,3 +1,4 @@
+import {commissionCreditRows} from "@/lib/reporting/commissionCredit";
 import { productEvidenceForCarrier } from "@/lib/carriers/productEvidence";
 import { classifyReportedProduct, PRODUCT_TYPES } from "@/lib/reporting/productTypes";
 import { listVisibleTransactions } from "@/lib/repositories/statementRepository";
@@ -10,7 +11,8 @@ import type { CurrentUser } from "@/types/domain";
 export async function loadPaymentLedger(user: CurrentUser, input: unknown) {
   const filters = normalizePaymentFilters(input);
   if (user.role !== "owner") filters.unassigned = false;
-  const [all, team] = await Promise.all([listVisibleTransactions(), listUsersForAgency(user.agencyId)]);
+  const [visible, team] = await Promise.all([listVisibleTransactions(), listUsersForAgency(user.agencyId)]);
+  const all=commissionCreditRows(user,visible);
   const candidates = filterPaymentMetadata(all, filters);
   const needsNames = Boolean(filters.search) && !/^UL\d+$/i.test(filters.search);
   const needsProducts = filters.product !== "all";
@@ -33,6 +35,7 @@ export async function loadPaymentLedger(user: CurrentUser, input: unknown) {
       categories: [...new Set(all.map((row) => row.commissionType))].sort(),
       agents: team.filter((person) => visibleAgentIds.has(person.id)).map((person) => ({ id: person.id, name: `${person.firstName} ${person.lastName}` })),
     },
+    commissionOwners: user.role === "owner" ? team.filter(person=>person.active&&["owner","agent"].includes(person.role)&&person.agentType!=="captive").map(person=>({id:person.id,name:`${person.firstName} ${person.lastName}`})):[],
     team: user.role === "owner" ? team.filter((person) => person.active).map((person) => ({ id: person.id, name: `${person.firstName} ${person.lastName}` })) : [],
     warning: needsNames && candidates.some((row) => !details.has(row.id))
       ? "Some client names could not be read from saved statements. Name search may miss those payments; try a member ID instead." : needsProducts && candidates.some((row) => !details.has(row.id))

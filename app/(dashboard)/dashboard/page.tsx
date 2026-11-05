@@ -1,3 +1,4 @@
+import {commissionCreditRows} from "@/lib/reporting/commissionCredit";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CircleDollarSign, FileText, Hash, UserX } from "lucide-react";
@@ -44,7 +45,9 @@ export default async function DashboardPage({
 
   const isOwner = user.role === "owner";
   // RLS scopes every query below to what this user is allowed to see.
-  const [transactions, team] = await Promise.all([listVisibleTransactions(), listUsersForAgency(user.agencyId)]);
+  const [visibleTransactions, team] = await Promise.all([listVisibleTransactions(), listUsersForAgency(user.agencyId)]);
+
+  const transactions=commissionCreditRows(user,visibleTransactions);
 
   const [agency, statementWork, connections, levels] = isOwner
     ? await Promise.all([

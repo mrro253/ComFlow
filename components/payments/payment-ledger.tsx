@@ -1,4 +1,5 @@
 "use client";
+import {PolicyOwnerForm} from "./policy-owner-form";
 
 import Link from "next/link";
 import { ClientCommissionHistory } from "@/components/payments/client-commission-history";
@@ -20,6 +21,7 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
   const [view, setView] = useState(initial);
   const [draft, setDraft] = useState(initial.filters);
   const [error, setError] = useState<string | null>(null);
+  const [ownershipNotice,setOwnershipNotice]=useState("");
   const [pending, startTransition] = useTransition();
   const [selected, setSelected] = useState<Payment | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -27,7 +29,7 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
   useEffect(() => { setView(initial); setDraft(initial.filters); }, [initial]);
   useEffect(() => { if (selected) dialog.current?.showModal(); else dialog.current?.close(); }, [selected]);
   function run(filters: PaymentFilters) {
-    setError(null); setSelected(null);
+    setError(null); setSelected(null);setOwnershipNotice("");
     startTransition(async () => {
       try {
         const response = await queryPayments(filters);
@@ -43,6 +45,7 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
   const personName = (id: string | null) => id ? (view.options.agents.find((person) => person.id === id)?.name ?? "Team member") : "Unassigned";
   return (
     <div className="flex flex-col gap-6" aria-busy={pending}>
+      {ownershipNotice&&<p role="status" className="rounded-md border p-3 text-sm">{ownershipNotice}</p>}
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Commission activity</h1>
         <p className="text-sm text-muted-foreground">Review commission entries from carrier statements. Open a client to see the details.</p>
@@ -139,6 +142,8 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
           <p className="mt-2 text-sm">{selected.carrier} · {selected.statementMonth} · {selected.commissionType} · {formatCents(selected.amountCents)}</p>
           <p className="mt-2 text-sm">Product type: {selected.product.label}{selected.product.reportedValue ? ` · As reported: ${selected.product.reportedValue}` : ` · ${selected.product.reason}`}</p>
           <p className="mt-2 text-sm text-muted-foreground">Credited to {personName(selected.userId)}{selected.writingUserId ? ` · Written by ${personName(selected.writingUserId)}` : ""}</p>
+          <p className="mt-2 text-sm text-muted-foreground">Writer on carrier statement: {selected.writingAgentName??"Not listed"}</p>
+          {isOwner&&<PolicyOwnerForm key={selected.id} entryId={selected.id} team={view.commissionOwners} onSaved={()=>{run(view.filters);setOwnershipNotice("Policy commission owner saved. Existing entries and future imports use the saved recipient.");}}/>}
           <ClientCommissionHistory key={selected.id} transactionId={selected.id} />
           <h3 className="mt-6 text-lg font-semibold">Selected entry’s statement details</h3>
           {selected.sourceDetails ? <>

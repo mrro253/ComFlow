@@ -1,3 +1,7 @@
+# Policy commission owner - 2026-11-05
+
+Agency owners can review and change the commission recipient for one statement-backed policy from Commission activity entry details. The carrier writer remains visible; a saved policy-specific rule routes later renewals and chargebacks to the selected recipient. Existing earnings/compensation locks, stale reviews and in-flight GHL work are protected. This does not reassign GHL contacts or enrollments, transfer bank funds or change other policies. See [scope, safeguards and validation](docs/policy-commission-ownership.md). Review branch only; no real ownership change was made during development.
+
 # Enrollment and GHL read-only review - 2026-11-03
 
 Enrollments now explains why a commission is not paid yet and keeps GHL details/corrections out of the main payment view. A new saved-only GHL coverage page covers original-statement policies without requiring SunFire. Existing-data checks found 19 applications, 41 saved links across 53 statement policies, 12 held identities and three unsent Active proposals. No records or GHL contacts changed. See [findings, page responsibilities and remaining limits](docs/enrollment-and-ghl-readonly-review.md). Review branch only.
