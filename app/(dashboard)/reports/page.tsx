@@ -40,7 +40,7 @@ export default async function ReportsPage({
     commissionType: tx.commissionType,
     amountCents: tx.amountCents,
     writingAgentName: tx.writingAgentName,
-    creditedTo: tx.userId ? (nameById.get(tx.userId) ?? "Teammate") : null,
+    creditedTo: tx.hasCommissionSplit ? (tx.allocations??[]).map(a=>`${nameById.get(a.userId)??"Agent"} (${a.basisPoints/100}%)`).join(" / ") : tx.userId ? (nameById.get(tx.userId) ?? "Teammate") : null,
   }));
   const report = buildCollectiveReport(payments, from, to);
   const query = new URLSearchParams();

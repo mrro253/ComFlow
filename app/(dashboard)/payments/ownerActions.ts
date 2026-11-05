@@ -3,7 +3,7 @@ import {requireRole} from "@/lib/auth/requireRole";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {revalidatePath} from "next/cache";
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
-export interface PolicyOwnerReview {entryId:string;carrier:string;effectiveDate:string;ownerId:string|null;writerName:string|null;count:number;locked:boolean;ruleVersion:number;reviewHash:string}
+export interface PolicyOwnerReview {entryId:string;carrier:string;effectiveDate:string;ownerId:string|null;writerName:string|null;count:number;locked:boolean;ruleVersion:number;reviewHash:string;splitEnabled?:boolean;firstUserId?:string;secondUserId?:string;firstBasisPoints?:number}
 export async function reviewPolicyOwner(entryId:string):Promise<{review?:PolicyOwnerReview;error?:string}>{
  try{if(typeof entryId!=="string"||!uuid.test(entryId))throw new Error();const actor=await requireRole(["owner"]),r=await createAdminClient().rpc("review_policy_commission_owner",{p_actor:actor.id,p_agency:actor.agencyId,p_entry:entryId});if(r.error||!r.data)throw new Error();return {review:r.data as unknown as PolicyOwnerReview};}catch{return {error:"Ownership review is unavailable. Refresh the entry or check agency-owner access."};}
 }
@@ -13,4 +13,15 @@ export async function savePolicyOwner(input:{entryId:string;ownerId:string;reaso
  for(const path of ["/payments","/dashboard","/sales","/reports","/settings/ghl/coverage"])revalidatePath(path);
  return {ok:true,changed:(r.data as {changed?:number}).changed??0};
  }catch{return {error:"Choose a valid commission owner and provide an explanation, then review again."};}
+}
+
+export async function savePolicySplit(input:{entryId:string;first:string;second:string;basisPoints:number;enabled:boolean;reason:string;reviewHash:string}){
+ try{
+  if(!input||!uuid.test(input.entryId)||typeof input.enabled!=="boolean"||typeof input.reason!=="string"||!input.reason.trim()||input.reason.trim().length>1000||!/^[a-f0-9]{64}$/.test(input.reviewHash)||input.enabled&&(!uuid.test(input.first)||!uuid.test(input.second)||input.first===input.second||!Number.isInteger(input.basisPoints)||input.basisPoints<1||input.basisPoints>9999))throw new Error();
+  const actor=await requireRole(["owner"]);
+  const result=await createAdminClient().rpc("save_policy_commission_split",{p_actor:actor.id,p_agency:actor.agencyId,p_entry:input.entryId,p_first:input.enabled?input.first:null,p_second:input.enabled?input.second:null,p_basis_points:input.enabled?input.basisPoints:null,p_enabled:input.enabled,p_reason:input.reason.trim(),p_review_hash:input.reviewHash});
+  if(result.error||!result.data)return {error:"Split was not changed. Refresh the review; earnings, compensation locks, pending GHL work or unavailable agents may block it."};
+  for(const path of ["/payments","/dashboard","/reports","/sales"])revalidatePath(path);
+  return {ok:true};
+ }catch{return {error:"Choose two different agents, a valid percentage, and an explanation. Review again before saving."};}
 }

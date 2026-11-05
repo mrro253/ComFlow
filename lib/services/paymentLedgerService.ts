@@ -12,7 +12,7 @@ export async function loadPaymentLedger(user: CurrentUser, input: unknown) {
   const filters = normalizePaymentFilters(input);
   if (user.role !== "owner") filters.unassigned = false;
   const [visible, team] = await Promise.all([listVisibleTransactions(), listUsersForAgency(user.agencyId)]);
-  const all=commissionCreditRows(user,visible);
+  const all=commissionCreditRows(user,visible,filters.agent);
   const candidates = filterPaymentMetadata(all, filters);
   const needsNames = Boolean(filters.search) && !/^UL\d+$/i.test(filters.search);
   const needsProducts = filters.product !== "all";
@@ -24,7 +24,7 @@ export async function loadPaymentLedger(user: CurrentUser, input: unknown) {
   const matching = searchPayments(byProduct, filters.search, names);
   const page = paginatePayments(matching, filters);
   if (!needsAllDetails) details = await loadPaymentDetails(page.rows.map((row) => row.id), user.agencyId);
-  const visibleAgentIds = new Set(all.flatMap((row) => [row.userId, row.writingUserId]).filter(Boolean));
+  const visibleAgentIds = new Set(all.flatMap((row) => [row.userId, row.writingUserId,...(row.allocations??[]).map(a=>a.userId)]).filter(Boolean));
   return {
     ...page, filters: { ...filters, page: page.page },
     rows: page.rows.map((row) => ({ ...row, sourceDetails: details.get(row.id) ?? null, product: classifyReportedProduct(details.get(row.id)?.fields, productEvidenceForCarrier(row.carrier)) })),

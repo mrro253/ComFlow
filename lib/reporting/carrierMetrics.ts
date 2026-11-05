@@ -1,3 +1,4 @@
+import type {CommissionAllocation} from "./commissionSplit";
 import type { MonthlyPoint } from "@/lib/reporting/metrics";
 import type { AppUser } from "@/types/domain";
 
@@ -14,6 +15,8 @@ export interface MetricTransaction {
   /** Carrier payment category as printed (COMMISSION, RENEWAL, CHARGEBACK, ...). */
   commissionType: string;
   amountCents: number;
+  hasCommissionSplit?: boolean;
+  allocations?: CommissionAllocation[];
 }
 
 /**
@@ -78,11 +81,13 @@ export function totalsByProducerGroup(
 ): GroupTotal[] {
   const byGroup = new Map<ProducerGroup, GroupTotal>();
   for (const tx of transactions) {
-    const group = producerGroup(tx.userId, usersById);
-    const entry = byGroup.get(group) ?? { group, cents: 0, count: 0 };
-    entry.cents += tx.amountCents;
-    entry.count += 1;
-    byGroup.set(group, entry);
+    const parts=tx.hasCommissionSplit?tx.allocations??[]:[tx];
+    const counted=new Set<ProducerGroup>();
+    for(const part of parts){
+      const group=producerGroup(part.userId,usersById);
+      const entry=byGroup.get(group)??{group,cents:0,count:0};
+      entry.cents+=part.amountCents;if(!counted.has(group))entry.count++;counted.add(group);byGroup.set(group,entry);
+    }
   }
   return [...byGroup.values()].sort((a, b) => Math.abs(b.cents) - Math.abs(a.cents));
 }

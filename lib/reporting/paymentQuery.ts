@@ -38,7 +38,7 @@ export function filterPaymentMetadata(rows: readonly CarrierTransactionRecord[],
   return rows.filter((row) =>
     (filters.month === "all" || row.statementMonth === filters.month) &&
     (filters.carrier === "all" || row.carrier === filters.carrier) &&
-    (filters.agent === "all" || row.userId === filters.agent || row.writingUserId === filters.agent) &&
+    (filters.agent === "all" || (row.hasCommissionSplit ? row.allocations?.some(a=>a.userId===filters.agent) : row.userId === filters.agent || row.writingUserId === filters.agent)) &&
     (filters.category === "all" || row.commissionType === filters.category) &&
     (!filters.from || row.effectiveDate >= filters.from) && (!filters.to || row.effectiveDate <= filters.to) &&
     (!filters.unassigned || row.userId === null));

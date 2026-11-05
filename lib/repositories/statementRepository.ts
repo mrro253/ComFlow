@@ -1,3 +1,4 @@
+import type {CommissionAllocation} from "@/lib/reporting/commissionSplit";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { mapUserRow } from "@/lib/repositories/userRepository";
@@ -89,6 +90,9 @@ export interface CarrierTransactionRecord {
   effectiveDate: string;
   commissionType: string;
   amountCents: number;
+  hasCommissionSplit?: boolean;
+  allocations?: CommissionAllocation[];
+  carrierAmountCents?: number;
   writingAgentName: string | null;
   writingAgentVerified: boolean;
   /** Who is credited with the payment (a captive agent's principal). */
@@ -392,7 +396,19 @@ export async function listVisibleTransactions(): Promise<CarrierTransactionRecor
       .range(from, from + PAGE_SIZE - 1);
     if (error) throw new Error("Could not load payments");
     rows.push(...(data ?? []).map(mapTransaction));
-    if (!data || data.length < PAGE_SIZE) return rows;
+    if (!data || data.length < PAGE_SIZE) {
+      for(let start=0;start<rows.length;start+=100){
+        const batch=rows.slice(start,start+100),ids=batch.map(row=>row.id);
+        const [markers,shares]=await Promise.all([
+          supabase.from("commission_split_entries").select("transaction_id").in("transaction_id",ids),
+          supabase.from("commission_allocations").select("transaction_id,user_id,basis_points,amount_cents").in("transaction_id",ids),
+        ]);
+        if(markers.error||shares.error)throw new Error("Could not verify commission shares. Please try again.");
+        const splitIds=new Set((markers.data??[]).map(m=>m.transaction_id));
+        for(const row of batch){row.hasCommissionSplit=splitIds.has(row.id);row.allocations=(shares.data??[]).filter(a=>a.transaction_id===row.id).map(a=>({userId:a.user_id,basisPoints:a.basis_points,amountCents:a.amount_cents}));}
+      }
+      return rows;
+    }
   }
   throw new Error("Too many payments to load at once; narrow the view");
 }

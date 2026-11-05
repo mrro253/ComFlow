@@ -1,3 +1,4 @@
+import {commissionCreditRows} from "@/lib/reporting/commissionCredit";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import {
   buildCollectiveReport,
@@ -25,10 +26,11 @@ export async function GET(request: Request) {
   const from = monthParam(url.searchParams.get("from"));
   const to = monthParam(url.searchParams.get("to"));
 
-  const [transactions, team] = await Promise.all([
+  const [visible, team] = await Promise.all([
     listVisibleTransactions(),
     listUsersForAgency(user.agencyId),
   ]);
+  const transactions=commissionCreditRows(user,visible);
   const nameById = new Map(team.map((u) => [u.id, `${u.firstName} ${u.lastName}`]));
   const report = buildCollectiveReport(
     transactions.map((tx) => ({
@@ -38,7 +40,7 @@ export async function GET(request: Request) {
       commissionType: tx.commissionType,
       amountCents: tx.amountCents,
       writingAgentName: tx.writingAgentName,
-      creditedTo: tx.userId ? (nameById.get(tx.userId) ?? "Teammate") : null,
+      creditedTo: tx.hasCommissionSplit ? (tx.allocations??[]).map(a=>`${nameById.get(a.userId)??"Agent"} (${a.basisPoints/100}%)`).join(" / ") : tx.userId ? (nameById.get(tx.userId) ?? "Teammate") : null,
     })),
     from,
     to

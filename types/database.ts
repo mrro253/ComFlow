@@ -41,6 +41,9 @@ export interface Database {
   };
   public: {
     Tables: {
+      policy_commission_splits: TableShape<{agency_id:string;carrier:string;carrier_member_id:string;effective_date:string;first_user_id:string;second_user_id:string;first_basis_points:number;enabled:boolean;version:number;changed_by:string;reason:string;updated_at:string},"enabled"|"version"|"updated_at">;
+      commission_split_entries: TableShape<{transaction_id:string;agency_id:string;rule_version:number}>;
+      commission_allocations: TableShape<{transaction_id:string;agency_id:string;user_id:string;basis_points:number;amount_cents:number;rule_version:number}>;
       policy_commission_owners: TableShape<{agency_id:string;carrier:string;carrier_member_id:string;effective_date:string;owner_user_id:string;production_entity_id:string;changed_by:string;reason:string;version:number;updated_at:string},"version"|"updated_at">;
       ghl_import_automation_settings: TableShape<{agency_id:string;actor_user_id:string;connection_id:string;enabled:boolean;updated_at:string},"enabled"|"updated_at">;
       ghl_import_jobs: TableShape<{id:string;agency_id:string;actor_user_id:string;connection_id:string;location_id:string;ghl_user_id:string;statement_id:string;state:"queued"|"running"|"completed"|"needs_attention"|"cancelled";attempts:number;lease_id:string|null;lease_until:string|null;next_attempt_at:string;summary:Json;last_error:string|null;created_at:string;updated_at:string},"id"|"state"|"attempts"|"lease_id"|"lease_until"|"next_attempt_at"|"summary"|"last_error"|"created_at"|"updated_at">;
@@ -584,6 +587,7 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      save_policy_commission_split:{Args:{p_actor:string;p_agency:string;p_entry:string;p_first:string|null;p_second:string|null;p_basis_points:number|null;p_enabled:boolean;p_reason:string;p_review_hash:string};Returns:Json};
       review_policy_commission_owner: {Args:{p_actor:string;p_agency:string;p_entry:string};Returns:Json};
       save_policy_commission_owner: {Args:{p_actor:string;p_agency:string;p_entry:string;p_owner:string;p_reason:string;p_review_hash:string};Returns:Json};
       claim_ghl_import_job: {Args:{p_job:string;p_lease:string};Returns:Json};

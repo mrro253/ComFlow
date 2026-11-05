@@ -1074,3 +1074,14 @@ If standalone collection pauses, the signed-in browser stays open. The worker re
 - **2026-10-08** - MVP statement flow: upload/preview/approve import, Payments, Carriers (encrypted logins + Sync now), carrier-based dashboard, agent type/level in Users, carrier worker (unverified), `import_statement` + storage bucket migration (`0006`), sample statement generator, README rewritten as a living handoff document.
 - **2026-10-08** - Merged Ryan's carrier-statement logic: Ultimate parser, duplicate planning, writing-agent classification, rate locks and earnings plan (pure logic + tests), migration `0005`, `.cursorrules` rewritten for the statement-driven model.
 - Earlier - CRM-driven MVP (auth, roles, comp plans, bonuses, GoHighLevel scaffold). Now legacy.
+
+
+### Review branch: two-agent policy commission splits
+
+An agency owner can open **Commission activity → a client entry → Split this policy’s commission between two agents**. Choose two active direct commission recipients and a percentage for the first agent; the second receives the remainder to 100%. A reason and fresh review are required. This applies only to the selected carrier, member identifier, and effective date, including active existing entries and future renewals or chargebacks. Another application/effective date stays separate.
+
+Carrier transactions, original writer attribution, and source statement amounts remain unchanged. Separate allocation rows hold each recipient’s credit. Personal dashboard, commission activity, client history, and report/CSV amounts use the recipient’s share. Agency totals count the source once; producer groups use the allocations. Each entry rounds the first share to the nearest cent, with half cents away from zero; the second receives the remainder. Chargebacks mirror the same rounding. Removing a split restores the underlying single credit owner for active entries; the change is audited.
+
+Allocation access is limited to the recipient, agency owner, and authorized direct-report managers. Sharing commission does **not** assign a SunFire application, transfer money, or change GHL contact ownership. Existing agency earnings or compensation locks block split changes, and split sources cannot enter the legacy whole-source payout path. Automated agency payout distribution for split policies is outside this credit-allocation feature. Captive recipients are not offered. No real policy split is applied by installation.
+
+Migration `0020_policy_commission_splits.sql` must be applied before deploying this version; reporting fails closed if allocation metadata cannot be read. Rollback-only isolated coverage: `supabase/tests/policy_commission_splits.sql`, plus the earlier owner-change regression suite. Tests cover signed-cent reconciliation, stale reviews, scope, recipient access, future imports, removal, and earning protections. All changes remain on the review branch.

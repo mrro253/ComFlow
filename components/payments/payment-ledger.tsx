@@ -1,4 +1,5 @@
 "use client";
+import {PolicySplitForm} from "./policy-split-form";
 import {PolicyOwnerForm} from "./policy-owner-form";
 
 import Link from "next/link";
@@ -117,14 +118,14 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
         <CardHeader><CardTitle>Commission entry details</CardTitle><p className="text-sm text-muted-foreground">Open a client to see all statement fields. On a phone, swipe the table sideways for more columns.</p></CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader><TableRow><TableHead>Client / member ID</TableHead><TableHead>Carrier</TableHead><TableHead>Product type</TableHead><TableHead>Category</TableHead><TableHead>Policy effective date</TableHead><TableHead>Statement month</TableHead>{role !== "agent" && <TableHead>Credited to</TableHead>}<TableHead className="text-right">Carrier commission</TableHead>{isOwner && <TableHead>Assign</TableHead>}</TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Client / member ID</TableHead><TableHead>Carrier</TableHead><TableHead>Product type</TableHead><TableHead>Category</TableHead><TableHead>Policy effective date</TableHead><TableHead>Statement month</TableHead>{role !== "agent" && <TableHead>Credited to</TableHead>}<TableHead className="text-right">Commission amount</TableHead>{isOwner && <TableHead>Assign</TableHead>}</TableRow></TableHeader>
             <TableBody>
               {!view.rows.length && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">No matching commission entries. Try changing or clearing the filters.</TableCell></TableRow>}
               {view.rows.map((row) => <TableRow key={row.id}>
                 <TableCell><button type="button" disabled={pending} onClick={() => setSelected(row)} className="text-left font-medium underline-offset-4 hover:underline focus-visible:underline">{row.sourceDetails?.clientName || "View commission entry"}</button><p className="text-xs text-muted-foreground">{row.memberId}</p></TableCell>
                 <TableCell>{row.carrier}</TableCell><TableCell>{row.product.label}</TableCell><TableCell>{row.commissionType}</TableCell><TableCell>{row.effectiveDate}</TableCell><TableCell>{row.statementMonth}</TableCell>
-                {role !== "agent" && <TableCell>{personName(row.userId)}</TableCell>}
-                <TableCell className={row.amountCents < 0 ? "text-right font-medium text-destructive" : "text-right font-medium"}>{formatCents(row.amountCents)}</TableCell>
+                {role !== "agent" && <TableCell>{row.hasCommissionSplit?(row.allocations??[]).map(a=>`${personName(a.userId)} (${a.basisPoints/100}%)`).join(" / "):personName(row.userId)}</TableCell>}
+                <TableCell className={row.amountCents < 0 ? "text-right font-medium text-destructive" : "text-right font-medium"}>{formatCents(row.amountCents)}{row.hasCommissionSplit&&<span className="block text-xs font-normal text-muted-foreground">{row.carrierAmountCents===undefined?"Split commission":"Allocated share"}</span>}</TableCell>
                 {isOwner && <TableCell>{!row.userId && <AssignPaymentForm transactionId={row.id} team={view.team} canRemember={row.writingAgentName !== null} />}</TableCell>}
               </TableRow>)}
             </TableBody>
@@ -141,9 +142,11 @@ export function PaymentLedger({ initial, role }: { initial: PaymentLedgerView; r
           <div className="flex items-start justify-between gap-4"><h2 id="payment-details-title" className="min-w-0 break-words text-xl font-semibold">{selected.sourceDetails?.clientName || "Commission entry details"}</h2><Button type="button" variant="outline" onClick={() => setSelected(null)}>Close</Button></div>
           <p className="mt-2 text-sm">{selected.carrier} · {selected.statementMonth} · {selected.commissionType} · {formatCents(selected.amountCents)}</p>
           <p className="mt-2 text-sm">Product type: {selected.product.label}{selected.product.reportedValue ? ` · As reported: ${selected.product.reportedValue}` : ` · ${selected.product.reason}`}</p>
-          <p className="mt-2 text-sm text-muted-foreground">Credited to {personName(selected.userId)}{selected.writingUserId ? ` · Written by ${personName(selected.writingUserId)}` : ""}</p>
+          <p className="mt-2 text-sm text-muted-foreground">Credited to {selected.hasCommissionSplit?(selected.allocations??[]).map(a=>`${personName(a.userId)} (${a.basisPoints/100}%)`).join(" / "):personName(selected.userId)}{selected.writingUserId ? ` · Written by ${personName(selected.writingUserId)}` : ""}</p>
           <p className="mt-2 text-sm text-muted-foreground">Writer on carrier statement: {selected.writingAgentName??"Not listed"}</p>
           {isOwner&&<PolicyOwnerForm key={selected.id} entryId={selected.id} team={view.commissionOwners} onSaved={()=>{run(view.filters);setOwnershipNotice("Policy commission owner saved. Existing entries and future imports use the saved recipient.");}}/>}
+          {selected.hasCommissionSplit&&<div className="mt-3 rounded-md bg-muted p-3 text-sm"><p>Carrier statement total: {formatCents(selected.carrierAmountCents??selected.amountCents)}</p>{selected.allocations?.map(a=><p key={a.userId}>{view.options.agents.find(p=>p.id===a.userId)?.name??"Agent share"}: {a.basisPoints/100}% · {formatCents(a.amountCents)}</p>)}</div>}
+          {isOwner&&<PolicySplitForm key={`split-${selected.id}`} entryId={selected.id} team={view.commissionOwners} onSaved={()=>{run(view.filters);setOwnershipNotice("Policy commission split saved. Each agent’s totals use their share; the original statement amount is unchanged.");}}/>}
           <ClientCommissionHistory key={selected.id} transactionId={selected.id} />
           <h3 className="mt-6 text-lg font-semibold">Selected entry’s statement details</h3>
           {selected.sourceDetails ? <>

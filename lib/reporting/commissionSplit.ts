@@ -1,0 +1,3 @@
+export interface CommissionAllocation {userId:string;basisPoints:number;amountCents:number}
+export function percentageToBasisPoints(value:string){if(!/^\d{1,2}(?:\.\d{1,2})?$/.test(value))return null;const [whole,fraction=""]=value.split(".");const b=Number(whole)*100+Number(fraction.padEnd(2,"0"));return b>0&&b<10000?b:null;}
+export function splitCents(amount:number,basisPoints:number){if(!Number.isSafeInteger(amount)||!Number.isInteger(basisPoints)||basisPoints<1||basisPoints>9999)throw new Error("Invalid split");const n=BigInt(amount),abs=n<BigInt(0)?-n:n,first=(abs*BigInt(basisPoints)+BigInt(5000))/BigInt(10000)*(n<BigInt(0)?-BigInt(1):BigInt(1));return [Number(first),Number(n-first)] as const;}
