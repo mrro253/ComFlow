@@ -2,6 +2,7 @@ import type { LoginHelp } from "../../lib/carriers/syncResult.js";
 import type { Page, Locator } from "playwright";
 import type { CarrierLogin } from "./carriers/types.js";
 import { SafePortalError } from "./carriers/types.js";
+import { captureLoginReview } from "./loginDiagnostics.js";
 
 export type LoginCarrier = "Devoted Health" | "UnitedHealthcare" | "Ultimate Health Plans" | "SunFire";
 const HOSTS: Record<LoginCarrier, readonly string[]> = {
@@ -86,6 +87,7 @@ export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, l
         }
       }
       if (!notified && Date.now() - started > 20000) {
+        if (carrier === "UnitedHealthcare") await captureLoginReview(page);
         console.warn(JSON.stringify({ loginDiagnostic: carrier, usernameSubmitted, passwordSubmitted,
           usernameFields: await page.locator('input#username:visible').count(),
           passwordFields: await page.locator('input[type="password"]:visible').count(),
