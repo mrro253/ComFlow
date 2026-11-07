@@ -1,10 +1,12 @@
 import type { BrowserContext, Page } from "playwright";
 import { uniqueFieldValue } from "./fields.js";
 import { detailUrl, enrollmentWindows, rememberEnrollment, verifyEnrollment, type EnrollmentListRow, type CollectedEnrollment, EnrollmentReadError } from "./enrollment.js";
+import { splitReportWindow } from "./reportWindows.js";
 
 const mmdd = (iso: string) => `${iso.slice(5, 7)}/${iso.slice(8)}/${iso.slice(0, 4)}`;
 const clean = (value: string) => value.trim().replace(/\s+/g, " ");
 interface ReportSnapshot { count: number; rows: EnrollmentListRow[] }
+class IncompleteReportError extends EnrollmentReadError {}
 async function reportSnapshot(page: Page): Promise<ReportSnapshot> {
   const text = await page.locator("body").innerText();
   const count = /\((\d+)\s+enrollments?\)/i.exec(text);
@@ -18,7 +20,8 @@ async function reportSnapshot(page: Page): Promise<ReportSnapshot> {
     return { code: get("Enrollment Code"), firstName: get("First name"), lastName: get("Last name"),
       carrier: get("Carrier"), submittedDate: get("Date"), status: get("Status") };
   });
-  if (rows.length !== Number(count[1]) || new Set(rows.map((r) => r.code)).size !== rows.length) throw new EnrollmentReadError("The report list is incomplete or ambiguous; pagination needs review.");
+  if (new Set(rows.map((r) => r.code)).size !== rows.length) throw new EnrollmentReadError("The report contains duplicate enrollment codes.");
+  if (rows.length !== Number(count[1])) throw new IncompleteReportError("The displayed report rows do not match its enrollment count.");
   return { count: rows.length, rows };
 }
 async function loadWindow(page: Page, portal: string, window: { start: string; end: string }, stage: (value: string) => void = () => {}) {
@@ -69,8 +72,21 @@ export async function collectEnrollments(_context: BrowserContext, page: Page, o
   let stage = "starting enrollment collection";
   const setStage = (value: string) => { stage = value; };
   try {
-  for (const window of enrollmentWindows(options.start, options.end)) {
-    const snapshot = await loadWindow(page, options.portal, window, setStage);
+  const windows = enrollmentWindows(options.start, options.end);
+  for (let windowIndex = 0; windowIndex < windows.length; windowIndex++) {
+    const window = windows[windowIndex];
+    let snapshot: ReportSnapshot;
+    try {
+      snapshot = await loadWindow(page, options.portal, window, setStage);
+    } catch (error) {
+      if (!(error instanceof IncompleteReportError)) throw error;
+      const smaller = splitReportWindow(window);
+      if (!smaller) throw new EnrollmentReadError("A single day's report is incomplete. No complete collection was saved; report pagination needs review.");
+      windows.splice(windowIndex, 1, ...smaller);
+      windowIndex--;
+      options.log("Narrowing the report date range to verify every enrollment.");
+      continue;
+    }
     // Empty windows get an independent fresh read rather than trusting a previous empty screen.
     if (!snapshot.count && (await loadWindow(page, options.portal, window, setStage)).count !== 0) throw new EnrollmentReadError("An empty report changed during verification.");
     options.log(`Report window ${window.start} through ${window.end}: ${snapshot.count} enrollments.`);
