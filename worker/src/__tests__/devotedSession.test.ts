@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { syncDevotedConnection } from "../devotedSync";
 import {SafePortalError} from "../carriers/types";
 import type { ConnectionRow, Db } from "../db";
-const mocks = vi.hoisted(() => ({ launch: vi.fn(), pull: vi.fn(), mark: vi.fn(), wait: vi.fn(), goto: vi.fn(), connected: true }));
+const mocks = vi.hoisted(() => ({ launch: vi.fn(), close: vi.fn(), pull: vi.fn(), mark: vi.fn(), wait: vi.fn(), goto: vi.fn(), connected: true }));
 vi.mock("../carrierLogin.js", () => ({ automaticCarrierLogin: () => mocks.wait() }));
 vi.mock("../backgroundBrowser.js", () => ({
   createBackgroundSession: async (options: unknown) => {
@@ -21,7 +21,7 @@ function db() {
 beforeEach(() => {
   vi.clearAllMocks(); mocks.connected = true;
   const page = { isClosed: () => false, goto: mocks.goto, url: () => "https://agent.devoted.com/commissions", locator: () => ({ count: async () => 0 }), getByRole: () => ({ waitFor: mocks.wait }) };
-  mocks.launch.mockResolvedValue({ isConnected: () => mocks.connected, newContext: async () => ({ newPage: async () => page }) });
+  mocks.launch.mockResolvedValue({ isConnected: () => mocks.connected, close: mocks.close, newContext: async () => ({ newPage: async () => page }) });
   mocks.pull.mockResolvedValue({ found: 1, downloaded: 0, skipped: 1, failed: 0 });
 });
 describe("Devoted interactive session reuse", () => {
@@ -38,6 +38,15 @@ describe("Devoted interactive session reuse", () => {
     const connection = {id:"safe-error",agency_id:"agency",user_id:"owner"} as ConnectionRow;
     mocks.wait.mockRejectedValueOnce(new SafePortalError("The carrier rejected the saved login."));
     await expect(syncDevotedConnection(db(),connection)).rejects.toThrow("The carrier rejected the saved login.");
+  });
+
+  it("closes the browser once collection finishes", async () => {
+    const connection = { id: "completed-session", agency_id: "agency", user_id: "owner" } as ConnectionRow;
+    mocks.wait.mockResolvedValue(undefined);
+    await syncDevotedConnection(db(), connection);
+    await syncDevotedConnection(db(), connection);
+    expect(mocks.close).toHaveBeenCalledTimes(2);
+    expect(mocks.launch).toHaveBeenCalledTimes(2);
   });
 
 });

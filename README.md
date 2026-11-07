@@ -1089,7 +1089,7 @@ Migration `0020_policy_commission_splits.sql` must be applied before deploying t
 
 ### Carrier collection runs in the background
 
-App-triggered Ultimate, UHC, Devoted, and SunFire sessions start minimized before loading a portal. Saved-login submission and statement/enrollment collection run in that background window. A recognized MFA/security-code or approval screen is brought forward for the agent, then minimized before collection resumes. The same browser context retains the signed-in session in memory. Download popup windows are minimized as well. Generic login errors are reported through the connection card instead of exposing a login/recovery page. A browser-control failure stops that session.
+App-triggered Ultimate, UHC, Devoted, and SunFire sessions start minimized before loading a portal. Saved-login submission and statement/enrollment collection run in that background window. A recognized MFA/security-code or approval screen is brought forward for the agent, then minimized before collection resumes. The same browser context retains the signed-in session in memory while a run is active or recoverable. Successful collection closes the browser and removes its retained session. Download popup windows are minimized as well. Generic login errors are reported through the connection card instead of exposing a login/recovery page. A browser-control failure stops that session.
 
 This behavior is implemented for the current desktop worker. A minimized Chromium window may still have a taskbar entry. Standalone developer download commands keep their existing interactive behavior. Fully remote worker hosting still needs a separate remote verification handoff. The changed presentation does not enable scheduled collection.
 

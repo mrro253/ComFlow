@@ -294,6 +294,8 @@ export const ultimatePortal: CarrierPortal = {
         stage = "reading statement results";
         await syncResults(page, options, summary);
       }
+      await session.browser.close();
+      sessions.delete(options.sessionKey);
       return summary;
     } catch (error) {
       if (error instanceof SafePortalError) throw error;

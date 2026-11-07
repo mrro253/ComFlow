@@ -55,7 +55,10 @@ export async function syncDevotedConnection(db: Db, connection: ConnectionRow) {
       () => page.getByRole("heading", { name: "My Commissions", exact: true }).isVisible(),
       (reason) => markConnection(db, connection.id, { ok: false, error: loginHelpMessage(reason) }));
     stage = "reading commission statements";
-    return await syncDevotedPage(page, yearsToSync(), (date, pdf, workbook) => storeDevotedPair(db, connection, date, pdf, workbook));
+    const summary = await syncDevotedPage(page, yearsToSync(), (date, pdf, workbook) => storeDevotedPair(db, connection, date, pdf, workbook));
+    await session.browser.close();
+    sessions.delete(connection.id);
+    return summary;
   } catch (error) {
     if (error instanceof SafePortalError) throw error;
     throw new SafePortalError(`Devoted could not complete ${stage}. Try Sync now again.`);

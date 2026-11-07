@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { ultimatePortal } from "../carriers/ultimate";
 import type { PullOptions } from "../carriers/types";
-const mock = vi.hoisted(() => ({ launch: vi.fn(), goto: vi.fn(), login: vi.fn(), url: "about:blank", usable: true }));
+const mock = vi.hoisted(() => ({ launch: vi.fn(), close: vi.fn(), goto: vi.fn(), login: vi.fn(), url: "about:blank", usable: true }));
 vi.mock("../backgroundBrowser.js", () => ({
   createBackgroundSession: async (options: unknown) => {
     const browser = await mock.launch();
@@ -15,7 +15,7 @@ beforeEach(() => {
   const page = { url: () => mock.url, isClosed: () => false, goto: mock.goto,
     locator: () => ({ count: async () => mock.usable ? 1 : 0 }), getByRole: () => ({ isVisible: async () => mock.usable }),
     getByText: () => ({ first: () => ({ isVisible: async () => false }) }) };
-  mock.launch.mockResolvedValue({ isConnected: () => true, newContext: async () => ({ newPage: async () => page }) });
+  mock.launch.mockResolvedValue({ isConnected: () => true, close: mock.close, newContext: async () => ({ newPage: async () => page }) });
 });
 function options(sessionKey: string): PullOptions { return { sessionKey, years: [], isKnown: () => false, onStatement: async () => {}, log: vi.fn() }; }
 it("uses DOM readiness and proceeds after an aborted navigation only with a trusted usable form", async () => {
@@ -34,4 +34,12 @@ it("does not treat an incomplete page as a successful navigation", async () => {
   mock.goto.mockImplementation(async () => { mock.url="https://enroll.myultimatehp.com/agportal/#/login"; throw new Error("page.goto: https://example.invalid/private timed out"); });
   await expect(ultimatePortal.pull({ username:"synthetic",password:"synthetic" }, options("incomplete"))).rejects.toThrow("opening the login page");
   expect(mock.login).not.toHaveBeenCalled();
+});
+
+it("closes completed sessions and starts a fresh browser for the next sync", async () => {
+  mock.goto.mockImplementation(async () => { mock.url = "https://enroll.myultimatehp.com/agportal/#/login"; });
+  await ultimatePortal.pull({ username: "synthetic", password: "synthetic" }, options("finished"));
+  await ultimatePortal.pull({ username: "synthetic", password: "synthetic" }, options("finished"));
+  expect(mock.close).toHaveBeenCalledTimes(2);
+  expect(mock.launch).toHaveBeenCalledTimes(2);
 });

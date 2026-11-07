@@ -31,6 +31,8 @@ export const uhcPortal: CarrierPortal = {
         const summary = await syncUhcYear(page, year, options.onUhcPair, options.log);
         for (const key of ["found", "downloaded", "skipped", "failed"] as const) total[key] += summary[key];
       }
+      await session.browser.close();
+      sessions.delete(options.sessionKey);
       return total;
     } catch (error) {
       const detail = error instanceof SafePortalError ? error.message : `Could not complete ${stage}.`;

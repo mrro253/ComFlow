@@ -57,6 +57,8 @@ export async function syncSunfireConnection(db: Db, connection: ConnectionRow) {
       log: () => undefined,
       checkpoint: async (records, complete) => { if (complete) result = await storeSunfireCollection(db, connection, start, end, records); } });
     if (!result) throw new SafePortalError("SunFire collection did not finish.");
+    await session.browser.close();
+    sessions.delete(connection.id);
     return result;
   } catch {
     throw new SafePortalError("SunFire collection paused. Check the connection message, then choose Sync enrollments again to retry.");

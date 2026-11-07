@@ -3,7 +3,7 @@ import { UHC_STATEMENTS_URL } from "../carriers/uhcMetadata";
 import { SafePortalError } from "../carriers/types";
 import { uhcPortal } from "../carriers/uhc";
 import type { PullOptions } from "../carriers/types";
-const mock = vi.hoisted(() => ({ launch: vi.fn(), wait: vi.fn(), year: vi.fn(), goto: vi.fn(), currentUrl: "" }));
+const mock = vi.hoisted(() => ({ launch: vi.fn(), close: vi.fn(), wait: vi.fn(), year: vi.fn(), goto: vi.fn(), currentUrl: "" }));
 vi.mock("../carrierLogin.js", () => ({ automaticCarrierLogin: () => mock.wait() }));
 vi.mock("../backgroundBrowser.js", () => ({
   createBackgroundSession: async (options: unknown) => {
@@ -16,7 +16,7 @@ vi.mock("../carriers/uhcLoader.js", () => ({ loadUhcDownloader: async () => ({ s
 beforeEach(() => {
   vi.clearAllMocks(); mock.currentUrl = UHC_STATEMENTS_URL; mock.wait.mockReset();
   const page = { isClosed: () => false, goto: mock.goto, url: () => mock.currentUrl, getByRole: () => ({ waitFor: mock.wait }) };
-  mock.launch.mockResolvedValue({ isConnected: () => true, newContext: async () => ({ newPage: async () => page }) });
+  mock.launch.mockResolvedValue({ isConnected: () => true, close: mock.close, newContext: async () => ({ newPage: async () => page }) });
   mock.year.mockResolvedValue({ found: 1, downloaded: 0, skipped: 1, failed: 0 });
 });
 describe("UHC verification session", () => {
@@ -35,6 +35,15 @@ describe("UHC verification session", () => {
     mock.year.mockRejectedValueOnce(new Error("secret source diagnostic"));
     await expect(uhcPortal.pull({ username: "synthetic", password: "synthetic" }, options)).rejects.toThrow("Could not complete reading report controls");
     expect(JSON.stringify((options.log as ReturnType<typeof vi.fn>).mock.calls)).not.toContain("secret source");
+  });
+
+  it("closes completed collection sessions", async () => {
+    const options: PullOptions = { years: [2026], sessionKey: "completed-session", isKnown: () => true, log: () => {}, onStatement: async () => {}, onUhcPair: async () => "duplicate" };
+    mock.wait.mockResolvedValue(undefined);
+    await uhcPortal.pull({ username: "synthetic", password: "synthetic" }, options);
+    await uhcPortal.pull({ username: "synthetic", password: "synthetic" }, options);
+    expect(mock.close).toHaveBeenCalledTimes(2);
+    expect(mock.launch).toHaveBeenCalledTimes(2);
   });
 
 });
