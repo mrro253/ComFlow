@@ -1,0 +1,25 @@
+{
+  "status": "planning-only-no-resources-created",
+  "verifiedDate": "2026-11-07",
+  "region": "us-east-2",
+  "currency": "USD",
+  "hoursPerMonth": 730,
+  "recommendedBudgetUsd": 50,
+  "domain": "purchase-later; registration-not-included",
+  "items": [
+    { "name": "Linux t3.medium", "quantity": 730, "unit": "hours", "rate": 0.0416, "source": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/US%20East%20(Ohio)/Linux/index.json", "rateCode": "YR3MEJZD3USM8NC3.JRTCKXETXF.6YS6EN2CT7", "publicationDate": "2026-11-07T00:28:52Z" },
+    { "name": "One public IPv4 / Elastic IP", "quantity": 730, "unit": "hours", "rate": 0.005, "source": "https://aws.amazon.com/vpc/pricing/" },
+    { "name": "Encrypted gp3 root disk", "quantity": 40, "unit": "GB-month", "rate": 0.08, "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/us-east-2/index.csv", "sku": "M6UGCCQ3CDJQAA37", "effectiveDate": "2026-11-01" },
+    { "name": "Encrypted gp3 state disk", "quantity": 10, "unit": "GB-month", "rate": 0.08, "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/us-east-2/index.csv", "sku": "M6UGCCQ3CDJQAA37", "effectiveDate": "2026-11-01" },
+    { "name": "Retained standard snapshot data allowance", "quantity": 20, "unit": "GB-month", "rate": 0.05, "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/us-east-2/index.csv", "sku": "EZ8T7N34G3H5Y4ER", "effectiveDate": "2026-11-01" },
+    { "name": "One grouped runtime secret", "quantity": 1, "unit": "secret-month", "rate": 0.4, "source": "https://aws.amazon.com/secrets-manager/pricing/" },
+    { "name": "Secret reads allowance", "quantity": 100, "unit": "API calls", "rate": 0.000005, "source": "https://aws.amazon.com/secrets-manager/pricing/" },
+    { "name": "Private ECR image storage allowance", "quantity": 10, "unit": "GB-month", "rate": 0.1, "source": "https://aws.amazon.com/ecr/pricing/" },
+    { "name": "Monitoring/logging allowance", "quantity": 1, "unit": "monthly allowance", "rate": 2, "source": "https://aws.amazon.com/cloudwatch/pricing/", "note": "Allowance, not a flat AWS product price; assumes 1 GB ingestion, 1 GB archived, two custom metrics and five standard alarms." },
+    { "name": "Outbound traffic allowance (no free quota assumed)", "quantity": 2, "unit": "GB", "rate": 0.09, "source": "https://aws.amazon.com/ec2/pricing/on-demand/" },
+    { "name": "Optional Route 53 public hosted zone", "quantity": 1, "unit": "zone-month", "rate": 0.5, "source": "https://aws.amazon.com/route53/pricing/" },
+    { "name": "Optional standard DNS queries allowance", "quantity": 10000, "unit": "queries", "rate": 0.0000005, "source": "https://aws.amazon.com/route53/pricing/" }
+  ],
+  "exclusions": ["tax", "domain registration and renewal", "Vercel", "Supabase", "provider compliance add-ons or agreements", "paid AWS support", "custom KMS keys", "NAT gateway", "load balancer", "multi-host or high-availability deployment", "usage beyond the listed allowances"],
+  "assumptions": ["single worker on one x86_64 host", "T3 standard credits; no Unlimited CPU surcharge", "manual Sync now only", "no purchase or capacity commitment", "no free-tier credits or promotional discounts included", "existing website/database retained", "AWS-managed encryption keys", "DNS/certificate setup waits for a new domain"]
+}

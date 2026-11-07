@@ -1,3 +1,7 @@
+# AWS worker setup and cost plan - 2026-11-07
+
+A review-only [AWS pilot plan](docs/aws-worker-setup-plan.md) proposes one Ohio Linux t3.medium, encrypted disks, private image storage/secrets and a minimal HTTPS verification gateway. Verified-rate estimate: about $43/month before tax; plan a $50 budget alert. Domain purchase is deferred and excluded, along with existing Vercel/Supabase costs and any required provider add-ons. Run `node scripts/estimate-aws-worker.mjs` for the local calculation. No AWS resources, DNS records, secrets or live settings were created or changed; imported records remain unchanged. Final account/domain details, deployment hooks and explicit provisioning approval are still required.
+
 # Hosted worker rehearsal - 2026-11-07
 
 The isolated local worker/gateway rehearsal passed HTTPS verification, agent separation, duplicate-worker blocking and crash recovery with synthetic fixtures only. A minimal standard-library Go HTTPS relay replaces Caddy/Alpine, removing the four remaining affected gateway components. Both worker and gateway scans now show zero high/critical findings; see [current scan results and exact image identities](docs/hosting-security-scan-review.md). The repeat rehearsal, gateway Go/race checks, 757 regression tests and both type checks passed. No AWS resources or live verification were enabled. See [repeatable rehearsal and pilot gates](docs/hosting-rehearsal-review.md). Review branch only; imported records unchanged.
