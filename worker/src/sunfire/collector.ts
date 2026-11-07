@@ -43,11 +43,27 @@ async function loadWindow(page: Page, portal: string, window: { start: string; e
   await page.waitForLoadState("networkidle", { timeout: 30000 });
   await page.waitForTimeout(1000);
   stage("checking enrollment report rows");
-  const first = await reportSnapshot(page);
-  await page.waitForTimeout(1000);
-  const second = await reportSnapshot(page);
-  if (JSON.stringify(first) !== JSON.stringify(second) || second.rows.some((r) => r.submittedDate < window.start || r.submittedDate > window.end)) throw new EnrollmentReadError("The report has not settled to the requested date window.");
-  return second;
+  // SunFire can finish its requests before replacing the previous report rows.
+  // Require two matching reads inside the requested window, with a bounded wait.
+  let previous: ReportSnapshot | undefined;
+  let incomplete = false;
+  for (let attempt = 0; attempt < 15; attempt++) {
+    try {
+      const current = await reportSnapshot(page);
+      incomplete = false;
+      if (current.rows.every((row) => row.submittedDate >= window.start && row.submittedDate <= window.end)) {
+        if (previous && JSON.stringify(previous) === JSON.stringify(current)) return current;
+        previous = current;
+      } else previous = undefined;
+    } catch (error) {
+      if (!(error instanceof IncompleteReportError)) throw error;
+      incomplete = true;
+      previous = undefined;
+    }
+    await page.waitForTimeout(1000);
+  }
+  if (incomplete) throw new IncompleteReportError("The displayed report rows do not match its enrollment count.");
+  throw new EnrollmentReadError("SunFire did not return a stable report within the requested dates. No complete collection was saved.");
 }
 export async function readField(page: Page, label: string) {
   const locator = page.getByText(label, { exact: true });
