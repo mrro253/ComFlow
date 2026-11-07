@@ -35,7 +35,20 @@ function fixture(fail=false){
  mocks.launch.mockResolvedValue(browser);
  return {context,bounds,close,fronts,navigation};
 }
-beforeEach(()=>vi.clearAllMocks());
+beforeEach(()=>{vi.clearAllMocks();vi.unstubAllEnvs();});
+it("keeps hosted collection headless and refuses a full-browser verification fallback",async()=>{
+ vi.stubEnv("CARRIER_BROWSER_MODE","hosted");
+ const f=fixture();const {page}=await createBackgroundSession({acceptDownloads:true});
+ expect(mocks.launch).toHaveBeenCalledWith({headless:true,args:[]});
+ await setVerificationVisible(page,false);
+ await expect(setVerificationVisible(page,true)).rejects.toThrow("Cloud verification is not available yet");
+ expect(f.fronts).not.toHaveBeenCalled();expect(f.bounds.size).toBe(0);
+});
+it("rejects an invalid browser mode before launching",async()=>{
+ vi.stubEnv("CARRIER_BROWSER_MODE","typo");
+ await expect(createBackgroundSession({})).rejects.toThrow("browser mode is invalid");
+ expect(mocks.launch).not.toHaveBeenCalled();
+});
 it("reconceals a restored collection window while leaving verification visible",async()=>{
  vi.useFakeTimers();
  try {

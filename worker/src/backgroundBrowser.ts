@@ -9,10 +9,18 @@ interface Presentation {
 }
 
 const presentations = new WeakMap<BrowserContext, Presentation>();
+const hostedContexts = new WeakSet<BrowserContext>();
 
 /** Keep the same in-memory carrier session while changing only its window visibility. */
 export async function setVerificationVisible(page: Page, visible: boolean): Promise<void> {
   const context = page.context();
+  if (hostedContexts.has(context)) {
+    if (visible) {
+      // No general browser or remote desktop may be exposed as a fallback.
+      throw new SafePortalError("Cloud verification is not available yet. Sync stopped without showing the carrier browser.");
+    }
+    return;
+  }
   const presentation = presentations.get(context);
   // Standalone developer download commands keep their existing interactive behavior.
   if (!presentation) return;
@@ -61,12 +69,22 @@ export async function setVerificationVisible(page: Page, visible: boolean): Prom
 
 /** App-triggered sessions start minimized, before any carrier page is loaded. */
 export async function createBackgroundSession(options: BrowserContextOptions) {
+  const mode = process.env.CARRIER_BROWSER_MODE ?? "desktop";
+  if (mode !== "desktop" && mode !== "hosted") {
+    throw new SafePortalError("Carrier browser mode is invalid. Sync stopped.");
+  }
+  const hosted = mode === "hosted";
   const browser = await chromium.launch({
-    headless: false,
-    args: ["--start-minimized", "--window-position=-32000,-32000"],
+    headless: hosted,
+    args: hosted ? [] : ["--start-minimized", "--window-position=-32000,-32000"],
   });
   try {
     const context = await browser.newContext(options);
+    if (hosted) {
+      hostedContexts.add(context);
+      const page = await context.newPage();
+      return { browser, page };
+    }
     presentations.set(context, {
       verificationPage: null,
       failure: null,

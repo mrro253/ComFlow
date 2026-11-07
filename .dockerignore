@@ -1,0 +1,18 @@
+# Allow only reviewed source and dependency manifests into the worker image.
+**
+!package.json
+!package-lock.json
+!tsconfig.json
+!worker/
+!worker/package.json
+!worker/package-lock.json
+!worker/tsconfig.json
+!worker/Dockerfile
+!worker/src/
+!worker/src/**
+!lib/
+!lib/**
+!types/
+!types/**
+**/__tests__/**
+**/*.test.*
