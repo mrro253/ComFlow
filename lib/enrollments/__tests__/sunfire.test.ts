@@ -4,6 +4,8 @@ import { syntheticSunfireCollection } from "../__fixtures__/sunfireCollection";
 describe("private SunFire source validation", () => {
   it("accepts only agency starting URLs on the exact HTTPS SunFire host", () => {
     expect(sunfirePortalUrl("https://www.sunfirematrix.com/app/agent/example/")).toContain("/example/");
+    expect(sunfirePortalUrl("https://www.sunfirematrix.com/app/agent/pfs")).toBe("https://www.sunfirematrix.com/app/agent/pfs/");
+    expect(sunfirePortalUrl("  https://www.sunfirematrix.com/app/agent/pfs/  ")).toBe("https://www.sunfirematrix.com/app/agent/pfs/");
     for (const url of ["http://www.sunfirematrix.com/app/agent/example/", "https://www.sunfirematrix.com.evil.invalid/app/agent/example/", "https://auth.sunfirematrix.com/u/login?state=secret", "https://www.sunfirematrix.com/app/agent/example/#/reporting", "https://user:password@www.sunfirematrix.com/app/agent/example/", "https://www.sunfirematrix.com:444/app/agent/example/"]) expect(() => sunfirePortalUrl(url)).toThrow();
   });
   it("deduplicates identical snapshots independently of source row order while binding the owner", () => {

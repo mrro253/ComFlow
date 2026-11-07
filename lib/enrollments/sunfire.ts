@@ -23,7 +23,8 @@ export function sunfireDate(value: unknown): string {
 export function sunfirePortalUrl(value: string): string {
   try {
     const url = new URL(value.trim());
-    if (url.protocol !== "https:" || url.hostname !== "www.sunfirematrix.com" || url.port || url.username || url.password || url.hash || url.search || !/^\/app\/agent\/[a-z0-9_-]+\/$/i.test(url.pathname)) return invalid();
+    if (url.protocol !== "https:" || url.hostname !== "www.sunfirematrix.com" || url.port || url.username || url.password || url.hash || url.search || !/^\/app\/agent\/[a-z0-9_-]+\/?$/i.test(url.pathname)) return invalid();
+    if (!url.pathname.endsWith("/")) url.pathname += "/";
     return url.href;
   } catch { return invalid(); }
 }
