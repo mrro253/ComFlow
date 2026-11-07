@@ -2,6 +2,9 @@
   "name": "commissionflow",
   "version": "0.1.0",
   "private": true,
+  "overrides": {
+    "next": { "postcss": "8.5.32" }
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",

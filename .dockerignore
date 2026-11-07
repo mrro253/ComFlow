@@ -8,6 +8,7 @@
 !worker/package-lock.json
 !worker/tsconfig.json
 !worker/Dockerfile
+!worker/container-entrypoint.sh
 !worker/src/
 !worker/src/**
 !lib/

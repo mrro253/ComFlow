@@ -1,3 +1,7 @@
+# Hosted worker rehearsal - 2026-11-07
+
+The isolated local worker/gateway rehearsal passed HTTPS verification, agent separation, duplicate-worker blocking and crash recovery with synthetic fixtures only. Production package audit findings were patched; 757 tests and the patched app build pass. The full-image scan still needs approval, and no AWS resources or live verification were enabled. See [results, repeatable rehearsal and pilot gates](docs/hosting-rehearsal-review.md). Review branch only; imported records unchanged.
+
 # Agent-account isolation review - 2026-11-07
 
 Separate signed-in test agents passed commission, selected-policy ownership, 60/40 split, personal/shared GHL setup and inactive-session checks in the isolated test project. The two-agent GHL import drill and nine rollback-only database suites also pass, with no real GHL calls. Staging's 154 imported entries and 11 protected tables, plus the local working ledger, have matching before/after fingerprints. See [test coverage, safe reproduction and remaining launch checks](docs/agent-account-isolation-review.md). Review branch only.

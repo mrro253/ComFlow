@@ -1,0 +1,49 @@
+services:
+  worker:
+    image: comflow-worker:review
+    hostname: comflow-hosted-rehearsal
+    init: true
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=./seccomp-playwright.json
+    shm_size: 512m
+    mem_limit: 2g
+    cpus: 2
+    tmpfs:
+      - /tmp:rw,nosuid,size=256m
+    volumes:
+      - rehearsal-state:/state
+    environment:
+      COMFLOW_REHEARSAL: synthetic
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:18081
+      SUPABASE_SERVICE_ROLE_KEY: synthetic-not-a-real-key
+      CARRIER_BROWSER_MODE: hosted
+      HOSTED_VERIFICATION_ENABLED: "true"
+      SCHEDULED_SYNC_ENABLED: "false"
+    command: ["--rehearsal", "serve"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('fs').accessSync('/state/rehearsal/ready.json')"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  gateway:
+    image: comflow-gateway:review
+    network_mode: service:worker
+    user: "1001:1001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+    tmpfs:
+      - /tmp:rw,nosuid,size=16m
+    volumes:
+      - ./Caddyfile.rehearsal:/etc/caddy/Caddyfile:ro
+      - rehearsal-state:/state:ro
+    depends_on:
+      worker:
+        condition: service_healthy
+volumes:
+  rehearsal-state:

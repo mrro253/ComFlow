@@ -39,7 +39,7 @@ beforeEach(()=>{vi.clearAllMocks();vi.unstubAllEnvs();});
 it("keeps hosted collection headless and refuses a full-browser verification fallback",async()=>{
  vi.stubEnv("CARRIER_BROWSER_MODE","hosted");
  const f=fixture();const {page}=await createBackgroundSession({acceptDownloads:true});
- expect(mocks.launch).toHaveBeenCalledWith({headless:true,args:[]});
+ expect(mocks.launch).toHaveBeenCalledWith({headless:true,chromiumSandbox:true,args:[]});
  await setVerificationVisible(page,false);
  await expect(setVerificationVisible(page,true)).rejects.toThrow("Cloud verification is not available yet");
  expect(f.fronts).not.toHaveBeenCalled();expect(f.bounds.size).toBe(0);

@@ -4,25 +4,40 @@ import { hostname } from "node:os";
 import { randomUUID } from "node:crypto";
 import type { InterruptedRun } from "./schedule.js";
 
+/** Linux start ticks distinguish a restarted container's reused process ID. */
+async function processStart(pid: number): Promise<string | undefined> {
+  if (process.platform !== "linux") return undefined;
+  const stat = await readFile(`/proc/${pid}/stat`, "utf8");
+  const start = stat.slice(stat.lastIndexOf(")") + 2).split(" ")[19];
+  if (!/^\d+$/.test(start ?? "")) throw new Error("Could not verify worker process identity.");
+  return start;
+}
+
 /** One worker on one local machine. State contains operational IDs/timestamps only. */
 export async function openLocalRuntime(directory: string) {
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const lockPath = join(directory, "worker.lock");
   const journalPath = join(directory, "in-flight.json");
   const token = randomUUID();
+  const started = await processStart(process.pid);
   for (let attempt = 0; ; attempt++) {
     try {
       const handle = await open(lockPath, "wx", 0o600);
-      try { await handle.writeFile(JSON.stringify({ pid: process.pid, host: hostname(), token })); await handle.sync(); }
+      try { await handle.writeFile(JSON.stringify({ pid: process.pid, host: hostname(), token, started })); await handle.sync(); }
       finally { await handle.close(); }
       break;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw new Error("Could not acquire local worker lock.");
       // Only remove a verified dead process lock. Unknown/corrupt/foreign locks fail closed.
-      const lock = JSON.parse(await readFile(lockPath, "utf8")) as { pid: number; host: string; token: string };
+      const lock = JSON.parse(await readFile(lockPath, "utf8")) as { pid: number; host: string; token: string; started?: string };
       if (attempt > 0 || lock.host !== hostname() || !Number.isSafeInteger(lock.pid) || lock.pid <= 0 || typeof lock.token !== "string") throw new Error("Another worker or an unreadable lock requires attention.");
       let dead = false;
       try { process.kill(lock.pid, 0); } catch (probe) { dead = (probe as NodeJS.ErrnoException).code === "ESRCH"; }
+      // Container entrypoint holds a namespace-independent kernel lock on /state.
+      // Without that guard, an unfamiliar live PID must continue to fail closed.
+      if (!dead && process.platform === "linux" && process.env.COMFLOW_CONTAINER_LOCKED === "1" && typeof lock.started === "string") {
+        dead = await processStart(lock.pid) !== lock.started;
+      }
       if (!dead) throw new Error("A worker is already running for this database on this machine.");
       // Serialize stale-lock removal; a competing recovery must not unlink a new live lock.
       const recoveryPath = join(directory, "worker-recovery.lock");

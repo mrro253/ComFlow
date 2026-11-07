@@ -83,6 +83,7 @@ export async function createBackgroundSession(options: BrowserContextOptions, co
   const hosted = mode === "hosted";
   const browser = await chromium.launch({
     headless: hosted,
+    ...(hosted ? { chromiumSandbox: true } : {}),
     args: hosted ? [] : ["--start-minimized", "--window-position=-32000,-32000"],
   });
   try {

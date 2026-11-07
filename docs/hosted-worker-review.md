@@ -1,5 +1,7 @@
 # Hosted downloader preparation — review only
 
+Update: the local container/gateway rehearsal now passes. See [hosting rehearsal results and remaining pilot gates](hosting-rehearsal-review.md). A full-image vulnerability scan and actual AWS/carrier pilot remain outstanding.
+
 The website is on Vercel and records are in Supabase. The remaining hosting component runs the carrier browser without the agent's computer. No AWS resources have been created by this change.
 
 ## Implemented
@@ -21,7 +23,7 @@ Before enabling: finish a container/gateway deployment rehearsal and an authoriz
 
 Both website and worker require `HOSTED_VERIFICATION_ENABLED=true` and the same privately generated 32-byte base64 `WORKER_VERIFICATION_KEY`. Store the key as a server-only secret, never a `NEXT_PUBLIC_` variable. The website also requires `WORKER_VERIFICATION_URL=https://<private-worker-host>/verification`. Redirects and non-HTTPS URLs are rejected.
 
-The hosted worker uses `CARRIER_BROWSER_MODE=hosted`. Its relay listens only on `127.0.0.1:8080` (`WORKER_VERIFICATION_PORT` can override the port). A same-host HTTPS gateway must forward only `/verification` to that loopback listener. In Docker, use a gateway sharing the worker's network namespace; do not bind the relay to a public interface or publish a browser port. The gateway and deployment are not included or enabled by this change. Do not configure the web flag until the gateway and worker are ready. Never log relay request bodies at the gateway.
+The hosted worker uses `CARRIER_BROWSER_MODE=hosted`. Its relay listens only on `127.0.0.1:8080` (`WORKER_VERIFICATION_PORT` can override the port). A same-host HTTPS gateway must forward only `/verification` to that loopback listener. In Docker, use a gateway sharing the worker's network namespace; do not bind the relay to a public interface or publish a browser port. A synthetic-only gateway rehearsal is now included; the real deployment remains disabled. Do not configure the web flag until the gateway and worker are ready. Never log relay request bodies at the gateway.
 
 The web and worker flags remain unset in existing staging. Existing desktop collection behavior is unchanged.
 
@@ -31,14 +33,14 @@ Use one worker instance initially, with an encrypted persistent state disk, outb
 
 The preliminary worker budget discussed was roughly $40–60/month; verify the selected instance, disk, network, logging and any agreement requirements before approval. No paid resources should be created from this document alone.
 
-Build candidate from repository root: `docker build -f worker/Dockerfile -t comflow-worker:review .`. Do not supply live secrets during image build. A production run also needs a writable `/state` volume owned by the container user, private runtime secrets, resource limits and a restart policy. Container build and AWS runtime verification remain pending.
+Build candidate from repository root: `docker build -f worker/Dockerfile -t comflow-worker:review .`. Do not supply live secrets during image build. A production run also needs a writable `/state` volume owned by the container user, private runtime secrets, resource limits and a restart policy. The local build/rehearsal passed; actual AWS runtime verification remains pending.
 
 ## Release gates
 
 Review validation: 757 tests across 133 files passed, including signed-request tampering/replay/expiry, exact owner checks, server-derived agent identity, stale form rejection and hidden normal/password pages. A real headless Chromium smoke test used three locally intercepted sample pages to exercise text delivery, code submission and hidden completion; no carrier requests were sent. The actual React panel also passed a synthetic mobile browser check for submission, code clearing and width, with built app styles visually inspected. App/worker TypeScript checks, changed-file ESLint and the production build passed. Container build and a live hosted carrier test remain pending.
 
 1. Validate the supported MFA interface against each carrier during the authorized pilot; unsupported challenges remain blocked.
-2. Build and scan the container; test startup, shutdown and recovery with an isolated database.
+2. Finish the approved full-image scan; repeat startup/shutdown/recovery checks in the actual AWS pilot environment. The local synthetic rehearsal passed.
 3. Review concrete AWS resources and monthly cost with Ryan before provisioning.
 4. Run one live pilot, confirming only verification is visible and no duplicate imports occur.
 5. Preserve the existing local worker until the pilot passes, but never poll the same queue concurrently.
