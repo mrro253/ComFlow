@@ -59,9 +59,10 @@ it("shows verification once, preserves the session, and conceals it afterward",a
  expect(f.bounds.get(1)).toBe("normal");expect(f.fronts).toHaveBeenCalledOnce();
  await setVerificationVisible(page,false);expect(f.bounds.get(1)).toBe("minimized");expect(f.close).not.toHaveBeenCalled();
 });
-it("minimizes popup pages and hides verification on main-frame navigation",async()=>{
+it("keeps verification visible across code-request navigation and minimizes popups",async()=>{
  const f=fixture();const {page}=await createBackgroundSession({acceptDownloads:true});
  await setVerificationVisible(page,true);f.navigation.get(page)!();
+ expect(f.bounds.get(1)).toBe("normal");
  await setVerificationVisible(page,false);expect(f.bounds.get(1)).toBe("minimized");
  const popup=await f.context.newPage();await setVerificationVisible(popup,false);expect(f.bounds.get(2)).toBe("minimized");
 });

@@ -78,8 +78,11 @@ export async function createBackgroundSession(options: BrowserContextOptions) {
       void setVerificationVisible(page, false).catch(() => undefined);
       page.on("framenavigated", frame => {
         if (frame === page.mainFrame()) {
-          // Hide immediately when a verification page navigates away, before collection resumes.
-          void setVerificationVisible(page, false).catch(() => undefined);
+          // Sending/resending a code can navigate between verification steps.
+          // The login flow decides when verification has actually finished.
+          if (presentations.get(context)?.verificationPage !== page) {
+            void setVerificationVisible(page, false).catch(() => undefined);
+          }
         }
       });
     });
