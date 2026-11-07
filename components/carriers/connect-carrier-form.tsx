@@ -13,7 +13,7 @@ export function ConnectCarrierForm({ carrier, replacing }: { carrier: string; re
 
   return (
     <form action={formAction} className="flex flex-col gap-4" autoComplete="off">
-      <p className="text-sm text-muted-foreground">{sunfire ? "Sync enrollments uses your saved SunFire login. Complete any verification in the worker window. It collects enrollment details for review without changing commission records." : "Sync now uses your saved login automatically. If the carrier asks for verification or sign-in review, complete that request in the worker browser. Your session stays in memory while the worker runs."}</p>
+      <p className="text-sm text-muted-foreground">{sunfire ? "SunFire sync runs in the background using your saved login. A verification window opens only when a security check is needed and hides when collection resumes." : "Sync now signs in and collects statements in the background. A verification window opens only when a security check is needed and hides when collection resumes. Check this card for login errors."}</p>
       <input type="hidden" name="carrier" value={carrier} />
       {sunfire && <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2"><Label htmlFor="sunfire-portal">Your agency’s SunFire portal URL</Label><Input id="sunfire-portal" name="portalUrl" type="url" required placeholder="https://www.sunfirematrix.com/app/agent/your-agency/" /><p className="text-xs text-muted-foreground">Use your normal starting link, before the sign-in redirect.</p></div>

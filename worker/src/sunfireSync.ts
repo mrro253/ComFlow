@@ -1,4 +1,5 @@
-import { chromium, type Browser, type Page } from "playwright";
+import { createBackgroundSession } from "./backgroundBrowser.js";
+import { type Browser, type Page } from "playwright";
 import { decryptCarrierLogin } from "../../lib/crypto/credentials";
 import { SUNFIRE_MAX_BYTES, localDate, sunfireCollectionBytes, sunfireCollectionHash, sunfireDate, sunfirePortalUrl, sunfireStoragePath } from "../../lib/enrollments/sunfire";
 import { loadCiphertext, markConnection, type ConnectionRow, type Db } from "./db.js";
@@ -38,9 +39,9 @@ export async function syncSunfireConnection(db: Db, connection: ConnectionRow) {
   let session = sessions.get(connection.id);
   if (session && (session.portal !== portal || session.credentialFingerprint !== credentialFingerprint)) { await session.browser.close(); sessions.delete(connection.id); session = undefined; }
   if (!session || !session.browser.isConnected() || session.page.isClosed()) {
-    const browser = await chromium.launch({ headless: false });
-    const context = await browser.newContext({ viewport: { width: 1500, height: 900 }, acceptDownloads: false });
-    session = { browser, page: await context.newPage(), portal, credentialFingerprint }; sessions.set(connection.id, session);
+    const background = await createBackgroundSession({ viewport: { width: 1500, height: 900 }, acceptDownloads: false });
+    session = { ...background, portal, credentialFingerprint };
+    sessions.set(connection.id, session);
   }
   const { page } = session;
   try {
@@ -48,7 +49,7 @@ export async function syncSunfireConnection(db: Db, connection: ConnectionRow) {
     await markConnection(db, connection.id, { ok: false, error: "Sync running. Signing in to SunFire with your saved login." });
     await automaticCarrierLogin(page, "SunFire", login,
       async () => await page.locator("#navLinkreporting").count() === 1,
-      () => markConnection(db, connection.id, { ok: false, error: "SunFire needs verification or sign-in review. Complete it in the worker window; enrollment collection will continue." }));
+      () => markConnection(db, connection.id, { ok: false, error: "SunFire needs verification. Complete the security check in the verification window; collection will continue." }));
     await markConnection(db, connection.id, { ok: false, error: "Sync running. Reading and verifying SunFire enrollments." });
     const { collectEnrollments } = await import(new URL(`./sunfire/collector.ts?attempt=${Date.now()}`, import.meta.url).href) as typeof import("./sunfire/collector.js");
     let result: { count: number; duplicate: boolean } | undefined;
@@ -58,6 +59,6 @@ export async function syncSunfireConnection(db: Db, connection: ConnectionRow) {
     if (!result) throw new SafePortalError("SunFire collection did not finish.");
     return result;
   } catch {
-    throw new SafePortalError("SunFire collection paused. The signed-in worker window stays open; choose Sync enrollments again to retry. No partial collection or commission records were imported.");
+    throw new SafePortalError("SunFire collection paused. Check the connection message, then choose Sync enrollments again to retry.");
   }
 }

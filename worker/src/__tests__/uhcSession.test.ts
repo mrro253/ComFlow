@@ -5,7 +5,13 @@ import { uhcPortal } from "../carriers/uhc";
 import type { PullOptions } from "../carriers/types";
 const mock = vi.hoisted(() => ({ launch: vi.fn(), wait: vi.fn(), year: vi.fn(), goto: vi.fn(), currentUrl: "" }));
 vi.mock("../carrierLogin.js", () => ({ automaticCarrierLogin: () => mock.wait() }));
-vi.mock("playwright", () => ({ chromium: { launch: mock.launch } }));
+vi.mock("../backgroundBrowser.js", () => ({
+  createBackgroundSession: async (options: unknown) => {
+    const browser = await mock.launch();
+    const context = await browser.newContext(options);
+    return { browser, page: await context.newPage() };
+  },
+}));
 vi.mock("../carriers/uhcLoader.js", () => ({ loadUhcDownloader: async () => ({ syncUhcYear: mock.year }) }));
 beforeEach(() => {
   vi.clearAllMocks(); mock.currentUrl = UHC_STATEMENTS_URL; mock.wait.mockReset();
@@ -17,7 +23,7 @@ describe("UHC verification session", () => {
   it("keeps its window and retries without relaunching after verification timeout", async () => {
     const options: PullOptions = { years: [2026], sessionKey: "synthetic-connection", isKnown: () => true, log: () => {}, onStatement: async () => {}, onUhcPair: async () => "duplicate" };
     mock.wait.mockRejectedValueOnce(new Error("private browser diagnostic")).mockResolvedValueOnce(undefined);
-    await expect(uhcPortal.pull({ username: "synthetic", password: "synthetic" }, options)).rejects.toThrow("browser stays open");
+    await expect(uhcPortal.pull({ username: "synthetic", password: "synthetic" }, options)).rejects.toThrow("Check the connection message");
     expect(await uhcPortal.pull({ username: "synthetic", password: "synthetic" }, options)).toEqual({ found: 1, downloaded: 0, skipped: 1, failed: 0 });
     expect(mock.launch).toHaveBeenCalledTimes(1); expect(mock.year).toHaveBeenCalledTimes(1); expect(mock.goto).not.toHaveBeenCalled();
   });

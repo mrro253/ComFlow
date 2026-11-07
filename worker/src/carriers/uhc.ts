@@ -1,5 +1,6 @@
+import { createBackgroundSession } from "../backgroundBrowser.js";
 import { automaticCarrierLogin } from "../carrierLogin.js";
-import { chromium, type Browser, type Page } from "playwright";
+import { type Browser, type Page } from "playwright";
 import { loadUhcDownloader } from "./uhcLoader.js";
 import { UHC_STATEMENTS_URL } from "./uhcMetadata.js";
 import { SafePortalError, type CarrierPortal } from "./types.js";
@@ -11,9 +12,7 @@ export const uhcPortal: CarrierPortal = {
     if (!options.sessionKey || !options.onUhcPair) throw new SafePortalError("UnitedHealthcare paired sync is not configured");
     let session = sessions.get(options.sessionKey);
     if (!session || !session.browser.isConnected() || session.page.isClosed()) {
-      const browser = await chromium.launch({ headless: false });
-      const context = await browser.newContext({ acceptDownloads: true });
-      session = { browser, page: await context.newPage() };
+      session = await createBackgroundSession({ acceptDownloads: true });
       sessions.set(options.sessionKey, session);
     }
     const { page } = session;
@@ -36,7 +35,7 @@ export const uhcPortal: CarrierPortal = {
     } catch (error) {
       const detail = error instanceof SafePortalError ? error.message : `Could not complete ${stage}.`;
       options.log(`UnitedHealthcare paused: ${detail}`);
-      throw new SafePortalError(`UnitedHealthcare paused: ${detail} The browser stays open. Resolve the issue there, then retry Sync now. No commission entries imported.`);
+      throw new SafePortalError(`UnitedHealthcare paused: ${detail} Check the connection message, then retry Sync now.`);
     }
   },
 };

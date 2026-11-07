@@ -1,8 +1,9 @@
+import { createBackgroundSession } from "./backgroundBrowser.js";
 import { loginHelpMessage } from "../../lib/carriers/syncResult.js";
 import { automaticCarrierLogin } from "./carrierLogin.js";
 import { decryptCarrierLogin } from "../../lib/crypto/credentials";
 import { loadCiphertext } from "./db.js";
-import { chromium, type Browser, type Page } from "playwright";
+import { type Browser, type Page } from "playwright";
 import { syncDevotedPage } from "./carriers/devotedDownload.js";
 import { SafePortalError } from "./carriers/types.js";
 import { sha256Hex, yearsToSync } from "./safeError.js";
@@ -39,9 +40,7 @@ export async function syncDevotedConnection(db: Db, connection: ConnectionRow) {
   if (owner.error || owner.data?.role !== "owner" || !owner.data.active) throw new SafePortalError("Devoted sync requires an active owner connection");
   let session = sessions.get(connection.id);
   if (!session || !session.browser.isConnected() || session.page.isClosed()) {
-    const browser = await chromium.launch({ headless: false });
-    const context = await browser.newContext({ acceptDownloads: true });
-    session = { browser, page: await context.newPage() };
+    session = await createBackgroundSession({ acceptDownloads: true });
     sessions.set(connection.id, session);
   }
   const { page } = session;
@@ -56,6 +55,6 @@ export async function syncDevotedConnection(db: Db, connection: ConnectionRow) {
       (reason) => markConnection(db, connection.id, { ok: false, error: loginHelpMessage(reason) }));
     return await syncDevotedPage(page, yearsToSync(), (date, pdf, workbook) => storeDevotedPair(db, connection, date, pdf, workbook));
   } catch {
-    throw new SafePortalError("Devoted sync paused. Its browser stays open; complete sign-in, then choose Sync now again. No commission records were imported.");
+    throw new SafePortalError("Devoted sync paused. Check the connection message, then choose Sync now again.");
   }
 }

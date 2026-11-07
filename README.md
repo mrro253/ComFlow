@@ -1085,3 +1085,12 @@ Carrier transactions, original writer attribution, and source statement amounts 
 Allocation access is limited to the recipient, agency owner, and authorized direct-report managers. Sharing commission does **not** assign a SunFire application, transfer money, or change GHL contact ownership. Existing agency earnings or compensation locks block split changes, and split sources cannot enter the legacy whole-source payout path. Automated agency payout distribution for split policies is outside this credit-allocation feature. Captive recipients are not offered. No real policy split is applied by installation.
 
 Migration `0020_policy_commission_splits.sql` must be applied before deploying this version; reporting fails closed if allocation metadata cannot be read. Rollback-only isolated coverage: `supabase/tests/policy_commission_splits.sql`, plus the earlier owner-change regression suite. Tests cover signed-cent reconciliation, stale reviews, scope, recipient access, future imports, removal, and earning protections. All changes remain on the review branch.
+
+
+### Carrier collection runs in the background
+
+App-triggered Ultimate, UHC, Devoted, and SunFire sessions start minimized before loading a portal. Saved-login submission and statement/enrollment collection run in that background window. A recognized MFA/security-code or approval screen is brought forward for the agent, then minimized before collection resumes. The same browser context retains the signed-in session in memory. Download popup windows are minimized as well. Generic login errors are reported through the connection card instead of exposing a login/recovery page. A browser-control failure stops that session.
+
+This behavior is implemented for the current desktop worker. A minimized Chromium window may still have a taskbar entry. Standalone developer download commands keep their existing interactive behavior. Fully remote worker hosting still needs a separate remote verification handoff. The changed presentation does not enable scheduled collection.
+
+Validation includes the carrier session/credential regressions, background-window unit tests, and a local Chromium drill with intercepted synthetic login/MFA/report pages. The drill confirms minimized login, visible MFA, minimized post-verification collection, and minimized popups. Live MFA presentation on every carrier remains to be verified when those carriers next request a code.

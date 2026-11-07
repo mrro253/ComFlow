@@ -9,7 +9,7 @@ function fixture(carrier: LoginCarrier, initial?: string, callbackFlow = false, 
   const url = () => state === "untrusted" ? "https://example.invalid/" : state === "reset" ? "https://devoted.auth0.com/reset" : carrier === "Devoted Health" ? state === "callback" ? "https://agent.devoted.com/callback" : state === "home" ? "https://agent.devoted.com/home" : state === "entry" || state === "ready" ? "https://agent.devoted.com/commissions" : "https://devoted.auth0.com/login" : carrier === "UnitedHealthcare" ? state === "ready" ? "https://www.uhcjarvis.com/content/jarvis/en/secure/commissions/statements.html" : "https://identity.onehealthcareid.com/login" : carrier === "SunFire" ? state === "ready" ? "https://www.sunfirematrix.com/app/agent/example/" : "https://auth.sunfirematrix.com/u/login" : "https://enroll.myultimatehp.com/agportal/#/login";
   const needs = vi.fn(async () => { if (state === "challenge") state = "ready"; else closed = true; });
   const locator = (selector: string) => {
-    const count = () => selector.includes('new-password') ? state === "reset" ? 1 : 0 : selector.includes('one-time-code') ? state === "challenge" ? 1 : 0 : selector.includes('type="password"') ? ["password", "reset"].includes(state) ? 1 : 0 : ["username", "password"].includes(state) ? 1 : 0;
+    const count = () => selector.startsWith('iframe') ? 0 : selector.includes('new-password') ? state === "reset" ? 1 : 0 : selector.includes('one-time-code') ? state === "challenge" ? 1 : 0 : selector.includes('type="password"') ? ["password", "reset"].includes(state) ? 1 : 0 : ["username", "password"].includes(state) ? 1 : 0;
     return { count: async () => count(), isVisible: async () => count() > 0, isEditable: async () => !(carrier === "UnitedHealthcare" && state === "password" && !selector.includes('password')), fill: async (value: string) => { values.set(selector, value); if (value) fills.push(selector.includes('password') ? "password" : "username"); else events.push("clear"); }, pressSequentially: async (value: string) => { values.set(selector, value); fills.push(selector.includes('password') ? "password" : "username"); events.push("type"); }, press: async () => { events.push("blur"); }, inputValue: async () => values.get(selector) ?? "" };
   };
   const page = { url, isClosed: () => closed, locator, goto: async () => { destinations.push(state); state = "ready"; }, waitForTimeout: async () => { if (state === "callback") state = "home"; }, getByText: (text: string | RegExp) => ({ count: async () => reject && state === "bad" && text instanceof RegExp && text.test("Wrong username or password") ? 1 : 0, first: () => ({ isVisible: async () => state === "home" || (reject && state === "bad") }) }), getByRole: (role: string, options?: {name: string | RegExp}) => {
@@ -64,6 +64,17 @@ describe("automatic carrier login", () => {
     const f = fixture("Devoted Health", "password", false, true);
     await expect(automaticCarrierLogin(f.page, "Devoted Health", login, f.ready, f.needs)).rejects.toThrow("carrier rejected the saved login");
     expect(f.clicks).toHaveLength(1); expect(f.needs).not.toHaveBeenCalled();
+  });
+  it("only exposes a verification page and hides it before routing to commissions", async () => {
+    const f = fixture("UnitedHealthcare");
+    const visibility = vi.fn(async (visible: boolean) => { void visible; });
+    await automaticCarrierLogin(f.page, "UnitedHealthcare", login, f.ready, f.needs, visibility);
+    expect(visibility.mock.calls.map(([visible]) => visible)).toEqual([false, false, true, false]);
+    expect(f.needs).toHaveBeenCalledWith("verification");
+    const ordinary = fixture("Ultimate Health Plans");
+    visibility.mockClear();
+    await automaticCarrierLogin(ordinary.page, "Ultimate Health Plans", login, ordinary.ready, ordinary.needs, visibility);
+    expect(visibility.mock.calls.every(([visible]) => !visible)).toBe(true);
   });
   it("requires exact HTTPS hosts and rejects lookalike domains", () => {
     expect(trustedLoginUrl("Devoted Health", "https://devoted.auth0.com/login")).toBe(true);

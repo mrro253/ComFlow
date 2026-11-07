@@ -106,8 +106,8 @@ export default async function CarriersPage() {
                   )}
                 </>
               )}
-              {carrier === "UnitedHealthcare" && <p className="text-sm text-muted-foreground">Sync downloads available PDF and text reports. Keep the local worker running; complete verification in its browser and open Commissions &gt; Statements and More. New PDFs appear in <Link className="underline" href="/statements">Statements for review</Link>. Existing imported entries stay unchanged.</p>}
-              {carrier === "Devoted Health" && <p className="text-sm text-muted-foreground">Sync saves PDF and spreadsheet pairs for review. Keep the local worker running; complete any Devoted verification in its browser window. <Link className="underline" href="/statements/devoted">Review downloaded Devoted statements</Link></p>}
+              {carrier === "UnitedHealthcare" && <p className="text-sm text-muted-foreground">Sync downloads available PDF and text reports in the background. Complete any security check in the verification window. New PDFs appear in <Link className="underline" href="/statements">Statements for review</Link>. Existing imported entries stay unchanged.</p>}
+              {carrier === "Devoted Health" && <p className="text-sm text-muted-foreground">Sync saves PDF and spreadsheet pairs for review in the background. Complete any security check in the verification window. <Link className="underline" href="/statements/devoted">Review downloaded Devoted statements</Link></p>}
               {status?.notice && (
                 <p role="status" className={status.variant === "destructive" ? "rounded-md bg-destructive/10 p-3 text-sm text-destructive" : "rounded-md bg-muted/40 p-3 text-sm"}>{status.notice}</p>
               )}

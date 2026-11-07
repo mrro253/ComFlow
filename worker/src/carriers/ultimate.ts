@@ -1,7 +1,8 @@
+import { createBackgroundSession } from "../backgroundBrowser.js";
 import { automaticCarrierLogin } from "../carrierLogin.js";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { chromium, type Browser, type APIRequestContext, type Download, type Locator, type Page } from "playwright";
+import { type Browser, type APIRequestContext, type Download, type Locator, type Page } from "playwright";
 import { safeError, statementIdentifier } from "../safeError.js";
 import {
   SafePortalError,
@@ -249,9 +250,7 @@ export const ultimatePortal: CarrierPortal = {
     if (!options.sessionKey) throw new SafePortalError("Carrier session identity is missing");
     let session = sessions.get(options.sessionKey);
     if (!session || !session.browser.isConnected() || session.page.isClosed()) {
-      const browser = await chromium.launch({ headless: false });
-      const context = await browser.newContext({ acceptDownloads: true });
-      session = { browser, page: await context.newPage() };
+      session = await createBackgroundSession({ acceptDownloads: true });
       sessions.set(options.sessionKey, session);
     }
     let { page } = session;

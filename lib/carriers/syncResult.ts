@@ -1,8 +1,8 @@
 export type LoginHelp = "verification" | "sign_in_review";
 export function loginHelpMessage(reason: LoginHelp): string {
   return reason === "verification"
-    ? "Verification needed. Complete the carrier's request in the worker browser; sync continues when ready."
-    : "Sign-in review needed. Check the worker browser for a login message; sync continues when ready.";
+    ? "Verification needed. Complete the security check in the verification window. It will hide when sync resumes."
+    : "Sign-in review needed. Check your saved login in Carrier connections, then retry Sync now.";
 }
 
 export interface SyncResult {

@@ -1,0 +1,93 @@
+import { chromium, type BrowserContext, type BrowserContextOptions, type CDPSession, type Page } from "playwright";
+import { SafePortalError } from "./carriers/types.js";
+
+interface Presentation {
+  verificationPage: Page | null;
+  failure: Error | null;
+  pending: Promise<void>;
+  sessions: WeakMap<Page, Promise<CDPSession>>;
+}
+
+const presentations = new WeakMap<BrowserContext, Presentation>();
+
+/** Keep the same in-memory carrier session while changing only its window visibility. */
+export async function setVerificationVisible(page: Page, visible: boolean): Promise<void> {
+  const context = page.context();
+  const presentation = presentations.get(context);
+  // Standalone developer download commands keep their existing interactive behavior.
+  if (!presentation) return;
+
+  const update = presentation.pending.then(async () => {
+    if (presentation.failure) throw presentation.failure;
+    if (page.isClosed()) return;
+    if (visible && presentation.verificationPage === page) return;
+    let session = presentation.sessions.get(page);
+    if (!session) {
+      session = context.newCDPSession(page);
+      presentation.sessions.set(page, session);
+    }
+    const protocol = await session;
+    const { windowId, bounds } = await protocol.send("Browser.getWindowForTarget");
+    if (visible) {
+      if (bounds.windowState !== "normal") {
+        await protocol.send("Browser.setWindowBounds", { windowId, bounds: { windowState: "normal" } });
+      }
+      await protocol.send("Browser.setWindowBounds", {
+        windowId, bounds: { left: 80, top: 80, width: 1100, height: 800 },
+      });
+      await page.bringToFront();
+      presentation.verificationPage = page;
+    } else {
+      if (bounds.windowState !== "minimized") {
+        await protocol.send("Browser.setWindowBounds", { windowId, bounds: { windowState: "minimized" } });
+      }
+      const current = await protocol.send("Browser.getWindowBounds", { windowId });
+      if (current.bounds.windowState !== "minimized") throw new Error("Background window was not minimized");
+      presentation.verificationPage = null;
+    }
+  });
+  presentation.pending = update.catch(async () => {
+    presentation.failure = new SafePortalError("Background browser controls are unavailable. Sync stopped; try Sync now again.");
+    // Do not continue collection in a visible window when concealment fails.
+    await context.browser()?.close().catch(() => undefined);
+  });
+  try {
+    await update;
+  } catch {
+    await presentation.pending;
+    throw presentation.failure;
+  }
+}
+
+/** App-triggered sessions start minimized, before any carrier page is loaded. */
+export async function createBackgroundSession(options: BrowserContextOptions) {
+  const browser = await chromium.launch({
+    headless: false,
+    args: ["--start-minimized", "--window-position=-32000,-32000"],
+  });
+  try {
+    const context = await browser.newContext(options);
+    presentations.set(context, {
+      verificationPage: null,
+      failure: null,
+      pending: Promise.resolve(),
+      sessions: new WeakMap(),
+    });
+    context.on("page", page => {
+      // Popups used by PDF downloads also stay in the background.
+      void setVerificationVisible(page, false).catch(() => undefined);
+      page.on("framenavigated", frame => {
+        if (frame === page.mainFrame()) {
+          // Hide immediately when a verification page navigates away, before collection resumes.
+          void setVerificationVisible(page, false).catch(() => undefined);
+        }
+      });
+    });
+    const page = await context.newPage();
+    await setVerificationVisible(page, false);
+    return { browser, page };
+  } catch {
+    await browser.close().catch(() => undefined);
+    throw new SafePortalError("Could not start the background carrier browser. Try Sync now again.");
+  }
+}

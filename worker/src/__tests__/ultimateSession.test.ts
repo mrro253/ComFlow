@@ -2,7 +2,13 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { ultimatePortal } from "../carriers/ultimate";
 import type { PullOptions } from "../carriers/types";
 const mock = vi.hoisted(() => ({ launch: vi.fn(), goto: vi.fn(), login: vi.fn(), url: "about:blank", usable: true }));
-vi.mock("playwright", () => ({ chromium: { launch: mock.launch } }));
+vi.mock("../backgroundBrowser.js", () => ({
+  createBackgroundSession: async (options: unknown) => {
+    const browser = await mock.launch();
+    const context = await browser.newContext(options);
+    return { browser, page: await context.newPage() };
+  },
+}));
 vi.mock("../carrierLogin.js", () => ({ automaticCarrierLogin: (...args: unknown[]) => mock.login(...args) }));
 beforeEach(() => {
   vi.clearAllMocks(); mock.goto.mockReset(); mock.url="about:blank"; mock.usable=true;

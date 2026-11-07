@@ -3,7 +3,13 @@ import { syncDevotedConnection } from "../devotedSync";
 import type { ConnectionRow, Db } from "../db";
 const mocks = vi.hoisted(() => ({ launch: vi.fn(), pull: vi.fn(), mark: vi.fn(), wait: vi.fn(), goto: vi.fn(), connected: true }));
 vi.mock("../carrierLogin.js", () => ({ automaticCarrierLogin: () => mocks.wait() }));
-vi.mock("playwright", () => ({ chromium: { launch: mocks.launch } }));
+vi.mock("../backgroundBrowser.js", () => ({
+  createBackgroundSession: async (options: unknown) => {
+    const browser = await mocks.launch();
+    const context = await browser.newContext(options);
+    return { browser, page: await context.newPage() };
+  },
+}));
 vi.mock("../carriers/devotedDownload.js", () => ({ syncDevotedPage: mocks.pull }));
 vi.mock("../db.js", () => ({ loadCiphertext: async () => "encrypted", markConnection: mocks.mark }));
 vi.mock("../../../lib/crypto/credentials", () => ({ decryptCarrierLogin: () => ({ username: "synthetic", password: "synthetic" }) }));
@@ -21,7 +27,7 @@ describe("Devoted interactive session reuse", () => {
   it("retains the same browser after verification timeout and retries in it", async () => {
     const connection = { id: "session-retry", agency_id: "agency", user_id: "owner" } as ConnectionRow;
     mocks.wait.mockRejectedValueOnce(new Error("private browser diagnostic")).mockResolvedValueOnce(undefined);
-    await expect(syncDevotedConnection(db(), connection)).rejects.toThrow("browser stays open");
+    await expect(syncDevotedConnection(db(), connection)).rejects.toThrow("Check the connection message");
     expect(await syncDevotedConnection(db(), connection)).toEqual({ found: 1, downloaded: 0, skipped: 1, failed: 0 });
     expect(mocks.launch).toHaveBeenCalledTimes(1);
     expect(mocks.pull).toHaveBeenCalledTimes(1);
