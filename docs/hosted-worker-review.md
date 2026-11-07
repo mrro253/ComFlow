@@ -1,6 +1,6 @@
 # Hosted downloader preparation — review only
 
-Update: the local container/gateway rehearsal now passes. See [hosting rehearsal results and remaining pilot gates](hosting-rehearsal-review.md). The [completed full-image scans](hosting-security-scan-review.md) found material base-image issues requiring remediation before the actual AWS/carrier pilot.
+Update: the local container/gateway rehearsal and its image-refresh repeat both pass. See [hosting rehearsal results and remaining pilot gates](hosting-rehearsal-review.md). Latest [high/critical image scans](hosting-security-scan-review.md) show worker 0/0 and gateway 4/0. The four remaining gateway findings require remediation or explicit assessed acceptance before the actual AWS/carrier pilot.
 
 The website is on Vercel and records are in Supabase. The remaining hosting component runs the carrier browser without the agent's computer. No AWS resources have been created by this change.
 

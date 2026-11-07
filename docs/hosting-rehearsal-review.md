@@ -1,5 +1,7 @@
 # Local hosting rehearsal — 2026-11-07
 
+The refreshed Playwright 1.65.0 / Caddy 2.11.9 images passed this same rehearsal again. Latest high/critical scan totals are worker 0/0 and gateway 4/0; see [refresh changes, exact image identities and remaining findings](hosting-security-scan-review.md). The earlier image identities and sizes below describe the baseline rehearsal.
+
 Review branch: `feature/ghl-contact-preview`. No AWS resources, DNS changes, live verification flags, imports or GHL updates were made.
 
 ## Result
