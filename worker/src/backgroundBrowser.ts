@@ -83,6 +83,27 @@ export async function createBackgroundSession(options: BrowserContextOptions) {
         }
       });
     });
+    // Carrier scripts can restore a window without navigating (including after
+    // verification). Recheck idle and collecting windows as well as navigation.
+    let checking = false;
+    const concealmentCheck = setInterval(async () => {
+      if (checking) return;
+      checking = true;
+      try {
+        const presentation = presentations.get(context);
+        for (const page of context.pages()) {
+          if (!page.isClosed() && presentation?.verificationPage !== page) {
+            await setVerificationVisible(page, false);
+          }
+        }
+      } catch {
+        // setVerificationVisible closes the browser if concealment fails.
+      } finally {
+        checking = false;
+      }
+    }, 500);
+    concealmentCheck.unref();
+    context.on("close", () => clearInterval(concealmentCheck));
     const page = await context.newPage();
     await setVerificationVisible(page, false);
     return { browser, page };

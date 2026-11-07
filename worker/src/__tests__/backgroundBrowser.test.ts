@@ -13,6 +13,7 @@ function fixture(fail=false){
  const pages:Page[]=[];
  const navigation=new Map<Page,()=>void>();
  const context={
+  pages:()=>pages,
   browser:()=>browser,
   on:(name:string,callback:(...args:unknown[])=>void)=>{events.set(name,callback);},
   newCDPSession:async(page:Page)=>({send:async(method:string,input?:{windowId:number;bounds:{windowState?:string}})=>{
@@ -35,6 +36,18 @@ function fixture(fail=false){
  return {context,bounds,close,fronts,navigation};
 }
 beforeEach(()=>vi.clearAllMocks());
+it("reconceals a restored collection window while leaving verification visible",async()=>{
+ vi.useFakeTimers();
+ try {
+  const f=fixture();const {page}=await createBackgroundSession({acceptDownloads:true});
+  f.bounds.set(1,"normal");
+  await vi.advanceTimersByTimeAsync(500);
+  expect(f.bounds.get(1)).toBe("minimized");
+  await setVerificationVisible(page,true);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(f.bounds.get(1)).toBe("normal");
+ } finally {vi.clearAllTimers();vi.useRealTimers();}
+});
 it("starts the app browser minimized before navigating to a carrier",async()=>{
  const f=fixture();await createBackgroundSession({acceptDownloads:true});
  expect(mocks.launch).toHaveBeenCalledWith({headless:false,args:["--start-minimized","--window-position=-32000,-32000"]});
