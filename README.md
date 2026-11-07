@@ -1,3 +1,7 @@
+# Agent-account isolation review - 2026-11-07
+
+Separate signed-in test agents passed commission, selected-policy ownership, 60/40 split, personal/shared GHL setup and inactive-session checks in the isolated test project. The two-agent GHL import drill and nine rollback-only database suites also pass, with no real GHL calls. Staging's 154 imported entries and 11 protected tables, plus the local working ledger, have matching before/after fingerprints. See [test coverage, safe reproduction and remaining launch checks](docs/agent-account-isolation-review.md). Review branch only.
+
 # Policy commission owner - 2026-11-05
 
 Agency owners can review and change the commission recipient for one statement-backed policy from Commission activity entry details. The carrier writer remains visible; a saved policy-specific rule routes later renewals and chargebacks to the selected recipient. Existing earnings/compensation locks, stale reviews and in-flight GHL work are protected. This does not reassign GHL contacts or enrollments, transfer bank funds or change other policies. See [scope, safeguards and validation](docs/policy-commission-ownership.md). Review branch only; no real ownership change was made during development.
