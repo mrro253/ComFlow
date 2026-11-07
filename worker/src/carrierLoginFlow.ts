@@ -85,7 +85,14 @@ export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, l
           await submit.click(); usernameSubmitted = true; continue;
         }
       }
-      if (!notified && Date.now() - started > 20000) { await needsUser("sign_in_review"); notified = true; }
+      if (!notified && Date.now() - started > 20000) {
+        console.warn(JSON.stringify({ loginDiagnostic: carrier, usernameSubmitted, passwordSubmitted,
+          usernameFields: await page.locator('input#username:visible').count(),
+          passwordFields: await page.locator('input[type="password"]:visible').count(),
+          verificationRequired, accountChange,
+          continueButtons: await page.getByRole("button", { name: /^(Continue|Sign In|Log In|Next)$/i }).count() }));
+        await needsUser("sign_in_review"); notified = true;
+      }
       await page.waitForTimeout(500);
     }
     throw new SafePortalError("Carrier sign-in did not complete. Check the connection message, then retry Sync now.");

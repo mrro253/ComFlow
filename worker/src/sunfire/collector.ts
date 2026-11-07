@@ -131,6 +131,7 @@ export async function collectEnrollments(_context: BrowserContext, page: Page, o
   } catch (error) {
     // Only controlled stage/error classes: never names, IDs, URLs or raw browser errors.
     console.warn(`SunFire stopped while ${stage} (${error instanceof EnrollmentReadError ? "validation" : error instanceof Error && error.name === "TimeoutError" ? "timeout" : "operation failed"}).`);
+    if (error instanceof EnrollmentReadError) console.warn(error.message);
     throw error;
   }
 }
