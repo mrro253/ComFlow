@@ -38,8 +38,15 @@ export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, l
       const accountChange = /reset|recover|change.password|signup|register/.test(current.pathname.toLowerCase()) || await page.locator('input[autocomplete="new-password"]:visible').count() > 0;
       const challenge = page.locator('input[autocomplete="one-time-code"]:visible, input[name="code"]:visible, input[name="otp"]:visible');
       const verificationText = page.getByText(/verification code|verify your identity|approve.*sign.in|check your.*email|security code|passkey/i);
+      let visibleVerificationText = false;
+      for (let index = 0; index < await verificationText.count(); index++) {
+        if (await verificationText.nth(index).isVisible()) {
+          visibleVerificationText = true;
+          break;
+        }
+      }
       const verificationRequired = !accountChange && (await challenge.count() > 0 ||
-        (await verificationText.count() > 0 && await verificationText.first().isVisible() && await page.locator('input[type="password"]:visible').count() === 0));
+        (visibleVerificationText && await page.locator('input[type="password"]:visible').count() === 0));
       await setVerificationVisible(verificationRequired);
 
       const target = carrier === "UnitedHealthcare" ? "https://www.uhcjarvis.com/content/jarvis/en/secure/commissions/statements.html" : carrier === "Devoted Health" ? "https://agent.devoted.com/commissions" : null;

@@ -22,6 +22,21 @@ function fixture(carrier: LoginCarrier, initial?: string, callbackFlow = false, 
 }
 const login = { username: "synthetic-user", password: "synthetic-password" };
 describe("automatic carrier login", () => {
+  it("recognizes visible verification text after a hidden matching element", async () => {
+    const f = fixture("UnitedHealthcare", "review");
+    const original = f.page.getByText.bind(f.page);
+    f.page.getByText = ((text: string | RegExp) => {
+      if (text instanceof RegExp && text.test("Verify Your Identity")) {
+        return { count: async () => 2, nth: (index: number) => ({ isVisible: async () => index === 1 }) };
+      }
+      return original(text);
+    }) as Page["getByText"];
+    const visibility = vi.fn(async (_visible: boolean) => {});
+    await expect(automaticCarrierLogin(f.page, "UnitedHealthcare", login, f.ready, f.needs, visibility)).rejects.toThrow();
+    expect(f.needs).toHaveBeenCalledWith("verification");
+    expect(visibility).toHaveBeenCalledWith(true);
+    expect(f.fills).toEqual([]);
+  });
   it.each(["Devoted Health", "UnitedHealthcare", "Ultimate Health Plans", "SunFire"] as const)("submits saved credentials for %s", async (carrier) => {
     const f = fixture(carrier); await automaticCarrierLogin(f.page, carrier, login, f.ready, f.needs);
     expect(f.fills).toContain("username"); expect(f.fills.filter(v => v === "password")).toHaveLength(1);
