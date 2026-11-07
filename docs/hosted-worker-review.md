@@ -1,6 +1,6 @@
 # Hosted downloader preparation — review only
 
-Update: the local container/gateway rehearsal now passes. See [hosting rehearsal results and remaining pilot gates](hosting-rehearsal-review.md). A full-image vulnerability scan and actual AWS/carrier pilot remain outstanding.
+Update: the local container/gateway rehearsal now passes. See [hosting rehearsal results and remaining pilot gates](hosting-rehearsal-review.md). The [completed full-image scans](hosting-security-scan-review.md) found material base-image issues requiring remediation before the actual AWS/carrier pilot.
 
 The website is on Vercel and records are in Supabase. The remaining hosting component runs the carrier browser without the agent's computer. No AWS resources have been created by this change.
 
@@ -40,7 +40,7 @@ Build candidate from repository root: `docker build -f worker/Dockerfile -t comf
 Review validation: 757 tests across 133 files passed, including signed-request tampering/replay/expiry, exact owner checks, server-derived agent identity, stale form rejection and hidden normal/password pages. A real headless Chromium smoke test used three locally intercepted sample pages to exercise text delivery, code submission and hidden completion; no carrier requests were sent. The actual React panel also passed a synthetic mobile browser check for submission, code clearing and width, with built app styles visually inspected. App/worker TypeScript checks, changed-file ESLint and the production build passed. Container build and a live hosted carrier test remain pending.
 
 1. Validate the supported MFA interface against each carrier during the authorized pilot; unsupported challenges remain blocked.
-2. Finish the approved full-image scan; repeat startup/shutdown/recovery checks in the actual AWS pilot environment. The local synthetic rehearsal passed.
+2. Address the completed full-image scan findings and rescan; repeat startup/shutdown/recovery checks in the actual AWS pilot environment. The local synthetic rehearsal passed.
 3. Review concrete AWS resources and monthly cost with Ryan before provisioning.
 4. Run one live pilot, confirming only verification is visible and no duplicate imports occur.
 5. Preserve the existing local worker until the pilot passes, but never poll the same queue concurrently.

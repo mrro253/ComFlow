@@ -24,7 +24,7 @@ The gateway's binary had a file capability incompatible with dropping every capa
 
 The initial dependency audit found a critical issue and high-severity issues. Compatible lockfile updates moved Next.js to 15.5.29; a targeted PostCSS 8.5.32 override removes its vulnerable nested copy. The production npm audit now reports **zero findings**. Fresh dependencies were installed in a separate validation copy, leaving running local installations untouched. All **757 tests in 133 files**, app/worker type checks, changed TypeScript lint and the production app build passed using that copy and synthetic connection settings.
 
-The separate full-image Docker Scout scan was **not run**: automatic approval blocked it because it may transmit private image or derived package/source metadata to an external service. The npm audit is not an operating-system or full-container scan. That remaining scan needs explicit approval or a separately approved offline scanning process before a live pilot.
+The separate full-image Docker Scout scans were subsequently approved and completed. They found material high/critical issues in the base images and bundled tooling, so the hosted pilot remains disabled pending remediation and a repeat scan. See [scan results and triage](hosting-security-scan-review.md). The zero-finding production npm audit does not cover operating-system packages or global tooling.
 
 ## Repeat locally
 
@@ -34,7 +34,7 @@ Configuration lives in `worker/hosting/compose.rehearsal.yaml` and `Caddyfile.re
 
 ## Remaining before AWS pilot
 
-1. Complete the approved full-image vulnerability scan and address material findings.
+1. Address the material findings from the completed full-image scans, then rescan and rehearse the replacement images.
 2. Review the concrete AWS instance, encrypted disk, access controls, HTTPS hostname/certificate, secrets, logging and monthly cost with Ryan before provisioning. No sample certificate or rehearsal key may be used online.
 3. Replace `network_mode: none` with reviewed outbound connectivity and expose only the authenticated HTTPS gateway. Configure real TLS and a restart/health policy. Never publish browser, debug or relay ports directly.
 4. Stop the local worker for the same queue before starting the hosted instance. One host/one worker remains the supported deployment.

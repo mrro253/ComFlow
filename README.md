@@ -1,6 +1,6 @@
 # Hosted worker rehearsal - 2026-11-07
 
-The isolated local worker/gateway rehearsal passed HTTPS verification, agent separation, duplicate-worker blocking and crash recovery with synthetic fixtures only. Production package audit findings were patched; 757 tests and the patched app build pass. The full-image scan still needs approval, and no AWS resources or live verification were enabled. See [results, repeatable rehearsal and pilot gates](docs/hosting-rehearsal-review.md). Review branch only; imported records unchanged.
+The isolated local worker/gateway rehearsal passed HTTPS verification, agent separation, duplicate-worker blocking and crash recovery with synthetic fixtures only. Production package audit findings were patched; 757 tests and the patched app build pass. The approved [full-image scans](docs/hosting-security-scan-review.md) found base-image issues that must be addressed before an online pilot. No AWS resources or live verification were enabled. See [results, repeatable rehearsal and pilot gates](docs/hosting-rehearsal-review.md). Review branch only; imported records unchanged.
 
 # Agent-account isolation review - 2026-11-07
 
