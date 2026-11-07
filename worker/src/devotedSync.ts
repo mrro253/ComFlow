@@ -49,12 +49,15 @@ export async function syncDevotedConnection(db: Db, connection: ConnectionRow) {
   if (!ciphertext) throw new SafePortalError("Enter your Devoted login again before syncing");
   const login = decryptCarrierLogin(ciphertext, connection.id);
   await markConnection(db, connection.id, { ok: false, error: "Sync running. Signing in to Devoted with your saved login." });
+  let stage = "signing in";
   try {
     await automaticCarrierLogin(page, "Devoted Health", login,
       () => page.getByRole("heading", { name: "My Commissions", exact: true }).isVisible(),
       (reason) => markConnection(db, connection.id, { ok: false, error: loginHelpMessage(reason) }));
+    stage = "reading commission statements";
     return await syncDevotedPage(page, yearsToSync(), (date, pdf, workbook) => storeDevotedPair(db, connection, date, pdf, workbook));
-  } catch {
-    throw new SafePortalError("Devoted sync paused. Check the connection message, then choose Sync now again.");
+  } catch (error) {
+    if (error instanceof SafePortalError) throw error;
+    throw new SafePortalError(`Devoted could not complete ${stage}. Try Sync now again.`);
   }
 }

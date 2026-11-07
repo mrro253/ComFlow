@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { syncDevotedConnection } from "../devotedSync";
+import {SafePortalError} from "../carriers/types";
 import type { ConnectionRow, Db } from "../db";
 const mocks = vi.hoisted(() => ({ launch: vi.fn(), pull: vi.fn(), mark: vi.fn(), wait: vi.fn(), goto: vi.fn(), connected: true }));
 vi.mock("../carrierLogin.js", () => ({ automaticCarrierLogin: () => mocks.wait() }));
@@ -27,10 +28,16 @@ describe("Devoted interactive session reuse", () => {
   it("retains the same browser after verification timeout and retries in it", async () => {
     const connection = { id: "session-retry", agency_id: "agency", user_id: "owner" } as ConnectionRow;
     mocks.wait.mockRejectedValueOnce(new Error("private browser diagnostic")).mockResolvedValueOnce(undefined);
-    await expect(syncDevotedConnection(db(), connection)).rejects.toThrow("Check the connection message");
+    await expect(syncDevotedConnection(db(), connection)).rejects.toThrow("Devoted could not complete signing in");
     expect(await syncDevotedConnection(db(), connection)).toEqual({ found: 1, downloaded: 0, skipped: 1, failed: 0 });
     expect(mocks.launch).toHaveBeenCalledTimes(1);
     expect(mocks.pull).toHaveBeenCalledTimes(1);
     expect(mocks.mark).toHaveBeenCalledTimes(2);
   });
+  it("preserves approved carrier error messages without exposing browser diagnostics", async () => {
+    const connection = {id:"safe-error",agency_id:"agency",user_id:"owner"} as ConnectionRow;
+    mocks.wait.mockRejectedValueOnce(new SafePortalError("The carrier rejected the saved login."));
+    await expect(syncDevotedConnection(db(),connection)).rejects.toThrow("The carrier rejected the saved login.");
+  });
+
 });
