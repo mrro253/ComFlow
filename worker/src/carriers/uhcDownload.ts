@@ -4,6 +4,7 @@ import path from "node:path";
 import type { Page } from "playwright";
 import { assertUhcFile, assertUhcPage, uhcDownloadName, uhcMonth } from "./uhcMetadata.js";
 import { SafePortalError } from "./types.js";
+import { captureLoginReview } from "../loginDiagnostics.js";
 
 async function preserve(directory: string, bytes: Buffer, extension: string) {
   const hash = createHash("sha256").update(bytes).digest("hex");
@@ -31,6 +32,7 @@ async function menuOptions(page: Page) {
   return labels.map(labelText);
 }
 async function selectControl(page: Page, name: string, value: string) {
+  try {
   const control = page.getByRole("combobox", { name, exact: true });
   if (labelText(await control.innerText()) === value) return;
   await page.getByRole("button", { name, exact: true }).click();
@@ -42,6 +44,11 @@ async function selectControl(page: Page, name: string, value: string) {
   while (labelText(await control.innerText()) !== value) {
     if (Date.now() >= deadline) throw new SafePortalError(`UnitedHealthcare ${name} selection did not update`);
     await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  } catch (error) {
+    if (error instanceof SafePortalError) throw error;
+    await captureLoginReview(page);
+    throw new SafePortalError(`UnitedHealthcare ${name} control could not be read or selected. The signed-in session was retained.`);
   }
 }
 async function source(page: Page, month: string, kind: "pdf" | "txt") {
