@@ -40,7 +40,7 @@ export async function syncDevotedConnection(db: Db, connection: ConnectionRow) {
   if (owner.error || owner.data?.role !== "owner" || !owner.data.active) throw new SafePortalError("Devoted sync requires an active owner connection");
   let session = sessions.get(connection.id);
   if (!session || !session.browser.isConnected() || session.page.isClosed()) {
-    session = await createBackgroundSession({ acceptDownloads: true });
+    session = await createBackgroundSession({ acceptDownloads: true }, connection.id);
     sessions.set(connection.id, session);
   }
   const { page } = session;

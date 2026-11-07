@@ -1,5 +1,6 @@
 import { chromium, type BrowserContext, type BrowserContextOptions, type CDPSession, type Page } from "playwright";
 import { SafePortalError } from "./carriers/types.js";
+import { enableVerification, registerVerification } from "./verificationSessions.js";
 
 interface Presentation {
   verificationPage: Page | null;
@@ -10,11 +11,17 @@ interface Presentation {
 
 const presentations = new WeakMap<BrowserContext, Presentation>();
 const hostedContexts = new WeakSet<BrowserContext>();
+const hostedBindings = new WeakMap<BrowserContext, string>();
 
 /** Keep the same in-memory carrier session while changing only its window visibility. */
 export async function setVerificationVisible(page: Page, visible: boolean): Promise<void> {
   const context = page.context();
   if (hostedContexts.has(context)) {
+    const binding = hostedBindings.get(context);
+    if (binding && process.env.HOSTED_VERIFICATION_ENABLED === "true") {
+      enableVerification(binding, page, visible);
+      return;
+    }
     if (visible) {
       // No general browser or remote desktop may be exposed as a fallback.
       throw new SafePortalError("Cloud verification is not available yet. Sync stopped without showing the carrier browser.");
@@ -68,7 +75,7 @@ export async function setVerificationVisible(page: Page, visible: boolean): Prom
 }
 
 /** App-triggered sessions start minimized, before any carrier page is loaded. */
-export async function createBackgroundSession(options: BrowserContextOptions) {
+export async function createBackgroundSession(options: BrowserContextOptions, connectionId?: string) {
   const mode = process.env.CARRIER_BROWSER_MODE ?? "desktop";
   if (mode !== "desktop" && mode !== "hosted") {
     throw new SafePortalError("Carrier browser mode is invalid. Sync stopped.");
@@ -83,6 +90,10 @@ export async function createBackgroundSession(options: BrowserContextOptions) {
     if (hosted) {
       hostedContexts.add(context);
       const page = await context.newPage();
+      if (connectionId && process.env.HOSTED_VERIFICATION_ENABLED === "true") {
+        hostedBindings.set(context, connectionId);
+        registerVerification(connectionId, page);
+      }
       return { browser, page };
     }
     presentations.set(context, {

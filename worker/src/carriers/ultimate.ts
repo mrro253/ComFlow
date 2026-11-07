@@ -250,7 +250,7 @@ export const ultimatePortal: CarrierPortal = {
     if (!options.sessionKey) throw new SafePortalError("Carrier session identity is missing");
     let session = sessions.get(options.sessionKey);
     if (!session || !session.browser.isConnected() || session.page.isClosed()) {
-      session = await createBackgroundSession({ acceptDownloads: true });
+      session = await createBackgroundSession({ acceptDownloads: true }, options.sessionKey);
       sessions.set(options.sessionKey, session);
     }
     let { page } = session;

@@ -1,4 +1,5 @@
 import { processGhlImportJobs } from "./ghlImportJobs.js";
+import { startVerificationServer } from "./verificationServer.js";
 import { claimConnection, createDb, listRequestedConnectionIds, loadStatementOwner, markConnection } from "./db.js";
 import { syncConnection } from "./syncConnection.js";
 import { queueScheduledSyncs, recoverInterruptedSync } from "./scheduledSync.js";
@@ -56,6 +57,7 @@ async function main() {
   if (["localhost", "127.0.0.1", "[::1]"].includes(endpoint.hostname)) endpoint.hostname = "127.0.0.1";
   const scope = createHash("sha256").update(endpoint.origin).digest("hex").slice(0, 24);
   const runtime = await openLocalRuntime(join(process.env.LOCALAPPDATA ?? join(homedir(), ".local", "state"), "ComFlow", "worker", scope));
+  const verification = await startVerificationServer();
   try {
   if (once) {
     const processed = await runOnce(runtime);
@@ -71,7 +73,7 @@ async function main() {
     }
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
-  } finally { await runtime.close(); }
+  } finally { verification?.close(); await runtime.close(); }
 }
 
 main().catch(() => {

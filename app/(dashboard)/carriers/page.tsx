@@ -12,6 +12,7 @@ import { listVisibleConnections } from "@/lib/repositories/carrierConnectionRepo
 import { listUsersForAgency } from "@/lib/repositories/userRepository";
 import { ConnectCarrierForm } from "@/components/carriers/connect-carrier-form";
 import { ConnectionActions, RemoveCarrierLogin } from "@/components/carriers/connection-actions";
+import { VerificationPanel } from "@/components/carriers/verification-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,6 +99,7 @@ export default async function CarriersPage() {
             <CardContent className="flex flex-col gap-4">
               {status?.notice && <p role="status" aria-live="polite" className={status.variant === "destructive" ? "rounded-md bg-destructive/10 p-3 text-sm text-destructive" : "rounded-md bg-muted/40 p-3 text-sm"}>{status.notice}</p>}
               {connected && connection && <ConnectionActions connectionId={connection.id} syncPending={connection.syncRequestedAt !== null} syncBusy={busy} enrollmentSource={carrier === "SunFire"} />}
+              {connected && connection && busy && process.env.HOSTED_VERIFICATION_ENABLED === "true" && <VerificationPanel connectionId={connection.id} />}
               {connected && carrier !== "SunFire" && <div className="rounded-md border p-4 text-sm">
                 <p className="font-medium">{busy ? "Previous download result" : "Last download result"}{summary ? ` · ${formatDate(summary.finishedAt)}` : ""}</p>
                 <div className="mt-2 space-y-2">

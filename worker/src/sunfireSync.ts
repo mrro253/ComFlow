@@ -39,7 +39,7 @@ export async function syncSunfireConnection(db: Db, connection: ConnectionRow) {
   let session = sessions.get(connection.id);
   if (session && (session.portal !== portal || session.credentialFingerprint !== credentialFingerprint)) { await session.browser.close(); sessions.delete(connection.id); session = undefined; }
   if (!session || !session.browser.isConnected() || session.page.isClosed()) {
-    const background = await createBackgroundSession({ viewport: { width: 1500, height: 900 }, acceptDownloads: false });
+    const background = await createBackgroundSession({ viewport: { width: 1500, height: 900 }, acceptDownloads: false }, connection.id);
     session = { ...background, portal, credentialFingerprint };
     sessions.set(connection.id, session);
   }

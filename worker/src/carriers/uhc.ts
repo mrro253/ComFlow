@@ -12,7 +12,7 @@ export const uhcPortal: CarrierPortal = {
     if (!options.sessionKey || !options.onUhcPair) throw new SafePortalError("UnitedHealthcare paired sync is not configured");
     let session = sessions.get(options.sessionKey);
     if (!session || !session.browser.isConnected() || session.page.isClosed()) {
-      session = await createBackgroundSession({ acceptDownloads: true });
+      session = await createBackgroundSession({ acceptDownloads: true }, options.sessionKey);
       sessions.set(options.sessionKey, session);
     }
     const { page } = session;
