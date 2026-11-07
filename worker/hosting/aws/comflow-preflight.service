@@ -1,0 +1,14 @@
+[Unit]
+Description=Restore only the identical previously approved ComFlow release before Docker
+After=network-online.target
+Wants=network-online.target
+Before=docker.service
+PartOf=docker.service
+RequiresMountsFor=/var/lib/comflow-state
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/python3 /opt/comflow/host.py preflight
+TimeoutStartSec=120
+UMask=0077

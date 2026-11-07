@@ -1,6 +1,10 @@
+# AWS deployment scripts - 2026-11-07
+
+Prepared an offline infrastructure bundle and gated host scripts on the review branch. All 19 host tests, two preparation tests, template validation, systemd checks and Compose configuration checks passed. No AWS resources or imported records changed. See [scripts, safeguards and remaining deployment checks](docs/aws-deployment-scripts-review.md). Actual AWS host validation and explicit provisioning approval remain pending.
+
 # AWS worker setup and cost plan - 2026-11-07
 
-A review-only [AWS pilot plan](docs/aws-worker-setup-plan.md) proposes one Ohio Linux t3.medium, encrypted disks, private image storage/secrets and a minimal HTTPS verification gateway. Verified-rate estimate: about $43/month before tax; plan a $50 budget alert. Domain purchase is deferred and excluded, along with existing Vercel/Supabase costs and any required provider add-ons. Run `node scripts/estimate-aws-worker.mjs` for the local calculation. No AWS resources, DNS records, secrets or live settings were created or changed; imported records remain unchanged. Final account/domain details, deployment hooks and explicit provisioning approval are still required.
+A review-only [AWS pilot plan](docs/aws-worker-setup-plan.md) proposes one Ohio Linux t3.medium, encrypted disks, private image storage/secrets and a minimal HTTPS verification gateway. Verified-rate estimate: about $43/month before tax; plan a $50 budget alert. Domain purchase is deferred and excluded, along with existing Vercel/Supabase costs and any required provider add-ons. Run `node scripts/estimate-aws-worker.mjs` for the local calculation. No AWS resources, DNS records, secrets or live settings were created or changed; imported records remain unchanged. Final account/domain details, actual host validation and explicit provisioning approval are still required.
 
 # Hosted worker rehearsal - 2026-11-07
 

@@ -1,0 +1,19 @@
+[Unit]
+Description=ComFlow manually approved single-host cutover (not a boot unit)
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+RequiresMountsFor=/var/lib/comflow-state
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/opt/comflow/check-host.sh
+ExecStart=/usr/bin/python3 /opt/comflow/host.py start
+ExecStop=/usr/bin/docker compose -p comflow-staging-worker -f /run/comflow/compose.json stop gateway worker
+TimeoutStartSec=300
+TimeoutStopSec=60
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+

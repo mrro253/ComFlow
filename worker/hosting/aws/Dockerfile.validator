@@ -1,0 +1,9 @@
+# Local test tooling only; never shipped as the worker or gateway runtime.
+FROM comflow-worker:review
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends python3-venv \
+    && python3 -m venv /validator \
+    && /validator/bin/pip install --no-cache-dir cfn-lint==1.60.0 \
+    && rm -rf /var/lib/apt/lists/*
+ENV PATH=/validator/bin:$PATH
+WORKDIR /review

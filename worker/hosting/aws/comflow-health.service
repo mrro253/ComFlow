@@ -1,0 +1,10 @@
+[Unit]
+Description=ComFlow operational health, never a collection trigger
+After=comflow-worker.service
+RequiresMountsFor=/var/lib/comflow-state
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/comflow/host.py health --publish
+TimeoutStartSec=60
+UMask=0077
