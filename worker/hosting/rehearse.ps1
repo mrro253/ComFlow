@@ -1,3 +1,4 @@
+param([switch]$SkipBuild)
 $ErrorActionPreference = 'Stop'
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $compose = Join-Path $PSScriptRoot 'compose.rehearsal.yaml'
@@ -13,8 +14,13 @@ Push-Location $repo
 try {
     # This exact project contains disposable fixtures only. Never pass live env files.
     Invoke-Compose -Arguments @('down','--volumes','--remove-orphans')
-    Invoke-Docker -Arguments @('build','-f','worker/Dockerfile','-t','comflow-worker:review','.')
-    Invoke-Docker -Arguments @('build','-f','worker/hosting/Dockerfile.gateway','-t','comflow-gateway:review','worker/hosting')
+    if ($SkipBuild) {
+        # Reuse exact image identities that were already built/scanned.
+        Invoke-Docker -Arguments @('image','inspect','comflow-worker:review','comflow-gateway:review','--format','{{.Id}}')
+    } else {
+        Invoke-Docker -Arguments @('build','-f','worker/Dockerfile','-t','comflow-worker:review','.')
+        Invoke-Docker -Arguments @('build','-f','worker/hosting/Dockerfile.gateway','-t','comflow-gateway:review','worker/hosting')
+    }
     Invoke-Compose -Arguments @('up','-d','--wait')
     $verify = @('exec','-T','worker','node','worker/node_modules/tsx/dist/cli.mjs','--tsconfig','worker/tsconfig.json','worker/src/hostingRehearsal.ts','verify')
     Invoke-Compose $verify

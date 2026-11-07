@@ -1,6 +1,6 @@
 # Local hosting rehearsal — 2026-11-07
 
-The refreshed Playwright 1.65.0 / Caddy 2.11.9 images passed this same rehearsal again. Latest high/critical scan totals are worker 0/0 and gateway 4/0; see [refresh changes, exact image identities and remaining findings](hosting-security-scan-review.md). The earlier image identities and sizes below describe the baseline rehearsal.
+The current candidate uses Playwright 1.65.0 and a minimal standard-library Go HTTPS gateway in place of Caddy/Alpine. It passed this rehearsal again, with additional TLS 1.3/legacy-protocol checks. See [remediation, exact image identities and current scans](hosting-security-scan-review.md). The earlier Caddy details, image identities and sizes below describe the historical baseline rehearsal.
 
 Review branch: `feature/ghl-contact-preview`. No AWS resources, DNS changes, live verification flags, imports or GHL updates were made.
 
@@ -26,17 +26,17 @@ The gateway's binary had a file capability incompatible with dropping every capa
 
 The initial dependency audit found a critical issue and high-severity issues. Compatible lockfile updates moved Next.js to 15.5.29; a targeted PostCSS 8.5.32 override removes its vulnerable nested copy. The production npm audit now reports **zero findings**. Fresh dependencies were installed in a separate validation copy, leaving running local installations untouched. All **757 tests in 133 files**, app/worker type checks, changed TypeScript lint and the production app build passed using that copy and synthetic connection settings.
 
-The separate full-image Docker Scout scans were subsequently approved and completed. They found material high/critical issues in the base images and bundled tooling, so the hosted pilot remains disabled pending remediation and a repeat scan. See [scan results and triage](hosting-security-scan-review.md). The zero-finding production npm audit does not cover operating-system packages or global tooling.
+The separate full-image Docker Scout scans were subsequently approved and completed. The initial findings were addressed through the worker image refresh and minimal gateway replacement; repeat scans of both exact rehearsed images now report zero high/critical findings. See [scan history and remediation](hosting-security-scan-review.md). The hosted pilot remains disabled pending the actual deployment plan and live validation. The production npm audit alone does not cover operating-system packages or global tooling.
 
 ## Repeat locally
 
 From the repository root, run `./worker/hosting/rehearse.ps1` in PowerShell with Docker Desktop running. It builds both review images, creates only the fixed `comflow-hosting-rehearsal` project, exercises verification and crash recovery, then removes that project's containers and fixture volume in `finally`. It requires no Supabase project, credentials or private environment files. Do not modify it to load staging secrets or enable external networking.
 
-Configuration lives in `worker/hosting/compose.rehearsal.yaml` and `Caddyfile.rehearsal`. The worker image is about 4.15 GiB locally; leave sufficient disk for image updates and rollback copies. This is a functional rehearsal, not a production load or capacity test.
+Current configuration lives in `worker/hosting/compose.rehearsal.yaml` and `worker/hosting/gateway/main.go`; the old Caddyfile was removed. The gateway receives only `GATEWAY_TLS_CERT` and `GATEWAY_TLS_KEY` file paths and forwards to fixed `127.0.0.1:8080`; do not change the worker port without reviewing the gateway too. `rehearse.ps1 -SkipBuild` reuses already built/scanned image identities; the default still builds both recipes. Leave sufficient disk for worker image updates and rollback copies. This is a functional rehearsal, not a production load or capacity test.
 
 ## Remaining before AWS pilot
 
-1. Address the material findings from the completed full-image scans, then rescan and rehearse the replacement images.
+1. Completed locally: address the high/critical image findings, rescan and rehearse the replacement images. Recheck current scans before a live pilot.
 2. Review the concrete AWS instance, encrypted disk, access controls, HTTPS hostname/certificate, secrets, logging and monthly cost with Ryan before provisioning. No sample certificate or rehearsal key may be used online.
 3. Replace `network_mode: none` with reviewed outbound connectivity and expose only the authenticated HTTPS gateway. Configure real TLS and a restart/health policy. Never publish browser, debug or relay ports directly.
 4. Stop the local worker for the same queue before starting the hosted instance. One host/one worker remains the supported deployment.

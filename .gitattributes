@@ -1,1 +1,3 @@
 worker/container-entrypoint.sh text eol=lf
+worker/hosting/gateway/*.go text eol=lf
+worker/hosting/gateway/go.mod text eol=lf

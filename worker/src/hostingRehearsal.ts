@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { request as httpsRequest } from "node:https";
+import { TLSSocket } from "node:tls";
 import { randomBytes } from "node:crypto";
 import { mkdir, readFile, writeFile, access, unlink } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
@@ -89,12 +90,18 @@ async function verify() {
   async function call(body: string, headers: Record<string, string> = {}, path = "/verification") {
     return await new Promise<{ status: number; body: string }>((resolve, reject) => {
       const req = httpsRequest({ hostname: "localhost", port: 8443, path, method: "POST", ca, headers: { "Content-Type": "application/json", ...headers }, timeout: 5000 }, res => {
+        assert(res.socket instanceof TLSSocket);
+        assert.equal(res.socket.getProtocol(), "TLSv1.3");
         let text = ""; res.on("data", chunk => { text += chunk; }); res.on("end", () => resolve({ status: res.statusCode ?? 0, body: text }));
       }); req.on("error", reject); req.on("timeout", () => req.destroy(new Error("Rehearsal timeout"))); req.end(body);
     });
   }
   function signed(body: string) { const s = signVerification(body, key); return { "X-Relay-Time": s.stamp, "X-Relay-Nonce": s.nonce, "X-Relay-Signature": s.signature }; }
   async function send(value: VerificationRequest): Promise<VerificationState> { const body = JSON.stringify(value); const r = await call(body, signed(body)); assert.equal(r.status, 200); return JSON.parse(r.body); }
+  await assert.rejects(new Promise<void>((resolve, reject) => {
+    const req = httpsRequest({ hostname: "localhost", port: 8443, path: "/verification", method: "POST", ca, maxVersion: "TLSv1.2", timeout: 3000 }, res => { res.resume(); resolve(); });
+    req.on("error", reject); req.on("timeout", () => req.destroy(new Error("Rehearsal timeout"))); req.end("{}");
+  }));
   assert.equal((await call("{}", {}, "/debug")).status, 404);
   assert.equal((await call(JSON.stringify(input))).status, 401);
   const raw = JSON.stringify(input), signature = signed(raw);

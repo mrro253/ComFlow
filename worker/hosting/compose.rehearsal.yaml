@@ -40,8 +40,10 @@ services:
     tmpfs:
       - /tmp:rw,nosuid,size=16m
     volumes:
-      - ./Caddyfile.rehearsal:/etc/caddy/Caddyfile:ro
       - rehearsal-state:/state:ro
+    environment:
+      GATEWAY_TLS_CERT: /state/rehearsal/tls.crt
+      GATEWAY_TLS_KEY: /state/rehearsal/tls.key
     depends_on:
       worker:
         condition: service_healthy

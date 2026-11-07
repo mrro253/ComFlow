@@ -1,6 +1,6 @@
 # Hosted downloader preparation — review only
 
-Update: the local container/gateway rehearsal and its image-refresh repeat both pass. See [hosting rehearsal results and remaining pilot gates](hosting-rehearsal-review.md). Latest [high/critical image scans](hosting-security-scan-review.md) show worker 0/0 and gateway 4/0. The four remaining gateway findings require remediation or explicit assessed acceptance before the actual AWS/carrier pilot.
+Update: the local container/gateway rehearsal passes with a minimal standard-library Go HTTPS relay replacing Caddy/Alpine. The four affected gateway components have been removed. See [current image scan results](hosting-security-scan-review.md) and [hosting rehearsal results and remaining pilot gates](hosting-rehearsal-review.md). An actual AWS/carrier pilot still requires a reviewed deployment plan and separate live validation.
 
 The website is on Vercel and records are in Supabase. The remaining hosting component runs the carrier browser without the agent's computer. No AWS resources have been created by this change.
 

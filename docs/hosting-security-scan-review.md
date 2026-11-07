@@ -1,6 +1,27 @@
 # Hosted image security scan — 2026-11-07
 
-## Image refresh and repeated rehearsal
+## Minimal gateway remediation (current review candidate)
+
+The general-purpose Caddy/Alpine gateway has been replaced with a purpose-built verification relay using **Go 1.27.3 standard library only**, compiled statically with `CGO_ENABLED=0` and shipped on pinned Distroless static Debian 13. There are no third-party Go modules, dynamic libc, package manager, shell, JWT/JWK parser, HTML parser or compression plugin in the gateway. The four affected Caddy/Alpine components are removed, not suppressed or covered by a risk exception.
+
+The relay accepts only `POST /verification`, TLS 1.3 and JSON bodies up to 2 KiB. It forwards the exact signed bytes and three relay headers to the fixed loopback worker endpoint. It drops arbitrary cookies/auth/forwarding headers, rejects upstream redirects and non-JSON or oversized responses, bounds timeouts, and never retries uncertain submissions. It does not add an admin endpoint, browser endpoint, automatic certificates or request-body logging. Existing worker HMAC, expiry, replay and active-agent ownership checks remain authoritative.
+
+The Go test groups and race detector cover validated TLS forwarding, byte preservation, stripped headers, route/query/encoding rejection, unsigned/duplicate headers, streamed body limits, redirect rejection, response limits and timeout behavior. `go vet` also passed during the image build with external networking disabled. The complete isolated rehearsal passed again, including a new check that TLS 1.2 is rejected and TLS 1.3 succeeds, plus MFA, agent separation, duplicate locks, abrupt restart recovery and repeat verification. No cloud resources or imported records were changed, and disposable fixtures were removed.
+
+The exact rehearsed minimal gateway is `sha256:ea5addd1ec26f578d5eaa8e67f25ed525206fcb62e794a5601a77ffea92cdcaa` (about 15.9 MiB). Docker Scout indexed eight packages and found **zero high/critical findings**. The worker image was rebuilt only to include the additional synthetic TLS checks; its exact rehearsed identity is `sha256:664ee846c861db76d4a5508fe53fc293c66bd27ea41de45135cfd2049c30c035`. Its repeat scan indexed 1,173 packages and also found **zero high/critical findings**. Low/medium and unknown vulnerabilities are not ruled out by a high/critical-filtered scan.
+
+| Current image | High findings | Critical findings |
+| --- | ---: | ---: |
+| Worker | 0 | 0 |
+| Minimal verification gateway | 0 | 0 |
+
+The four-finding remediation gate is complete without suppressions or risk acceptance. This is not approval to provision AWS or enable live carrier traffic: the concrete deployment/cost/access plan and authorized live pilot are still required. The 757 application/worker regression tests, both TypeScript checks and changed TypeScript lint passed in the separate validation copy in addition to the gateway's Go/race tests and `go vet`. No Main merge was performed.
+
+The two image recipes pin the Go builder and Distroless runtime digests. Go source is under `worker/hosting/gateway`; its `go.mod` has no external requirements. The runtime copies Go's license and preserves compiler build metadata for scanning. The gateway build context has a source allowlist. Raw scan reports stay in ignored local `.pgtest` files.
+
+Sources: [Go's standard HTTP library](https://pkg.go.dev/net/http), [official Go releases](https://go.dev/dl/), [Distroless documentation and supported image](https://github.com/GoogleContainerTools/distroless).
+
+## Previous Caddy image refresh (superseded)
 
 The review images now use Playwright **1.65.0** (matching the worker's exact dependency version) and Caddy **2.11.9**, with both upstream image digests pinned. Available Ubuntu/Alpine distribution updates were applied during the builds. The worker no longer ships global npm/npx tooling or GStreamer bad plugins used by the unused WebKit/media stack. Chromium's sandbox, non-root users, read-only filesystems, dropped capabilities and private relay remain in place.
 
@@ -15,7 +36,7 @@ The refreshed scans of the exact rehearsed images report:
 
 The worker indexed 1,173 packages, with no findings in this high/critical-filtered scan. This does not assert absence of medium/low issues or unknown vulnerabilities. The gateway indexed 187 packages. Refreshed image identities are worker `sha256:f56281431ee5fdefa602a1294d7fb2a68c138f3d461294ce4b2d61fb03cf5635` and gateway `sha256:f1b2aedc5e6091376de950bc54c527697bbc8c27aba3d7f5edd7c4e0f2da1f73`.
 
-The four remaining gateway high findings are:
+The four gateway high findings at that stage were:
 
 | Advisory | Component | Follow-up |
 | --- | --- | --- |
@@ -24,7 +45,7 @@ The four remaining gateway high findings are:
 | CVE-2026-116591 | klauspost/compress 1.20.1 | Scout lists 1.20.2 as fixed; requires an updated Caddy binary/dependency build. |
 | CVE-2026-107891 | Alpine musl 1.2.6-r3 | Scout lists r6 as fixed, but the stable v3.24 repository still offered only r3 when checked. |
 
-These findings have not been suppressed or declared harmless. The gateway uses only fixed-certificate HTTPS and an exact JSON relay route, with no JWT/JWK input, automatic ACME, HTML parsing or compression configuration; this narrows applicability but is not a formal reachability audit. Do not enable the online pilot until the remaining material findings are fixed or individually assessed and explicitly accepted.
+These findings were not suppressed or declared harmless. They prompted the component-removal remediation above. No applicability exception was used to pass the gate.
 
 Official release references: [Playwright 1.65.0](https://github.com/microsoft/playwright/releases/tag/v1.65.0), [Caddy 2.11.9](https://github.com/caddyserver/caddy/releases/tag/v2.11.9). Raw refreshed reports remain ignored locally beside the baseline reports.
 
@@ -32,7 +53,7 @@ Official release references: [Playwright 1.65.0](https://github.com/microsoft/pl
 
 Ryan approved Docker Scout scanning after being informed that it may send private image/package metadata to Docker. Both baseline scans completed after Docker sign-in. The baseline scan task did not rebuild or deploy images, import records, request carrier pages or update GHL. The subsequent authorized image refresh and isolated rehearsal are described above.
 
-## Decision
+## Baseline decision (now satisfied by remediation above)
 
 **Keep the hosted pilot disabled until the material base-image findings are addressed and the replacement images pass a new scan and rehearsal.** Passing the functional rehearsal and production npm audit did not establish full-image security readiness.
 

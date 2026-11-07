@@ -1,6 +1,6 @@
 # Hosted worker rehearsal - 2026-11-07
 
-The isolated local worker/gateway rehearsal passed HTTPS verification, agent separation, duplicate-worker blocking and crash recovery with synthetic fixtures only. Refreshed Playwright 1.65.0 and Caddy 2.11.9 images passed the repeat rehearsal and 757 regression tests. The latest [high/critical image scans](docs/hosting-security-scan-review.md) show worker 0/0 and gateway 4/0, improved from worker 13/0 and gateway 97/22. The four remaining gateway findings still block the online pilot pending remediation or explicit assessed acceptance. No AWS resources or live verification were enabled. See [results, repeatable rehearsal and pilot gates](docs/hosting-rehearsal-review.md). Review branch only; imported records unchanged.
+The isolated local worker/gateway rehearsal passed HTTPS verification, agent separation, duplicate-worker blocking and crash recovery with synthetic fixtures only. A minimal standard-library Go HTTPS relay replaces Caddy/Alpine, removing the four remaining affected gateway components. Both worker and gateway scans now show zero high/critical findings; see [current scan results and exact image identities](docs/hosting-security-scan-review.md). The repeat rehearsal, gateway Go/race checks, 757 regression tests and both type checks passed. No AWS resources or live verification were enabled. See [repeatable rehearsal and pilot gates](docs/hosting-rehearsal-review.md). Review branch only; imported records unchanged.
 
 # Agent-account isolation review - 2026-11-07
 
