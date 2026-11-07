@@ -29,6 +29,7 @@ export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, l
   let usernameSubmitted = false, passwordSubmitted = false, entryClicked = false, notified = false;
   const started = Date.now();
   let destinationOpened = false;
+  let verificationOrigin: string | undefined;
   const deadline = Date.now() + 30 * 60 * 1000;
   try {
     while (Date.now() < deadline && !page.isClosed()) {
@@ -45,8 +46,14 @@ export async function automaticCarrierLogin(page: Page, carrier: LoginCarrier, l
           break;
         }
       }
-      const verificationRequired = !accountChange && (await challenge.count() > 0 ||
-        (visibleVerificationText && await page.locator('input[type="password"]:visible').count() === 0));
+      const passwordVisible = await page.locator('input[type="password"]:visible').count() > 0;
+      const verificationDetected = await challenge.count() > 0 || (visibleVerificationText && !passwordVisible);
+      if (accountChange || passwordVisible || (verificationOrigin && current.origin !== verificationOrigin)) verificationOrigin = undefined;
+      if (!accountChange && verificationDetected) verificationOrigin = current.origin;
+      // Code-delivery pages briefly replace the prompt with a loading screen or
+      // different wording. Keep the entire verified-origin challenge visible.
+      const verificationRequired = !accountChange && !passwordVisible &&
+        (verificationDetected || verificationOrigin === current.origin);
       await setVerificationVisible(verificationRequired);
 
       const target = carrier === "UnitedHealthcare" ? "https://www.uhcjarvis.com/content/jarvis/en/secure/commissions/statements.html" : carrier === "Devoted Health" ? "https://agent.devoted.com/commissions" : null;

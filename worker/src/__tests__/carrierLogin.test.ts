@@ -22,6 +22,21 @@ function fixture(carrier: LoginCarrier, initial?: string, callbackFlow = false, 
 }
 const login = { username: "synthetic-user", password: "synthetic-password" };
 describe("automatic carrier login", () => {
+  it("keeps the verification window open while code delivery replaces the prompt", async () => {
+    const f = fixture("UnitedHealthcare", "review");
+    let reads = 0;
+    const original = f.page.getByText.bind(f.page);
+    f.page.getByText = ((text: string | RegExp) => {
+      if (text instanceof RegExp && text.test("Verify Your Identity")) {
+        return { count: async () => reads === 1 ? 1 : 0, nth: () => ({ isVisible: async () => true }) };
+      }
+      return original(text);
+    }) as Page["getByText"];
+    const visibility = vi.fn(async (_visible: boolean) => {});
+    await automaticCarrierLogin(f.page, "UnitedHealthcare", login, async () => ++reads >= 3, vi.fn(async () => {}), visibility);
+    expect(visibility.mock.calls.map(([visible]) => visible)).toEqual([true, true, false]);
+    expect(f.fills).toEqual([]);
+  });
   it("recognizes visible verification text after a hidden matching element", async () => {
     const f = fixture("UnitedHealthcare", "review");
     const original = f.page.getByText.bind(f.page);
