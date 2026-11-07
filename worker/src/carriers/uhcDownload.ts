@@ -19,6 +19,24 @@ async function preserve(directory: string, bytes: Buffer, extension: string) {
 const isMonthPrompt = (label: string) => /^(?:PLEASE )?(?:SELECT|CHOOSE)(?: A)?(?: MONTH)?[.\s-]*$/.test(label);
 const VISIBLE_MENU_ITEMS = '[id^="downshift-"][id$="-menu"]:visible [id*="-item-"]';
 const labelText = (text: string) => text.replace(/\s+/g, " ").trim().toUpperCase();
+export async function dismissUhcSurvey(page: Page) {
+  const heading = page.getByText(/your opinion matters/i);
+  let visible = false;
+  for (let index = 0; index < await heading.count(); index++) {
+    if (await heading.nth(index).isVisible()) { visible = true; break; }
+  }
+  if (!visible) return;
+  const dialogs = page.getByRole("dialog").filter({ hasText: /your opinion matters/i });
+  const scope = await dialogs.count() === 1 ? dialogs : page;
+  const close = scope.getByRole("button", { name: /^(close(?: dialog)?|dismiss|no thanks|not now|maybe later)$/i });
+  const candidates = close.filter({ visible: true });
+  if (await candidates.count() !== 1) {
+    await captureLoginReview(page);
+    throw new SafePortalError("UnitedHealthcare's optional survey is blocking the statement controls. Its close button needs review.");
+  }
+  await candidates.click();
+  await heading.first().waitFor({ state: "hidden", timeout: 10000 });
+}
 async function menuOptions(page: Page) {
   // Downshift leaves closed menus mounted. Read only the currently visible popup.
   const items = page.locator(VISIBLE_MENU_ITEMS);
@@ -153,6 +171,7 @@ export async function downloadUhcYear(page: Page, year: number, directory: strin
 export async function syncUhcYear(page: Page, year: number, save: (pair: Awaited<ReturnType<typeof readUhcMonth>>) => Promise<"stored" | "duplicate">, log: (message: string) => void = () => {}) {
   if (!Number.isInteger(year) || year < 2000 || year > 2099) throw new SafePortalError("Invalid UnitedHealthcare statement year");
   assertUhcPage(page.url());
+  await dismissUhcSurvey(page);
   await selectControl(page, "Year", String(year));
   await page.getByRole("button", { name: "Month", exact: true }).click();
   const options = await menuOptions(page);

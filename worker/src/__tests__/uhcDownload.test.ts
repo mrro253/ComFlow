@@ -3,7 +3,7 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import type { Page } from "playwright";
-import { downloadUhcMonth, downloadUhcYear, syncUhcYear } from "../carriers/uhcDownload";
+import { dismissUhcSurvey, downloadUhcMonth, downloadUhcYear, syncUhcYear } from "../carriers/uhcDownload";
 import { UHC_STATEMENTS_URL, UHC_TEXT_HEADER } from "../carriers/uhcMetadata";
 const roots: string[] = [];
 async function directory() { const root = await mkdtemp(path.join(os.tmpdir(),"comflow-uhc-test-")); roots.push(root); return root; }
@@ -18,7 +18,7 @@ async function fixture(options: { months?: string[]; party?: string; invalidText
   const combo = (name:string) => ({innerText:async()=>selected[name],press:async(key:string)=>{if(key==="Home")cursor=0;else if(key==="ArrowDown")cursor++;else if(key==="Enter"){selected[name]=menus[name][cursor];opened="";}else if(key==="Escape")opened="";}});
   const page = {
     url:()=>options.wrongHost ? "https://example.invalid/" : UHC_STATEMENTS_URL,
-    getByText:()=>({first:()=>({locator:()=>({innerText:async()=>options.header ?? `You are now accessing JARVIS as Medicare User: SYNTHETIC ( PID: ${options.party ?? "999001"} )`})})}),
+    getByText:()=>({count:async()=>0,first:()=>({locator:()=>({innerText:async()=>options.header ?? `You are now accessing JARVIS as Medicare User: SYNTHETIC ( PID: ${options.party ?? "999001"} )`})})}),
     locator:(selector:string)=>({first:()=>({waitFor:async()=>undefined}),nth:(index:number)=>({click:async()=>{selected[opened]=menus[opened][index];opened="";}}),evaluateAll:async()=>menus[opened],allTextContents:async()=> options.selectedCheckIcon ? menus[opened].map((label)=>label === selected[opened] ? label + "check" : label) : options.hiddenMenus && !selector.includes(":visible") ? Object.values(menus).flat() : menus[opened]}),
     getByRole:(role:string,opts:{name:string})=>role==="combobox" ? combo(opts.name) : {click:async()=>{if(opts.name!=="DOWNLOAD"){opened=opts.name;cursor=menus[opts.name].indexOf(selected[opts.name]);}else downloads.push(`${selected.Year}-${names.indexOf(selected.Month.toUpperCase().trim())+1}:${selected.Format}`);}},
     waitForEvent:async()=>{
@@ -77,6 +77,19 @@ describe("UnitedHealthcare year scope and explicit resume",()=>{
 });
 
 describe("UHC app-requested sync", () => {
+  it("dismisses only a recognized optional survey without submitting a response", async () => {
+    const actions: string[] = [];
+    const close = { filter: () => close, count: async () => 1, click: async () => { actions.push("closed"); } };
+    const dialog = { count: async () => 1, getByRole: (_role: string, options: { name: RegExp }) => {
+      expect(options.name.test("Take survey")).toBe(false);
+      expect(options.name.test("Close")).toBe(true);
+      return close;
+    } };
+    const heading = { count: async () => 1, nth: () => ({ isVisible: async () => true }), first: () => ({ waitFor: async () => { actions.push("hidden"); } }) };
+    const page = { getByText: () => heading, getByRole: () => ({ filter: () => dialog }) } as unknown as Page;
+    await dismissUhcSurvey(page);
+    expect(actions).toEqual(["closed", "hidden"]);
+  });
   it("fetches current pairs even for previously seen months and counts duplicates", async () => {
     const f = await fixture(); const outcomes: string[] = [];
     const result = await syncUhcYear(f.page, 2026, async (pair) => { outcomes.push(pair.statementMonth); return pair.statementMonth === "2026-01" ? "duplicate" : "stored"; });
