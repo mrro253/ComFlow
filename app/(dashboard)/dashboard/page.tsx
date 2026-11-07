@@ -93,7 +93,7 @@ export default async function DashboardPage({
         <OnboardingChecklistCard
           hasCompensation={levels.length > 0}
           hasTeammates={team.length > 1}
-          hasStatements={statements.length > 0}
+          hasStatements={statements.some(statement => statement.status === "imported")}
           hasCarrierLogin={connections.some((c) => c.userId === user.id && c.status !== "disabled")}
         />
       )}

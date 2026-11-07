@@ -1,4 +1,7 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { getAgencyById } from "@/lib/repositories/agencyRepository";
 import { listCareerLevels, listCompensationRules } from "@/lib/repositories/compensationSettingsRepository";
@@ -12,11 +15,12 @@ import { FinishOnboardingCard } from "@/components/onboarding/finish-onboarding-
 import { activeLevelNames } from "@/lib/carriers/careerLevels";
 
 const STEPS = [
-  { number: 1, label: "Welcome" },
-  { number: 2, label: "Compensation" },
-  { number: 3, label: "Build your team" },
-  { number: 4, label: "GoHighLevel (coming soon)" },
-  { number: 5, label: "Finish" },
+  { number: 1, label: "Connect your carriers" },
+  { number: 2, label: "Agency details" },
+  { number: 3, label: "Compensation (optional)" },
+  { number: 4, label: "Build your team (optional)" },
+  { number: 5, label: "GoHighLevel (optional)" },
+  { number: 6, label: "Finish" },
 ] as const;
 
 function StepHeading({ number, label }: { number: number; label: string }) {
@@ -60,11 +64,18 @@ export default async function OnboardingPage() {
 
       <div className="flex flex-col gap-3">
         <StepHeading number={STEPS[0].number} label={STEPS[0].label} />
+        <Card>
+          <CardHeader><CardTitle>Start with your carrier logins</CardTitle><CardDescription>Save a login and choose Sync now to retrieve statements in the background. Complete a security check only if your carrier asks. Review saved statements before importing commissions to your dashboard.</CardDescription></CardHeader>
+          <CardContent><Button asChild><Link href="/carriers">Connect carrier logins</Link></Button></CardContent>
+        </Card>
+      </div>
+      <div className="flex flex-col gap-3">
+        <StepHeading number={STEPS[1].number} label={STEPS[1].label} />
         <WelcomeAgencyCard firstName={user.firstName} agencyName={agency.name} />
       </div>
 
       <div className="flex flex-col gap-3">
-        <StepHeading number={STEPS[1].number} label={STEPS[1].label} />
+        <StepHeading number={STEPS[2].number} label={STEPS[2].label} />
         <p className="text-sm text-muted-foreground">
           Set this agency&apos;s career levels, what each level is paid, and whether you use
           bonuses. You can change any of this later on Compensation.
@@ -75,7 +86,7 @@ export default async function OnboardingPage() {
       </div>
 
       <div className="flex flex-col gap-3">
-        <StepHeading number={STEPS[2].number} label={STEPS[2].label} />
+        <StepHeading number={STEPS[3].number} label={STEPS[3].label} />
         <p className="text-sm text-muted-foreground">
           Add your Managers and Agents now, or come back to this any time from
           Users. Teammates get a temporary password to sign in with.
@@ -84,12 +95,12 @@ export default async function OnboardingPage() {
       </div>
 
       <div className="flex flex-col gap-3">
-        <StepHeading number={STEPS[3].number} label={STEPS[3].label} />
+        <StepHeading number={STEPS[4].number} label={STEPS[4].label} />
         <CrmConnectionCard />
       </div>
 
       <div className="flex flex-col gap-3">
-        <StepHeading number={STEPS[4].number} label={STEPS[4].label} />
+        <StepHeading number={STEPS[5].number} label={STEPS[5].label} />
         <FinishOnboardingCard />
       </div>
     </div>

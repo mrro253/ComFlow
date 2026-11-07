@@ -33,10 +33,10 @@ export function OnboardingChecklistCard({
   );
 
   const items = [
-    { label: "Set up career levels and rates", done: hasCompensation, href: "/compensation" },
+    { label: "Connect your carrier logins", done: hasCarrierLogin, href: "/carriers" },
+    { label: "Sync and import your first statement", done: hasStatements, href: "/carriers" },
     { label: "Add your team", done: hasTeammates, href: "/users" },
-    { label: "Upload a carrier statement", done: hasStatements, href: "/statements" },
-    { label: "Connect your carrier login", done: hasCarrierLogin, href: "/carriers" },
+    { label: "Set up career levels and rates", done: hasCompensation, href: "/compensation" },
   ];
 
   return (
@@ -45,7 +45,7 @@ export function OnboardingChecklistCard({
         <div>
           <CardTitle>Finish setting up your agency</CardTitle>
           <CardDescription>
-            A few quick steps to get CommissionFlow ready for your team.
+            Start by connecting a carrier. Team and compensation setup can follow when you need them.
           </CardDescription>
         </div>
         <form action={formAction}>

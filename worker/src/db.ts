@@ -29,7 +29,7 @@ export async function listRequestedConnectionIds(db: Db): Promise<string[]> {
 export async function claimConnection(db: Db, id: string): Promise<ConnectionRow | null> {
   const { data, error } = await db
     .from("carrier_connections")
-    .update({ sync_requested_at: null, last_sync_at: new Date().toISOString() })
+    .update({ sync_requested_at: null, last_sync_at: new Date().toISOString(), status: "needs_attention", last_error: "Sync running. Starting this update." })
     .eq("id", id)
     .not("sync_requested_at", "is", null)
     .neq("status", "disabled")

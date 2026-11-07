@@ -18,7 +18,7 @@ it("projects only allowlisted summary fields", () => {
   expect(readSyncResult({ ...result, rawError: "private", counts: { ...result.counts, filename: "private" } }, result.connectionId, result.carrier)).toEqual(result);
 });
 it("distinguishes verification from sign-in review and ordinary errors", () => {
-  expect(connectionStatus("needs_attention", loginHelpMessage("verification")).label).toBe("Needs verification");
+  expect(connectionStatus("needs_attention", loginHelpMessage("verification")).label).toBe("Enter security code");
   expect(connectionStatus("needs_attention", loginHelpMessage("sign_in_review")).label).toBe("Review sign-in");
   expect(connectionStatus("needs_attention", "Wrong username or password").label).toBe("Needs attention");
   expect(connectionStatus("needs_attention", "Sync running. Signing in").label).toBe("Update in progress");

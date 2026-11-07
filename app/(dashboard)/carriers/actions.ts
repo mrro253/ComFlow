@@ -12,6 +12,7 @@ import {
 import { canManageCarrierLogin } from "@/lib/auth/carrierAccess";
 import type { ActionResult } from "@/app/(auth)/actions";
 import { localDate, sunfireDate, sunfirePortalUrl } from "@/lib/enrollments/sunfire";
+import { connectionSyncBusy } from "@/lib/reporting/connectionStatus";
 
 export async function saveCarrierCredentials(
   _prev: ActionResult | undefined,
@@ -73,10 +74,10 @@ export async function syncCarrierNow(
     if (connection.carrier === "SunFire" && (user.role !== "owner" || !user.active || connection.userId !== user.id)) return { error: "SunFire sync is available for your own active owner connection." };
 
     if (connection.carrier === "Devoted Health" && (user.role !== "owner" || connection.userId !== user.id)) return { error: "Devoted sync is available for your own owner connection." };
+    if (connectionSyncBusy(connection)) return { info: "This sync is already queued or running. Its progress will update here automatically." };
     await requestSync(user.agencyId, connection.id);
     revalidatePath("/carriers");
-    if (connection.carrier === "SunFire") return { info: "Enrollment collection queued. Keep the local worker running and complete any SunFire verification in its window. Collected enrollments will be available for review; no commissions are imported." };
-    return { info: connection.carrier === "Devoted Health" ? "Sync requested. Keep the local worker running and complete verification in its browser if asked. Open Devoted paired statement review after sync finishes." : "Sync requested. New statements will appear under Statements shortly." };
+    return { info: connection.carrier === "SunFire" ? "Enrollment sync requested; no commissions are imported. Complete verification only if prompted; results will update here." : "Statement sync requested. Complete verification only if prompted. Downloads will be saved for review before import." };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Could not request a sync." };
   }
