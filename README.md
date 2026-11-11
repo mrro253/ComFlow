@@ -11,7 +11,7 @@ what the agency owes them).
 > The business rules live in `.cursorrules`; this file describes the system as
 > it is *right now*.
 
-Last updated: 2026-10-21
+Last updated: 2026-11-10 (README accuracy sweep against `Main` as of the 2026-10-21 changelog entries; `Main` has no commits after 2026-10-21)
 
 > **Changing code? Read section 13 (Contributing) first.** Work on a branch, never directly on `Main`.
 
@@ -19,41 +19,43 @@ Last updated: 2026-10-21
 
 ## 1. Status at a glance
 
+**"Verified locally"** means exercised on this project's *local* Supabase (Docker) with the
+app in a browser and/or synthetic tests. **Nothing has been run against a hosted Supabase
+project, Vercel, or a hosted worker** (section 14). All automated checks currently pass on `Main`:
+**393 Vitest tests in 55 files**, app and worker TypeScript, ESLint and `next build`
+(last recorded 2026-10-21).
+
 | Area | State | How it was checked |
 | --- | --- | --- |
-| Statement PDF parsing (Ultimate) + reconciliation | Built | 230 unit tests (whole suite), synthetic fixtures only. Nine real Ultimate PDFs parsed and imported locally on 2026-10-20; other carrier layouts remain unverified. |
-| Payment client names and full statement details | Locally verified | All 94 imported rows matched to saved PDFs; synthetic extraction and access tests. Other layouts unverified |
-| Payment product types | Locally verified | Confirmed Ultimate MAPD mapping: 94 payments; product/month/category filtering, Unknown/no-match state and evidence label checked. 230-test synthetic suite; other carrier product adapters remain unverified |
-| Payment search, filters and pagination | Locally verified | Owner browser flow: combined filters, name/member lookup, no matches, all 94 rows across pages, 50-row size, unchanged totals and 13-field dialog. Other role browser flows unverified; access and query rules unit-tested |
-| Dashboard clarity and mobile navigation | Locally verified | Owner dashboard reviewed at desktop and phone widths; month, totals, production breakdown and mobile links checked. Empty and error screens compile but their browser failure flows remain unverified. |
-| Duplicate protection, writing-agent assignment, import preview | Built | Unit tests |
-| Atomic import into the database (`import_statement`) | Built | SQL run on a throwaway Postgres 14: success, double import blocked, duplicate rolls back, wrong agency rejected, normal users denied |
-| Database schema, RLS, immutability triggers | Built | Same throwaway Postgres run |
-| Statement review (2026-10-10): PDF viewer, corrected-version "Superseded" flow, same-file-name duplicate rule, unmatched writing agents prompt, payee ID | Built | Unit tests (planner, classifier, unmatched summary) and the migration `0007` function on a throwaway Postgres 14 (supersede succeeds and keeps old rows, cross-agency rejected, re-import blocked, payee ID unique). **UI never run against live Supabase** |
-| Captive / LOA agents (2026-10-10): captive type + principal, production credited to the principal, own login for the captive agent | Built | Unit tests and migration `0008` on a throwaway Postgres 14 (constraints, no chains, cross-agency principal rejected, RLS: captive sees only their rows, principal sees both, other agency sees none). **UI never run against live Supabase** |
-| Per-agency compensation settings (2026-10-10): career levels + visibility, Owner-editable rates, bonuses on/off, payouts removed | Built | Unit tests for rule/level planning; migration `0009` on a throwaway Postgres 14. **UI never run against live Supabase** |
-| Independent collective report + owner-level profile (2026-10-10) | Built | Unit tests for the report/CSV and statement-access rules; migration `0010`. **UI never run against live Supabase** |
-| Upload -> preview -> approve -> payments UI | Built | Compiles, lints, `next build` passes. **Never run in a browser against a live Supabase project** (no Docker/Supabase CLI was available while building) |
-| Carrier login screen (encrypted credentials) | Built | Encryption unit-tested. UI **unverified** against live Supabase |
-| UnitedHealthcare | Limited renewal PDF import locally verified | [Supported renewal layout, mapping and verification](docs/uhc-import.md). Eight saved statements imported: 46 entries / 133,032 cents, all assigned; source details and coverage verified. August/October downloaded through app-triggered Sync now and await review/import (6 entries / 17,352 cents combined); existing imported rows remain unchanged. |
-| Devoted Health | Limited paired renewal import locally verified | [Activation, authorization and recovery notes](docs/devoted-import-live.md). Nine saved PDF/workbook pairs imported; client names and 24 detail fields verified. Ryan explicitly overrode the pending approval gate; Marshall has not approved. Unattended login remains unverified. |
-| Carrier worker (auto-pull from the portal) | Locally verified | One live Ultimate sync downloaded nine statements with zero failures on 2026-10-20. Scheduling and hosted worker remain unverified |
-| Career-agent earnings, rate locks | Logic built, **no UI** | Unit tests. Payout batches removed. Intentionally not in the MVP screens |
-| GoHighLevel output | Expanded field inventory and pilot plan documented; integration not built | [Field mapping and review plan](docs/ghl-integration-plan.md); no API access or live GHL changes |
-
-The live Ultimate download, saved-PDF preview and approval/import path have now been exercised locally with nine statements (94 payments). Manual upload, other layouts and all role-specific browser flows still need their own verification.
+| Ultimate Health Plans PDF parsing + reconciliation | Locally verified | Synthetic fixtures plus nine real Ultimate PDFs parsed and imported locally on 2026-10-20 (94 entries). Other Ultimate layouts remain unverified. |
+| UnitedHealthcare (UHC) renewal PDFs | Limited layout locally verified | [Supported layout and mapping](docs/uhc-import.md). Eight saved statements imported (46 entries / 133,032 cents, all assigned). August and October were downloaded by Sync now and await review/import (6 entries / 17,352 cents). Other layouts unsupported. |
+| Devoted Health paired PDF + workbook | Limited layout locally verified | [Activation and recovery notes](docs/devoted-import-live.md). Nine pairs imported (9 entries / 26,019 cents). Ryan explicitly overrode the pending approval gate; **Marshall has not approved it.** Other layouts unsupported. |
+| Carrier worker (Playwright auto-pull) | Locally verified, Sync now only | Ultimate and Devoted automatic saved-login sync passed live on 2026-10-21. UHC password step is accepted manually; UHC automatic credential acceptance is **not** verified (details in section 9). Scheduling and hosted worker are unbuilt. |
+| Atomic import (`import_statement`), duplicate protection, corrections/Superseded | Locally verified | SQL regressions on local Postgres/throwaway Postgres 14, plus [synthetic three-carrier repeat/correction tests](docs/import-regression-tests.md). Browser correction flow unverified. |
+| Database schema, RLS, immutability triggers (migrations 0001-0011) | Locally verified | `supabase/tests/role_access.sql` (nine synthetic users, two agencies, rollback-only) passed 2026-10-21. |
+| Commission activity (`/payments`): search, filters, pagination, client details dialog, product types | Locally verified | Owner browser flow on all saved entries. Career, Independent and Manager populated flows verified in an isolated synthetic environment on 2026-10-21. Captive and Independent owner-profile browser flows **unverified**. |
+| Dashboard (month selector, totals, categories, production groups, carrier-stacked monthly chart) | Locally verified (owner) | Owner browser flow and mobile navigation reviewed. Phone chart, empty/error screens and other role flows unverified. A redesigned filter-panel dashboard is being built on a separate branch (section 5). |
+| Statements coverage by year/carrier/owner | Built | Synthetic tests and build. Browser flow unverified. |
+| Statement review (PDF viewer, Superseded, unmatched writing agents, payee ID) | Built; import path locally verified | Unit tests + SQL regressions; real statements went through upload/preview/approve locally. The View PDF, Superseded and unmatched-agent screens are not separately recorded as browser-verified. Payee ID position on a real statement is still an assumption (section 7). |
+| Captive / LOA agents (migration 0008) | Built | Unit tests and SQL/RLS tests. Browser login as a captive agent **unverified**. |
+| Per-agency compensation settings (migration 0009) | Built | Unit tests and SQL. Compensation screens not browser-verified in the changelog. |
+| Independent collective report + owner-level profile (migration 0010) | Built | Unit tests and SQL. Owner-profile browser flow **unverified**. |
+| Carrier login screen (encrypted credentials) | Locally verified | Encryption unit-tested; owner connection cards for Ultimate, Devoted and UHC checked in a browser. |
+| Career-agent earnings, rate locks | Logic built, **no UI** | Unit tests. Payout batches removed. Not in the MVP screens. |
+| GoHighLevel output | Plan only | [Field mapping and review plan](docs/ghl-integration-plan.md). No API access and no live GHL changes on `Main`. |
 
 ---
 
 ## 2. Next session together (Marshall + Ryan)
 
-Nothing below has been run against a live Supabase project or a real Ultimate
-PDF. Treat this as the first real test, not a demo of a proven product.
+This is a walkthrough for confirming the product with Ryan. Parts of it have already
+been run locally (see section 1); sections C and D were done once on 2026-10-20 with
+Ryan's real Ultimate statements and login. Nothing has run on a hosted Supabase project.
 
 **Before you sit down (Marshall)**
 
 ```bash
-npx supabase migration up    # applies 0008, 0009, 0010; keeps existing data
+npx supabase migration up --local    # applies any pending migration (through 0011); keeps existing data
 # If you would rather wipe local data and re-seed: npx supabase db reset
 npm run dev
 ```
@@ -79,13 +81,14 @@ npm run sample:statement             # writes sample-statement.pdf (synthetic, s
 4. **Approve and import.**
 5. **Payments**: see the totals by category. Assign the unassigned payment
    (tick "remember name" to apply it to future statements).
-6. **Dashboard**: paid by carrier, categories, and "where it came from"
+6. **Dashboard**: pick a statement month and see commission totals, the monthly
+   carrier-stacked chart, categories, and "where it came from"
    (the owner's personal production is shown separately from the agency's).
 7. Sign in as `agent2@commissionflow.dev` (Priya, Career) and confirm she only
    sees her own payment. Try uploading the same file again: it is recognized
    as a duplicate.
 
-### C. Test with Ryan's real PDF
+### C. Test with a real PDF (done locally 2026-10-20; repeat for each new customer or layout)
 
 1. Ryan signs in as Owner and uploads a real Ultimate statement.
 2. **Expected failure mode:** if the PDF layout differs from what the parser
@@ -97,11 +100,11 @@ npm run sample:statement             # writes sample-statement.pdf (synthetic, s
 4. In **Users**, make sure each person is typed (Career + level, or
    Independent) so names on the statement can be matched.
 
-### D. Test a carrier login (Ryan's credentials)
+### D. Test a carrier login (done locally for Ultimate, Devoted and UHC; repeat per customer)
 
 1. Ryan: **Carriers** -> enter the Ultimate username/password -> Save.
 2. Marshall (or Ryan) runs the worker on a machine with a browser (section 9):
-   `cd worker && npm run browsers && npm run once`.
+   `cd worker && npm run browsers && npm run start` (or `npm run once`).
 3. Click **Sync now** first (the worker only processes requested syncs).
 4. New statements appear under **Statements** as "Needs review".
 5. If the portal asks for MFA or the markup differs, the connection turns to
@@ -180,36 +183,24 @@ See section 7 for the full list. The ones that still need an answer:
 
 ## 3. Current functionality
 
-Clarity/mobile follow-up: dashboard production groups explicitly show carrier commissions, not Career take-home earnings. Activity table headings distinguish policy effective date, statement month and carrier commission. Mobile selectors have larger touch targets, pagination wraps, details use smaller phone padding and long client/field values wrap. Automated checks cover compilation; owner statement cards and activity filters were reviewed at 390px width; dashboard production heading verified. Long-value dialogs and pagination wrapping remain browser-unverified.
-
-
-Repeat/correction testing: [synthetic three-carrier regressions](docs/import-regression-tests.md) verify exact repeats, regenerated sources, recognized corrections, retained original entries and failure rollback in a separate synthetic database. Before/after working-table fingerprints match. These tests do not change imported records or correction rules; browser correction/retrieval remains unverified.
-
-Monthly chart: each month is stacked by the carriers visible to the signed-in user, with a color legend, signed carrier amounts and a month total in the tooltip. Negative contributions plot below zero. An expandable amounts table distinguishes no imported entries from a zero net total. This is presentation/reporting only; selected-month cards and ledger totals are unchanged. Desktop chart, keyboard tooltip (including a negative contribution), and amount table were browser-verified. Phone viewport verification remains pending.
-
-Statement total wording: preview and imported statement pages now show commission entries this month, an amount added/deducted from a previous statement (or a zero previous statement balance), and the statement total. Dashboard/activity explanations use the same plain language. This changes presentation only; ledger amounts and import rules stay unchanged. Negative/positive/zero presentation and safe-cent validation have synthetic coverage. Imported negative and zero-balance statements were browser-verified; positive balances and the unimported preview path remain browser-unverified. No setup, dependency or migration changes.
-
-Statement tracking: Statements now shows a year selector and month cards per visible carrier/statement owner, using all RLS-visible saved statement metadata. Imported, Needs review and None on file indicate document presence only, not missed payments. Superseded copies are excluded; unknown-month files remain in the latest-100 History table. The nine saved Devoted pairs are now registered/imported statements; future download-only files are not counted until imported. Synthetic coverage checks and build verification are recorded below; browser verification remains unverified.
-
-
-Local row-access regression: `supabase/tests/role_access.sql` uses synthetic users in two agencies inside a rollback-only transaction. It asserts exact commission-entry visibility for the owner, manager, Independent/principal, Career agents, captive writer and Career direct-report visibility, then checks the ledger fingerprint is unchanged. Run locally with `psql -U postgres -d postgres -f supabase/tests/role_access.sql` against the local development database (migrations through 0010). Verified locally on 2026-10-21; this checks database enforcement. Existing Career, Independent and Manager demo browser sign-ins and empty states were also checked; populated Career, Independent and Manager client-detail browser flows were subsequently verified in an isolated synthetic environment (see 2026-10-21 changelog). Captive and Independent owner-profile browser flows remain unverified. Fixtures are rolled back; no real records are edited.
-
-
-The dashboard offers a statement-month selector (automated checks pass; owner browser flow verified) using only months visible to the signed-in user, defaults to the latest month and keeps the selected month when opening Commission activity. It updates monthly totals, counts, categories and production groups together while retaining the all-month chart and recent-review scope. Invalid or unavailable month links fall back to the latest available month with a notice. The dashboard explains commission-entry totals versus bank deposits and carried balances, and separates production groups. The recent-review card covers only the five most recent statements. A Menu on small screens provides the same role-filtered navigation as the desktop sidebar. Dashboard load errors offer a read-only retry and a link to commission activity.
-
+What the app does on `Main` today, by role. How it was checked is in section 1 and the
+verification log in section 12.
 
 **Everyone signed in**
 - **Commission terminology:** `/payments` is labeled **Commission activity**. Counts on this page, Dashboard, Reports and statement review mean **commission entries** (client-level statement lines), not bank deposits. **Commission total** is the signed sum of matching entries; it can differ from the carrier's statement total because of filters or carried balances. Statement totals retain their original label. One carrier payment can cover several entries; the app does not verify bank deposits. No calculations or financial records changed.
 - **Product type** is separate from payment category. The dropdown includes dental, vision, hearing, combined DVH, Medicare Advantage, prescription drug, Medicare supplement, life insurance, final expense, annuity, Other and Unknown. These are shared reporting groups, not agency compensation products or rates. Final expense and bundled DVH have distinct filters; no component split is invented.
 - **Confirmed carrier product mapping:** Ryan confirmed on 2026-10-21 that Ultimate only offers MAPDs. Ultimate payments therefore report **Medicare Advantage (MAPD)** even though these PDFs have no product column. The details dialog identifies this as carrier evidence, not an extracted PDF field. Other carriers need a verified adapter/mapping or an explicit Product/Product type/Product category/Line of business field; names, prior plan, notes, payment category and amount are never used to guess a product. An explicit source product that conflicts with a confirmed mapping stays Unknown for review. Unrecognized but explicitly stated products retain their value under Other. No commission rows, rate locks or compensation rules are changed.
-- **Payment statement details**: client name appears in Payment detail. Click the client name to open a keyboard-accessible details dialog containing all 13 printed Ultimate columns, including first/last name, Medicare identifier as printed, carrier member ID, effective date, writing agent, UCAIN, payee ID/name, amount/category, prior plan and notes, plus source filename/row. Blank fields say "Not provided"; unsupported or unverifiable source rows say "Source details unavailable". All 94 locally imported payments were checked against their saved sources on 2026-10-20.
+- **Payment statement details**: client name appears in Payment detail. Click the client name to open a keyboard-accessible details dialog containing all 13 printed Ultimate columns (UHC shows 18 source-detail fields and Devoted 24), including first/last name, Medicare identifier as printed, carrier member ID, effective date, writing agent, UCAIN, payee ID/name, amount/category, prior plan and notes, plus source filename/row. Blank fields say "Not provided"; unsupported or unverifiable source rows say "Source details unavailable". All 94 locally imported payments were checked against their saved sources on 2026-10-20.
 - Details are read from the saved private PDF after session/RLS authorization and exact source-hash, transaction-key, member, date, amount and category checks. Only the authorized payment's row is returned, even if its PDF contains other clients. No carrier connection, reimport, database migration or financial-record update is required by this feature. Existing imports gain details immediately.
-- Dashboard of carrier payments in their own scope (Owner: agency; Manager: self + direct reports; Agent: self).
+- **Dashboard** (`/dashboard`): a statement-month selector (months visible to the signed-in user, defaults to the latest, invalid links fall back with a notice) drives the commission total, entry count, category chart and production-group breakdown together. The **monthly chart** is separate: it always shows every imported month, stacked by the carriers the user can see (legend, signed amounts, per-carrier tooltip, month total, expandable amounts table; negative amounts plot below zero; "no entries imported" is distinguished from a zero total). The "recent statements needing review" card covers only the five most recent statements. Production groups say they are carrier commissions, not Career take-home earnings. On small screens a Menu provides the same role-filtered navigation, and a load error offers a read-only retry. Presentation only: totals come from the same signed-cent ledger rows.
+- **Statement totals wording:** previews and imported statements show commission entries this month, an amount added/deducted from a previous statement (or a zero previous balance), and the statement total. Dashboard/activity explanations use the same plain language.
+- Dashboard scope: Owner: agency; Manager: self + direct reports; Agent: self (row access enforced by RLS).
 - **Commission activity** (`/payments`): search by client name or member ID; combine statement month, carrier, credited/writing agent, product type, payment category and inclusive policy-effective-date filters. Owner can also select Unassigned only. Apply filters resets to page 1; Clear filters selects all months. Page sizes are 25, 50 or 100 commission entries, with Previous/Next controls and entry counts. Signed totals and category totals cover every matching payment, not only the displayed page. Free-text searches use a POST server action; names and IDs stay out of URLs and ordinary access logs. Filters and searches are not saved across refreshes; existing `?month=YYYY-MM` links still work. The default view is all months.
 - **Reports**: a collective production report (totals by category + a downloadable CSV) of whatever they are allowed to see. Independents use this to send a report upstream externally; nothing is sent automatically.
 
 **Owner**
 - **Statements**: upload a PDF, preview it (new / already imported / needs review / unassigned), approve the import. History of all statements (manual and portal).
+- **Statement tracking** (Statements page): a year selector and month cards per visible carrier/statement owner using all RLS-visible saved statement metadata. Imported, Needs review and None on file describe document presence only, not missed payments. Superseded copies are excluded; unknown-month files stay in the latest-100 History table.
 - **View PDF** on any statement (opens the stored original in a new tab; Owner only, never cached, every view is written to the audit trail).
 - **Writing agents to match**: names on a statement that nobody on the team has (or that several teammates share) are listed in the preview. Pick an existing teammate or create a new agent (name pre-filled from the printed `LAST, FIRST`, optional payee ID). The choice is remembered for future statements. Same name on several teammates is **never guessed**: it stays in review unless the payee ID on the statement matches exactly one of them.
 - **Duplicates and corrections** (same carrier, month and owner): same file name + identical payments = duplicate, imported once. Same file name + mostly the same payments (50% or more) = **corrected version**: it is imported and the earlier one moves to **Superseded** (kept and viewable, excluded from the dashboard and reports; each page links to the other). Identical PDF bytes under another name are skipped. Different file name with identical payments still goes to review.
@@ -217,7 +208,8 @@ The dashboard offers a statement-month selector (automated checks pass; owner br
 - **Payments**: assign unassigned payments to a teammate; optionally remember the printed name as an alias.
 - **Users**: add/edit teammates with **agent type** (Career + this agency's levels, Independent, or Captive) and an optional **carrier payee ID**. Owner only.
 - **Compensation**: set this agency's career levels (name, order, visibility, on/off), effective-dated rates (fixed dollars or percent of annual premium), and bonuses on/off. History is never overwritten: a new rate starts on its date and ends the previous one the day before.
-- **Carriers**: enter the agency's carrier portal login, Sync now, remove login; see Independent agents' connection status.
+- **Carriers**: enter the agency's carrier portal login (Ultimate Health Plans, Devoted Health, UnitedHealthcare), Sync now, remove login; see Independent agents' connection status. Sync only downloads and registers statements for review; nothing is imported automatically.
+- **Devoted paired review** (`/statements/devoted`): lists unimported PDF + workbook pairs downloaded by Sync now (or uploaded manually) for preview and approval. Requires the two Devoted flags in section 8; Devoted connections for other roles are not available yet.
 
 **Independent agent**
 - **Carriers**: enter their own portal login, Sync now, remove login. They are paid directly by the carrier; the app only shows what they were paid, by category.
@@ -243,6 +235,9 @@ old percent-split plan / bonus screens in Settings. See section 5.
 ---
 
 ## 4. How the data flows
+
+Ultimate and UHC statements are single PDFs. Devoted statements are a PDF + workbook pair
+and use their own review page (`/statements/devoted`) before the same atomic import.
 
 ```
  Carrier portal ──(worker, Playwright)──┐
@@ -283,10 +278,15 @@ Important properties:
 - **Scheduled** syncing. The worker only handles "Sync now" requests.
 - Auto-import for Independent agents' statements (currently the Owner approves every statement).
 - Inviting teammates by email (new users get a temporary password shown to the Owner).
-- Hosted deployment of the worker.
+- Hosted deployment of the worker (nothing is hosted yet; see section 14).
+- Email/SMS verification-code retrieval for carrier sign-in. Carrier MFA stays interactive; no mailbox access exists. A Gmail/Outlook approach is planned separately for Marshall's integration/security review.
+- Unattended UHC sign-in (the password step was only accepted manually; see section 9).
 
 **Agreed with Ryan (2026-10-10), not built yet** (see section 7)
 - Not wanted for now: override tiers, chargeback rules, split-commission features beyond the compensation rules above.
+
+**Work on unmerged branches (not part of `Main`)**
+- `origin` holds about twenty feature branches that are **not merged into `Main`**, dated 2026-10-21 to 2026-11-07. By their commit titles they cover GoHighLevel connection/contact preview, SunFire enrollment checks, sales dispositions and attention-first review, scheduled-sync recovery, combined client-history review, and a gated AWS worker pilot plan. This README describes `Main` only: none of that work is described as working here, and this sweep did not review or run it. Marshall should decide which branches to review, merge or retire. The redesigned dashboard is `feature/dashboard-filter-ui`, held for review with Ryan.
 
 **Built: per-company compensation settings (2026-10-10)**
 - Career levels, visibility, Owner-editable rates (fixed or percent of annual premium), bonuses on/off, payouts removed. TruePlan's level names and MAPD rates remain **demo seed only**.
@@ -297,7 +297,8 @@ Important properties:
 - `commission_plans`, `commission_plan_rates`, bonuses, `commission_transactions`, `lib/commission-engine`, `/commissions`, Settings plan/bonus screens, `/onboarding`, and the inbound GoHighLevel adapter in `lib/crm` (its webhook route and fake "Connect" button were removed 2026-10-10; `crm_connections` table stays). They still work but no longer feed the dashboard. The signup function `create_agency_with_owner` still seeds the old 10% / 2% / 1% plan. Retire these once nothing needs them.
 
 **Known limits**
-- Client detail extraction supports the verified 13-column Ultimate layout the limited UHC renewal PDF layout (18 source-detail fields), and the limited Devoted paired layout (24 source-detail fields). It reads each relevant saved PDF once per request for the displayed page. A client-name search or product-filter request reads candidate statements after metadata filtering; a member-ID search does not need to scan every client name; details are not stored in the financial tables or a shared cross-user cache. Other layouts need synthetic fixtures and verification. Saved PDFs must remain available and unchanged.
+- Client detail extraction supports the verified 13-column Ultimate layout, the limited UHC renewal PDF layout (18 source-detail fields) and the limited Devoted paired layout (24 source-detail fields). It reads each relevant saved PDF once per request for the displayed page. A client-name search or product-filter request reads candidate statements after metadata filtering; a member-ID search does not need to scan every client name; details are not stored in the financial tables or a shared cross-user cache. Other layouts need synthetic fixtures and verification. Saved PDFs must remain available and unchanged.
+- **Tracked files from Ryan's original prototype:** `.dashboardnotes`, `.filereferenceguide` and `.projecthandoff` in the repo root are stale notes about that prototype (they name real people and prototype files). They are not used by the app. Consider removing them.
 - **Unverified:** the payee ID is read from the `W####` code right after the `ADV/MCC/PFS/BRP` marker on Ultimate rows (assumed to be the writer's carrier number). Confirm with Ryan against a real statement. Until then the payee ID only breaks ties between same-name teammates.
 - Ultimate parser only recognizes the writing-agent layouts proven in Ryan's prototype (`ADV`, `MCC`, `PFS`, `BRP` codes). Other layouts leave the writing agent unverified -> Unassigned.
 - Statement tables show at most 300 rows per page (all rows still import).
@@ -307,16 +308,19 @@ Important properties:
 
 ## 6. Recommended next steps (in order)
 
-As of 2026-10-21, payment search/filter/pagination and eight saved UHC renewal statement imports are locally verified. Repeating the UHC preflight proposes zero new entries. UHC Sync now downloaded all ten January-October 2026 pairs successfully; next review the new August/October PDFs without reimporting the eight earlier months; review the completed local Devoted integration with Marshall after Ryan explicitly authorized proceeding without his approval. Gmail/Outlook MFA-code retrieval is planned separately for Marshall's integration/security review; no mailbox access is enabled by this feature.
+As of 2026-11-10 (`Main` unchanged since 2026-10-21): the local manual-upload, Ultimate worker pull, UHC and Devoted imports, and payment search have all been verified locally. What remains is mostly review, decisions and hosting.
 
-1. **Run the manual flow once** on a real Supabase project with `sample-statement.pdf`, then with one of Ryan's real PDFs. Fix whatever breaks. Nothing else is trustworthy until this is done.
-2. **Answer the open decisions** in section 7, especially how Independent agents' production rolls up and how aliases should work.
-3. **Run the worker once** with Ryan's Ultimate login on a machine with a browser; fix selector/flow issues.
-4. **Keep running locally for now. Do not deploy yet.** Run the app, local Supabase and the worker (`npm run start` in `worker/`) on your own machine. Hosting costs money and real client data (PHI) cannot go on any hosted service until HIPAA agreements are in place. Deploy when you are ready to launch, following the roadmap in section 14 (hosted setup, nightly sync, HIPAA).
-5. Career **earnings UI** (preview via `buildEarningsPlan`, Owner approval; no payouts).
-6. **Additional carrier work:** verify unsupported UHC layouts before expanding the parser; review downloaded August/October statements, then verify later available periods. Review the Devoted activation/recovery notes with Marshall; Ryan authorized the local migration/import while his approval was pending.
-7. **GoHighLevel output**: Marshall reviews [the field mapping and connection decisions](docs/ghl-integration-plan.md), then synthetic testing before any real-contact updates. Integration remains unbuilt; no inbound payable data.
-8. Retire the legacy CRM-driven code and the old seed data.
+1. **Review the redesigned dashboard** (`feature/dashboard-filter-ui`) with Ryan; merge only after his feedback.
+2. **Review the Devoted integration with Marshall.** Ryan authorized the local migration/import while the approval gate was pending; Marshall's approval is not recorded.
+3. **Review UHC's downloaded August and October statements** in Statements without reimporting the eight earlier months, then verify later months as they become available.
+4. **Answer the open decisions** in section 7 (payee ID location, captive dollar visibility, hierarchy visibility, annual-premium source, TruePlan rates).
+5. **Decide what to do with the unmerged feature branches** listed in section 5 (review, merge or retire).
+6. **Keep running locally. Do not deploy yet.** Run the app, local Supabase and the worker (`npm run start` in `worker/`) on your own machine. Hosting costs money and real client data (PHI) cannot go on any hosted service until HIPAA agreements are in place. Follow section 14 when ready (hosted setup, nightly sync, HIPAA).
+7. Career **earnings UI** (preview via `buildEarningsPlan`, Owner approval; no payouts).
+8. **Scheduled syncing** and a hosted worker (section 14.4 C and D), once hosting is decided.
+9. **GoHighLevel output**: Marshall reviews [the field mapping and connection decisions](docs/ghl-integration-plan.md), then synthetic testing before any real-contact updates. No inbound payable data.
+10. Move payment/dashboard totals to indexed SQL before large agency volumes (see "Known limits" in section 5).
+11. Retire the legacy CRM-driven code, the old seed data and the stale prototype notes in the repo root.
 
 ---
 
@@ -338,14 +342,16 @@ Ryan's answers from 2026-10-10 are marked **Ryan:**.
 10. **Career agents** have no carrier portal login but do log in to CommissionFlow and see only the statements assigned to them up the hierarchy. **Open:** how "up the hierarchy" should work for visibility (today Managers see self + direct reports).
 11. **Per-company settings**: **Ryan:** different level names and visibility, compensation plans, bonuses on/off (setting); **no payouts for now (remove)**; split commissions handled by #7; no override tiers, no chargeback rules for now. **Built.**
 12. **Open (Captive/LOA agents, built):** a captive agent currently sees the **carrier-paid dollar amounts** on the payments they wrote (the database cannot hide a column per role). That reveals the principal's margin over what the principal pays them. Confirm with Ryan whether that is acceptable, or whether captive agents should see counts only (a change that needs a separate view or hiding the amount column in the app).
+13. **Product type for Ultimate:** **Ryan (2026-10-21):** Ultimate only offers MAPDs, so Ultimate payments report Medicare Advantage (MAPD). Other carriers need their own confirmed mapping (section 3).
+14. **Devoted approval gate:** **Ryan (2026-10-21)** explicitly told the assistant to proceed with the limited Devoted paired importer. **Open:** Marshall has not approved it (see `docs/devoted-import-approval.md`).
+15. **Open (Dashboard):** the redesigned filter-panel dashboard on `feature/dashboard-filter-ui` needs Ryan's feedback (which filters, default month, which table columns) before merge.
 
 ---
 
 ## 8. Setup and environment variables
 
-Payment details use the existing `pdf-parse` dependency and private local/Supabase statement storage; no new environment variables or migration are needed. Never copy the real PDFs into this repository. The synthetic PDF fixture pads beyond `Buffer.poolSize` so the existing parser test also runs on Node versions with a larger shared buffer pool.
-
 Prerequisites: Node 20+, Docker Desktop, the [Supabase CLI](https://supabase.com/docs/guides/cli).
+Never copy real PDFs into this repository.
 
 For an existing local installation, back up first and use `npx supabase migration up --local` to apply pending migrations from Main. The `db reset` command below is for a new disposable demo database only; it deletes existing local records.
 
@@ -365,7 +371,9 @@ npm run dev                 # http://localhost:3000
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | app | |
 | `SUPABASE_SERVICE_ROLE_KEY` | app (server only), worker | Bypasses RLS. Never expose to the browser. |
 | `CREDENTIAL_ENCRYPTION_KEY` | app (server only), worker | 32 random bytes, base64. **App and worker must use the same value.** Losing it means every saved carrier login must be re-entered. |
-| `POLL_INTERVAL_SECONDS` | worker | Optional, default 30. |
+| `POLL_INTERVAL_SECONDS` | worker | Optional, default 30 (minimum 5). |
+| `DEVOTED_REVIEW_ENABLED` | app (server only) | `true` shows the Owner Devoted paired review page and allows saving a Devoted carrier login. Default `false`. |
+| `DEVOTED_IMPORT_REVIEW_ENABLED` | app (server only) | `true` allows approving a Devoted pair import. Default `false`. Both flags are `false` in `.env.local.example`; never enable them on a database you cannot back up. |
 
 Demo logins (all `password123`; created by `supabase/seed.sql`):
 
@@ -388,29 +396,18 @@ the private `statements` storage bucket.
 
 Commands: `npm run dev | build | test | lint | typecheck | sample:statement`.
 
----
+Devoted imports need migration `0011_devoted_paired_sources.sql` plus the two flags above in your ignored `.env.local`. See the [activation and recovery notes](docs/devoted-import-live.md). Back up before applying migrations; never use `db reset` on a ledger you want to keep.
 
-Local Devoted imports require migration `0011_devoted_paired_sources.sql` and ignored local flags `DEVOTED_REVIEW_ENABLED=true`, `DEVOTED_IMPORT_REVIEW_ENABLED=true`. Example defaults stay false. Owner-only paired upload/preview is `/statements/devoted`; see [activation and recovery notes](docs/devoted-import-live.md). Back up before applying migrations; never use `db reset` on the working ledger.
+Payment details use the existing `pdf-parse` dependency and private statement storage; no extra environment variables are needed. The synthetic PDF fixture pads beyond `Buffer.poolSize` so parser tests also run on Node versions with a larger shared buffer pool.
+
+---
 
 ## 9. Carrier worker (`worker/`)
 
-**Saved-login behavior for every supported carrier:** Ultimate, Devoted and UHC submit the saved username/password automatically in a headed worker browser. Devoted opens its Login entry button and uses the verified `devoted.auth0.com` form; UHC handles username/Continue before password submission. Credentials are filled only on exact approved HTTPS hosts, never on lookalike hosts, password-reset or verification-code forms. A request submits the username/password at most once; rejected credentials stop automatic submission. Verification codes, push approvals, passkeys, CAPTCHA and unfamiliar sign-in screens remain interactive. The app distinguishes Sync in progress from a verification/review request. Sessions stay in memory per connection for later requests; worker restarts/carrier expiry may require verification again. Retry loads updated sign-in code without losing its browser. Future carrier adapters must provide the same automatic-login/verification handoff behavior before being exposed as supported. No mailbox integration, security bypass, session export or disk cookie persistence is added. All 389 synthetic tests, application/worker TypeScript, ESLint and production build pass. Live Devoted automatic login/sync passed: 9 existing pairs skipped, zero failures. Ultimate automatic login/sync passed: 9 found, 8 skipped, 1 PDF saved for review, zero failures. UHC reached a verification/review handoff; automatic completion remains pending that step. No commissions were imported; the working ledger remains 155 entries / 1,286,819 cents.
-
-
-**UnitedHealthcare Sync now:** The normal polling worker now includes the Jarvis adapter. Use the existing encrypted UHC login on Carrier connections, choose Sync now, then complete verification in the headed worker browser and open Commissions > Statements and More. The worker submits the saved username and password on `identity.onehealthcareid.com`; MFA remains interactive. It waits up to 30 minutes and retains its in-memory browser for later requests/retries; restarting the worker or carrier session expiry may require verification again. No mailbox access or verification bypass is added. Retry reloads downloader code while retaining the browser and avoids reloading an already-open statement page. Safe stage/validation messages identify failures without logging portal content; older running workers require one restart to load this retry behavior.
-
-UHC sync discovers available months for the current year (also the preceding year in January/February), validates the PDF/text source filenames against the selected month and signed-in PID, and saves both privately with verified content hashes before registering the PDF in Statements for normal preview/approval. Companion text/manifests use the existing private bucket at `<agency>/uhc-downloads/<connection>/<pairHash>.*`; no source details are logged. Identical PDFs reuse existing statements. Sync fetches current revisions rather than treating a previously seen month as unchanged; changed PDFs reach correction review, never automatic import. Private companion-source cleanup is not automated. No schema, library, financial-calculation or permission changes. All 378 synthetic tests, app/worker TypeScript and ESLint pass; production build pass; owner UHC card and Sync now button browser-verified. Live app-triggered sync completed after interactive sign-in: all ten available January-October 2026 PDF/text pairs preserved with zero failures. Eight regenerated PDFs repeat existing economic entries; August and October contain six new entries / 17,352 cents and await review. Existing imported UHC totals remain 46 entries / 133,032 cents; overall ledger remains 149 entries / 1,269,467 cents. Downloader fixes reused the authenticated browser without another restart. Latest 382 synthetic tests, app/worker TypeScript and ESLint pass; unattended/hosted operation remains unverified.
-
-
-Devoted has a separate, explicit period/year local download command; see [Devoted integration status](docs/devoted-integration.md). It uses interactive sign-in and preserves PDF/workbook pairs outside Git. Owner connections now also support **Devoted Health / Sync now** through the normal polling worker. The worker opens a headed Devoted browser, opens Login and submits the encrypted saved credentials on its verified Auth0 form, then waits up to 30 minutes if verification is required. It reuses that in-memory browser on subsequent requests and leaves it open after recoverable errors; no session is saved to disk. Keep the worker running locally and refresh Carrier connections for progress. Restarting the worker or carrier session expiry may require signing in again. No unattended/MFA-email retrieval is provided.
-
-Complete PDF/workbook pairs are hash-verified in the existing private `statements` bucket under `<agency>/devoted-inbox/<connection>/<pairHash>.*`; a small manifest is written last, so incomplete pairs cannot be reviewed. No financial rows are written by sync. Already imported pair hashes are skipped; changed pairs go through the existing correction preview and explicit approval. `/statements/devoted` lists the current owner's unimported downloads by pay date and accepts either a saved pair or manual uploads. Every saved-pair read checks the active owner and their session-visible connection before admin storage access, then verifies both source and pair hashes. Imports keep the staging evidence privately; cleanup is not automated. No new migration, dependency, RLS or commission calculation changes. The two Devoted review/import flags in section 8 remain required. Other-role Devoted connections are unavailable until their paired review is supported. Live app-triggered portal sync remains unverified until Ryan connects and signs in; synthetic checks cover downloads/storage/access. Ultimate remains unchanged.
-
-
-Logging into a carrier portal needs a real browser, so it **cannot run on
-Vercel**. It is a separate small Node package that talks to the same Supabase
-database. It only *downloads PDFs* into the private bucket; the web app does
-all parsing.
+Logging into a carrier portal needs a real browser, so it **cannot run on Vercel**. The
+worker is a separate small Node package that talks to the same Supabase database. It only
+*downloads statements* into the private bucket and registers them for review; the web app
+does all parsing and import.
 
 ```bash
 cd worker
@@ -420,15 +417,29 @@ npm run once         # process pending "Sync now" requests and exit
 npm run start        # keep polling every POLL_INTERVAL_SECONDS
 ```
 
-It reads `../.env.local`. How it behaves:
-- Picks up connections where an agent clicked **Sync now** (`sync_requested_at`), decrypts the login (AES-256-GCM, bound to the connection id), signs in with a **fresh browser each run** (no saved sessions), downloads statements it has not seen, stores them, and registers them as "Needs review".
-- An **Independent** agent's connection tags statements as theirs; the **Owner's** connection produces agency statements.
-- On a login problem, MFA prompt, or portal change the connection becomes **Needs attention** with a safe message (no URLs, selectors or credentials).
-- Selectors live only in `worker/src/carriers/ultimate.ts` (ported from Ryan's prototype; **unverified** here).
+It reads `../.env.local`.
 
-Adding a carrier: implement `StatementParser` (`lib/carriers/types.ts`, register in `lib/carriers/index.ts`) **and** `CarrierPortal` (`worker/src/carriers/types.ts`, register in `worker/src/carriers/registry.ts`). The carrier name string must be identical in both. Paired carriers use their paired review adapter instead of registering a fake single-PDF parser; connection options are separate in `lib/carriers/connectionCarriers.ts`.
+**Supported carriers**
 
-TODO: nightly scheduled syncs; MFA handling; monitoring/alerts.
+| Carrier | Source | Sync now | Notes |
+| --- | --- | --- | --- |
+| Ultimate Health Plans | PDF | Locally verified (live, automatic login) | Latest run: 9 found, 8 skipped, 1 PDF saved for review, zero failures. Selectors in `worker/src/carriers/ultimate.ts` (ported from Ryan's prototype). |
+| Devoted Health | PDF + workbook pair | Locally verified (live, automatic login) | 9 existing pairs skipped, zero failures. Also has a separate explicit download command, see [Devoted integration status](docs/devoted-integration.md). |
+| UnitedHealthcare (Jarvis) | PDF + text | Locally verified after manual password entry and SMS verification | Ten January-October 2026 pairs downloaded, zero failures. **Automatic password acceptance is unverified**: the saved username was accepted, but later automated attempts did not reach verification (Ryan confirms the credentials are correct and suspects a portal issue). |
+
+**How it behaves (all carriers)**
+- Picks up connections where someone clicked **Sync now** (`sync_requested_at`) and decrypts the saved login (AES-256-GCM, bound to the connection id). An **Independent** agent's connection tags statements as theirs; the **Owner's** connection produces agency statements.
+- Submits the saved username/password **automatically** in a headed worker browser, only on exact approved HTTPS hosts (never lookalike hosts, password-reset or verification-code forms), **at most once per request**. Rejected credentials stop automatic submission and the browser is kept for a user-requested retry after replacing the login.
+- Verification codes, push approvals, passkeys, CAPTCHA and unfamiliar sign-in screens stay **interactive**: the app shows Sync in progress or a verification request and waits up to 30 minutes. No mailbox integration, security bypass, session export or on-disk cookie persistence exists.
+- Sessions are kept **in memory per connection** for later requests; restarting the worker or carrier session expiry may require verification again. Retry reloads updated sign-in code without losing its browser.
+- Ultimate, Devoted and UHC downloads are hash-verified and stored privately (`<agency>/<sha256>.pdf`; Devoted pairs under `<agency>/devoted-inbox/<connection>/<pairHash>.*`; UHC under `<agency>/uhc-downloads/<connection>/<pairHash>.*`, manifest written last so incomplete pairs cannot be reviewed). Identical files reuse existing statements; changed files reach correction review, never automatic import. Cleanup of private companion sources is not automated.
+- UHC discovers available months for the current year (and the previous year in January/February) and validates PDF/text filenames against the selected month and signed-in PID.
+- On a login problem, MFA prompt or portal change the connection becomes **Needs attention** with a safe message (no URLs, selectors, portal content or credentials).
+- Sync writes **no financial rows**. Every imported statement still goes through preview and Owner approval.
+
+Adding a carrier: implement `StatementParser` (`lib/carriers/types.ts`, register in `lib/carriers/index.ts`) **and** `CarrierPortal` (`worker/src/carriers/types.ts`, register in `worker/src/carriers/registry.ts`). The carrier name string must be identical in both. Paired carriers use their paired review adapter instead of registering a fake single-PDF parser; connection options are separate in `lib/carriers/connectionCarriers.ts`. A new adapter must provide the same automatic-login/verification handoff before being exposed as supported.
+
+TODO: nightly scheduled syncs; MFA-code retrieval; monitoring/alerts; Dockerfile and hosting (section 14).
 
 ---
 
@@ -448,28 +459,32 @@ TODO: nightly scheduled syncs; MFA handling; monitoring/alerts.
 ```
 /app/(dashboard)
   dashboard/        carrier-payment dashboard (all roles)
-  payments/         carrier payments, categories, assign (Owner)
-  statements/       upload + history + [id] preview/approve (Owner)
+  payments/         "Commission activity": search, filters, assign (Owner)
+  statements/       upload + history + coverage; [id] preview/approve; devoted/ paired review (Owner)
   carriers/         carrier login + sync status (Owner, Independent agents)
   users/            team + agent type/level (Owner/Manager)
   compensation/     per-agency levels, rates, bonuses on/off (Owner)
   reports/          collective production report + CSV
   settings/         legacy plans/bonuses/CRM + team add
-/components         ui/ primitives; dashboard/, statements/, payments/, carriers/, users/
+  commissions/, onboarding/   legacy / onboarding screens
+/app/api            reports/collective (CSV), statements/[id]/pdf (Owner, audited)
+/components         ui/ primitives; dashboard/, statements/, payments/, carriers/, users/, compensation/, settings/, onboarding/
 /lib
-  carriers/         PURE carrier logic: parsers, money, duplicate planning, assignment,
-                    preview, sample statement, compensation (rate locks, earnings plan)
+  carriers/         PURE carrier logic: parsers (ultimate/, uhc/, devoted/), money, duplicate planning,
+                    assignment, preview, sample statement, compensation (rate locks, earnings plan)
   pdf/              PDF text extraction (pdf-parse 1.1.1, pinned on purpose)
   crypto/           credential encryption (no app imports; worker reuses it)
-  services/         orchestration: stored PDF -> preview -> import
+  services/         orchestration: stored PDF -> preview -> import; payment ledger; Devoted pairs
   repositories/     ALL database access (supabase-js)
-  reporting/        pure aggregation (carrierMetrics.ts; metrics.ts is legacy)
+  reporting/        pure aggregation (carrierMetrics, carrierMonthlySeries, paymentQuery, statementCoverage...; metrics.ts is legacy)
   auth/             session, role guards, agent-type validation, carrier-login access rule
+  workbooks/        Devoted workbook reading
   commission-engine/, crm/   LEGACY CRM-driven model
-/worker             separate package: Playwright portal pull
-/supabase           migrations/ (0001-0010), seed.sql
+/worker             separate package: Playwright portal pull (carriers/ has ultimate, devoted, uhc)
+/supabase           migrations/ (0001-0011), seed.sql, tests/ (SQL regressions, run with psql)
+/docs               carrier import notes, regression tests, GHL plan
 /types              hand-written schema + domain types
-/scripts            make-sample-statement.ts
+/scripts            make-sample-statement.ts, make-import-regression-fixtures.ts
 ```
 
 Layering: UI -> server actions -> services -> repositories (database) and
@@ -478,7 +493,7 @@ parsing never touches the database.
 
 Migrations: `0001` base schema/RLS, `0002` grants, `0003` comp plans (legacy),
 `0004` onboarding, `0005` carrier statements/compensation model, `0006` statement
-import function + storage bucket + sync request column, `0007` statement review (superseded statements, payee ID, `import_statement` supersede support), `0008` captive agents (`users.principal_id`, `carrier_transactions.writing_user_id`, RLS for the captive agent, `import_statement` records the writer), `0009` per-agency career levels, bonuses on/off, percent-of-premium rules, payout tables removed, `0010` Independent owner-level profile (`users.independent_owner`).
+import function + storage bucket + sync request column, `0007` statement review (superseded statements, payee ID, `import_statement` supersede support), `0008` captive agents (`users.principal_id`, `carrier_transactions.writing_user_id`, RLS for the captive agent, `import_statement` records the writer), `0009` per-agency career levels, bonuses on/off, percent-of-premium rules, payout tables removed, `0010` Independent owner-level profile (`users.independent_owner`), `0011` Devoted paired sources.
 
 `types/database.ts` is hand-written; regenerate with
 `supabase gen types typescript --linked` once linked to a real project.
@@ -487,10 +502,17 @@ import function + storage bucket + sync request column, `0007` statement review 
 
 ## 12. Verification log
 
-Last full run (2026-10-10, independent reports): `vitest` 170 tests passing, `tsc` and `eslint` clean, `next build` succeeds. Migrations `0008`-`0010` applied on a throwaway Postgres 14. Earlier statement-review run: `vitest` 133. Earlier run (2026-10-08): `vitest` 113 tests passing, `tsc` clean (app and
-worker), `eslint` clean, `next build` succeeds. SQL behavior verified on a
-throwaway Postgres 14 (not Supabase). **Not verified:** any screen against live
-Supabase/Auth/Storage, the worker against the live portal, any real PDF.
+**Last recorded full run (2026-10-21, `Main`):** `vitest` 393 tests in 55 files passing, app and worker `tsc` clean, `eslint` clean, `next build` succeeds. Earlier runs: 230 (2026-10-20), 170 (2026-10-10), 133, 113 (2026-10-08).
+
+**Local checks recorded in the changelog (local Supabase and local worker only):**
+- Nine real Ultimate PDFs imported through upload/preview/approve and checked against saved sources (94 entries, 2026-10-20); eight UHC and nine Devoted statements imported later. The working ledger then stood at 155 entries / 1,286,819 cents.
+- `supabase/tests/role_access.sql`: nine synthetic users, two agencies, exact visible-entry sets per role, captive/principal attribution, cross-agency isolation, rollback-only (passed 2026-10-21). Run with `psql -U postgres -d postgres -f supabase/tests/role_access.sql` against the local database (migrations through 0011).
+- Synthetic three-carrier repeat/correction regressions ([docs](docs/import-regression-tests.md)): exact repeats, regenerated sources, recognized corrections, retained originals and failure rollback; before/after fingerprints match. Browser correction/retrieval unverified.
+- Browser smoke checks of Career, Independent and Manager demo sign-ins, then populated flows in an isolated synthetic environment (2026-10-21). Captive login and the Independent owner-profile flow remain unverified.
+- Dashboard: owner month selector, mobile navigation, carrier-stacked chart (desktop, keyboard tooltip, amounts table) and statement-total wording reviewed. Phone chart, positive-balance and unimported-preview wording, long-value dialogs and pagination wrapping remain browser-unverified.
+- Live worker runs: Ultimate and Devoted automatic login/sync; UHC sync after manual password and SMS verification.
+
+**Not verified:** anything on a hosted Supabase/Vercel/worker, unattended or scheduled syncs, UHC automatic credential acceptance, other carrier layouts, and browser flows for roles/screens marked unverified in section 1.
 
 Known quirk: `pdf-parse` 1.1.1 fails on PDFs smaller than about 4 KB (buffer-pool
 offset bug). Real statements are much larger; only hand-made test PDFs are affected
@@ -557,6 +579,8 @@ Bad: `update`, `fix stuff`, `wip`, `changes`.
 You can merge on your own when the change is **new functionality or a fix that
 fits the existing architecture and stack**: new screens, new carrier parsers,
 new reports, copy changes, tests.
+
+**Branches held for review:** if Marshall says a branch must be reviewed (for example with Ryan) before it merges, push it and leave it unmerged until he says so, even when the change would otherwise be allowed.
 
 **Ask Marshall first** (do the work on a branch and push it, but do not merge) if the
 change would:
@@ -626,7 +650,7 @@ branch per phase. (Recorded in `.cursorrules`.)
 A hosted service without a signed agreement (BAA) and the right plan is a HIPAA violation, even for "just testing".
 
 Do not move to the next stage until the exit criteria hold:
-- **0 -> 1:** a real Ultimate PDF imports correctly on a local run, and the worker pulls once with Ryan's login (section 6, steps 1-3).
+- **0 -> 1:** a real Ultimate PDF imports correctly on a local run, and the worker pulls once with Ryan's login (**done locally 2026-10-20/21**).
 - **1 -> 2:** hosted app works end to end with `sample-statement.pdf`; Ryan has answered the section 7 questions.
 - **2 -> 3:** pilot ran for a few statement cycles with matching totals; HIPAA package (14.5) done; the pre-launch engineering list (14.6) is done.
 
@@ -749,14 +773,16 @@ Each Independent-agent customer is their own business associate of their carrier
 - [ ] Decide on public sign-up (off for pilot)
 - [ ] Monitoring and alerts for the worker and failed syncs (without PHI in the alert text)
 - [ ] Backup and restore drill (restore into a scratch project and check totals)
-- [ ] Rotate Ryan's old Ultimate password (it was in his prototype) and use new production keys
+- [ ] Rotate Ryan's old Ultimate password (it was in his prototype) and use new production keys; remove the stale prototype notes in the repo root (section 5)
 - [ ] Remove demo seed users, retire the legacy CRM-driven code
 - [ ] Error pages and logs checked for PHI leaks
-- [ ] Real Ultimate PDF and worker pull verified locally (section 6 steps 1-3)
+- [x] Real Ultimate PDF and worker pull verified locally (done 2026-10-20 and 2026-10-21)
 
 ---
 
 ## 15. Changelog (newest first)
+
+- **2026-11-10** - README accuracy sweep against the 2026-10-21 changelog entries: refreshed the status table (393 tests, local vs hosted verification, UHC/Devoted/worker rows), moved loose feature paragraphs into role-based functionality and the verification log, rewrote the carrier worker section (supported carriers, automatic login, in-memory sessions), added the two Devoted environment flags and migration 0011, updated project structure, next steps and open decisions, and listed the unmerged feature branches and stale prototype notes. Documentation only; no code, schema or behavior changes. TypeScript, ESLint and `vitest` (393 tests) pass; no browser or database checks were re-run for this sweep.
 
 - **2026-10-21** - Standardize automatic saved-login submission for Ultimate, Devoted and UHC, including Devoted Login/Auth0 and UHC username/Continue. Retain per-connection in-memory browsers; hand off verification and rejected/unknown/reset screens; guard exact HTTPS destinations and avoid repeated credential submission. Update connection guidance/progress labels and add synthetic authentication regressions. No imports, schema, permissions or dependency changes. Live Devoted tracing found the callback was being interrupted by early navigation; wait for a visible signed-in portal marker before leaving callback routes. A regression covers this ordering. The live Devoted retest automatically opened Login, submitted saved credentials and reached My Commissions without manual input. All 391 synthetic tests, app/worker TypeScript and ESLint pass; The live worker subsequently verified Devoted automatic login/sync (9 skipped, zero failures) and Ultimate automatic login/sync (8 skipped, 1 PDF saved for review, zero failures). UHC submitted the saved credentials but the carrier reported wrong username/password. Reject known credential-error screens immediately and preserve the browser for a user-requested retry after Replace login; do not repeat submissions. Ryan confirms the saved credentials are correct and suspects a carrier portal issue. Credentials are unchanged; no further UHC retry is requested. A later retry accepted the username and reached Enter Your Password. Skip any read-only username field on that second step and report password-field/submit failures safely. Manual password entry and SMS verification succeeded (first SMS required resend); subsequent sync downloaded ten pairs with zero failures. UHC automatic password acceptance remains unverified. Use typing/blur events and verify each field retains the entered value before submission. A separate fresh-context acceptance test still did not reach verification, so automatic UHC credential acceptance is not claimed; it requested/sent no verification code and left the working authenticated browser untouched. All 393 synthetic tests, app/worker TypeScript and ESLint pass. The working ledger remains 155 entries / 1,286,819 cents. Ledger unchanged at 155 entries / 1,286,819 cents.
 
