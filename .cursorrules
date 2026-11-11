@@ -105,6 +105,13 @@ In scope:
   UnitedHealthcare and Devoted (Devoted sits behind feature flags). Manual PDF upload and
   automated portal pulls through the worker both exist. More carriers are welcome and need
   no approval (see GIT WORKFLOW). README section 1 has the current carrier status.
+- Enrollment tracking and review: SunFire enrollment collection through the worker
+  (read-only, exact approved SunFire HTTPS host), owner review that matches enrollments
+  to carrier-paid statement entries, owner-confirmed links and follow-up notes, and the
+  Sales page (manual policy dispositions assigned to agents). Enrollment, link and
+  disposition data is for review and follow-up only. It never decides what is payable:
+  only carrier statements do. Collected enrollment data is PHI and stays in private
+  storage, never in the repo or logs.
 - Career and Independent agent processing as described above
 - Agency/personal production reporting
 - Approval-gated earnings (no payout batches for now)
