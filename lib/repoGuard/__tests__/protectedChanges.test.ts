@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { hasMarshallApproval, parseAddedLines, parseNameStatus } from "../parseDiff";
+import { hasMarshallApproval, parseAddedLines, parseNameStatus, parseUnmergedBranches } from "../parseDiff";
+import { formatBranchReport } from "../report";
 import { evaluateChanges, majorVersion, type ChangedFile, type GuardInput } from "../protectedChanges";
 
 const base: GuardInput = { files: [], addedLines: {}, packages: [], readme: "", approved: false };
@@ -152,5 +153,27 @@ describe("diff parsing", () => {
       "diff --git a/gone.ts b/gone.ts", "--- a/gone.ts", "+++ /dev/null", "@@ -1 +0,0 @@", "-bye",
     ].join("\n");
     expect(parseAddedLines(diff)).toEqual({ "x.ts": ["new line", "++ not a header"] });
+  });
+});
+
+describe("branch report", () => {
+  it("lists remote branches and drops the HEAD pointer and the base branch", () => {
+    const output = "  origin/HEAD -> origin/Main\n  origin/Main\n  origin/feature/a\n  origin/fix/b\n";
+    expect(parseUnmergedBranches(output, "origin/Main")).toEqual(["origin/feature/a", "origin/fix/b"]);
+  });
+  it("prints one line per branch with category counts", () => {
+    const stopped = run({ files: [file("worker/hosting/a"), file("worker/hosting/b"), file("vercel.json")] });
+    const clear = run({ files: [file("lib/x.ts")] });
+    const approved = run({ files: [file("vercel.json")], approved: true });
+    const text = formatBranchReport([
+      { branch: "origin/feature/a", fileCount: 3, result: stopped },
+      { branch: "origin/feature/bb", fileCount: 1, result: clear },
+      { branch: "origin/feature/c", fileCount: 1, result: approved },
+    ]);
+    const lines = text.split("\n");
+    expect(lines[0]).toMatch(/^origin\/feature\/a\s+STOPPED\s+hosting \(3\)$/);
+    expect(lines[1]).toMatch(/^origin\/feature\/bb\s+PASS\s+\(1 files\)$/);
+    expect(lines[2]).toMatch(/^origin\/feature\/c\s+APPROVED\s+hosting \(1\)$/);
+    expect(formatBranchReport([])).toBe("No unmerged branches.");
   });
 });

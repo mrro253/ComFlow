@@ -41,3 +41,15 @@ export function parseAddedLines(diff: string): Record<string, string[]> {
 export function hasMarshallApproval(commitMessages: string): boolean {
   return /^Approved-by:\s*Marshall\b/im.test(commitMessages);
 }
+
+/**
+ * Parses `git branch -r --no-merged <base>` into branch names such as "origin/feature/x".
+ * Drops the "origin/HEAD -> origin/Main" pointer and the base branch itself.
+ */
+export function parseUnmergedBranches(output: string, base: string): string[] {
+  const baseName = base.replace(/^origin\//, "");
+  return output
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !line.includes("->") && line !== `origin/${baseName}` && line !== baseName);
+}
