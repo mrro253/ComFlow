@@ -10,6 +10,7 @@ import { listUsersForAgency } from "@/lib/repositories/userRepository";
 import { ConnectCarrierForm } from "@/components/carriers/connect-carrier-form";
 import { ConnectionActions } from "@/components/carriers/connection-actions";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
@@ -22,7 +23,7 @@ export default async function CarriersPage() {
   if (!canManageCarrierLogin(user)) {
     return (
       <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Carrier connections</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Carrier &amp; enrollment connections</h1>
         <Card>
           <CardHeader>
             <CardTitle>Your agency handles this for you</CardTitle>
@@ -49,7 +50,7 @@ export default async function CarriersPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Carrier connections</h1>
         <p className="text-sm text-muted-foreground">
           {isOwner
-            ? "Connect your agency's carrier portal login so statements are pulled automatically."
+            ? "Connect carrier portals for commission statements and SunFire for enrollment details."
             : "Connect your carrier portal login so your statements are pulled automatically. Your carrier pays you directly; this only lets us show what you were paid."}
         </p>
       </div>
@@ -64,6 +65,7 @@ export default async function CarriersPage() {
             <CardHeader className="flex-row items-center justify-between space-y-0">
               <div>
                 <CardTitle>{carrier}</CardTitle>
+                {carrier === "SunFire" && <p className="mt-1 text-sm font-medium">Enrollment source</p>}
                 <CardDescription>
                   {connection?.lastSuccessfulSyncAt
                     ? `Last successful sync ${formatDate(connection.lastSuccessfulSyncAt)}`
@@ -73,6 +75,27 @@ export default async function CarriersPage() {
               {status && <Badge variant={status.variant}>{status.label}</Badge>}
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
+              {carrier === "SunFire" && (
+                <>
+                  <p className="text-sm text-muted-foreground">Collect enrollment details from SunFire, then compare them with your imported commissions. Nothing is linked automatically.</p>
+                  {connection && (
+                    <div className="grid gap-4 rounded-lg border bg-muted/30 p-4 lg:grid-cols-2">
+                      <div className="flex flex-col items-start gap-2">
+                        <Button asChild variant="outline" className="h-auto min-h-10 whitespace-normal text-left">
+                          <Link href="/carriers/sunfire">View enrollments</Link>
+                        </Button>
+                        <p className="text-sm text-muted-foreground">See the clients, plans and proposed effective dates collected from SunFire.</p>
+                      </div>
+                      <div className="flex flex-col items-start gap-2">
+                        <Button asChild className="h-auto min-h-10 whitespace-normal text-left">
+                          <Link href="/carriers/sunfire/matches">Review commission matches</Link>
+                        </Button>
+                        <p className="text-sm text-muted-foreground">Compare possible matches and check chargebacks before linking anything.</p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
               {carrier === "UnitedHealthcare" && <p className="text-sm text-muted-foreground">Sync downloads available PDF and text reports. Keep the local worker running; complete verification in its browser and open Commissions &gt; Statements and More. New PDFs appear in <Link className="underline" href="/statements">Statements for review</Link>. Existing imported entries stay unchanged.</p>}
               {carrier === "Devoted Health" && <p className="text-sm text-muted-foreground">Sync saves PDF and spreadsheet pairs for review. Keep the local worker running; complete any Devoted verification in its browser window. <Link className="underline" href="/statements/devoted">Review downloaded Devoted statements</Link></p>}
               {connection && <section className="rounded-md border p-3 text-sm" aria-label="Latest sync result">
@@ -92,12 +115,15 @@ export default async function CarriersPage() {
                 <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{connection.lastError}</p>
               )}
               {connected && connection && (
-                <ConnectionActions connectionId={connection.id} syncPending={connection.syncRequestedAt !== null} />
+                <div className={carrier === "SunFire" ? "border-t pt-4" : undefined}>
+                  {carrier === "SunFire" && <p className="mb-2 text-sm font-medium">Update enrollment data</p>}
+                  <ConnectionActions connectionId={connection.id} syncPending={connection.syncRequestedAt !== null} enrollmentSource={carrier === "SunFire"} />
+                </div>
               )}
               <div className={connected ? "border-t border-border pt-4" : ""}>
                 <ConnectCarrierForm carrier={carrier} replacing={Boolean(connected)} />
                 <p className="mt-3 text-xs text-muted-foreground">
-                  Your login is encrypted before it is stored and is only used by the statement downloader.
+                  Your login is encrypted before it is stored and is only used by the {carrier === "SunFire" ? "enrollment collector" : "statement downloader"}.
                   It is never shown again.
                 </p>
               </div>
