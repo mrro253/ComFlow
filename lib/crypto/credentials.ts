@@ -19,6 +19,8 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 export interface CarrierLogin {
   username: string;
   password: string;
+  portalUrl?: string;
+  enrollmentStart?: string;
 }
 
 const VERSION = "v1";
@@ -77,7 +79,9 @@ export function decryptCarrierLogin(
     ]).toString("utf8");
     const parsed = JSON.parse(plain) as Partial<CarrierLogin>;
     if (!parsed.username || !parsed.password) throw new Error("malformed");
-    return { username: parsed.username, password: parsed.password };
+    return { username: parsed.username, password: parsed.password,
+      ...(typeof parsed.portalUrl === "string" ? { portalUrl: parsed.portalUrl } : {}),
+      ...(typeof parsed.enrollmentStart === "string" ? { enrollmentStart: parsed.enrollmentStart } : {}) };
   } catch {
     // Deliberately vague: never reveal why decryption failed.
     throw new Error("Stored credentials could not be decrypted");

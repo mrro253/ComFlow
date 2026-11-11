@@ -1,3 +1,5 @@
+import { loadSyncResult } from "@/lib/repositories/syncResultRepository";
+import { connectionStatus } from "@/lib/reporting/connectionStatus";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { canManageCarrierLogin } from "@/lib/auth/carrierAccess";
@@ -8,16 +10,10 @@ import { listUsersForAgency } from "@/lib/repositories/userRepository";
 import { ConnectCarrierForm } from "@/components/carriers/connect-carrier-form";
 import { ConnectionActions } from "@/components/carriers/connection-actions";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
-
-const STATUS = {
-  pending: { label: "Saved - not synced yet", variant: "secondary" },
-  active: { label: "Connected", variant: "success" },
-  needs_attention: { label: "Needs attention", variant: "destructive" },
-  disabled: { label: "Disconnected", variant: "outline" },
-} as const;
 
 export default async function CarriersPage() {
   const user = await getCurrentUser();
@@ -27,7 +23,7 @@ export default async function CarriersPage() {
   if (!canManageCarrierLogin(user)) {
     return (
       <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Carrier connections</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Carrier &amp; enrollment connections</h1>
         <Card>
           <CardHeader>
             <CardTitle>Your agency handles this for you</CardTitle>
@@ -46,6 +42,7 @@ export default async function CarriersPage() {
   const mine = connections.filter((c) => c.userId === user.id);
   const others = connections.filter((c) => c.userId !== user.id);
   const isOwner = user.role === "owner";
+  const summaries = new Map(await Promise.all(mine.map(async (c) => [c.id, await loadSyncResult(c.id, user.agencyId)] as const)));
 
   return (
     <div className="flex flex-col gap-6">
@@ -53,7 +50,7 @@ export default async function CarriersPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Carrier connections</h1>
         <p className="text-sm text-muted-foreground">
           {isOwner
-            ? "Connect your agency's carrier portal login so statements are pulled automatically."
+            ? "Connect carrier portals for commission statements and SunFire for enrollment details."
             : "Connect your carrier portal login so your statements are pulled automatically. Your carrier pays you directly; this only lets us show what you were paid."}
         </p>
       </div>
@@ -61,14 +58,14 @@ export default async function CarriersPage() {
       {connectionCarriers(isOwner).map((carrier) => {
         const connection = mine.find((c) => c.carrier === carrier);
         const connected = connection && connection.status !== "disabled";
-        const status = connection?.status === "needs_attention" && connection.lastError?.startsWith("Sync running.")
-          ? { label: "Sync in progress", variant: "secondary" as const }
-          : connection ? STATUS[connection.status] : null;
+        const status = connection ? connectionStatus(connection.status, connection.lastError) : null;
+        const summary = connection ? summaries.get(connection.id) : null;
         return (
           <Card key={carrier}>
             <CardHeader className="flex-row items-center justify-between space-y-0">
               <div>
                 <CardTitle>{carrier}</CardTitle>
+                {carrier === "SunFire" && <p className="mt-1 text-sm font-medium">Enrollment source</p>}
                 <CardDescription>
                   {connection?.lastSuccessfulSyncAt
                     ? `Last successful sync ${formatDate(connection.lastSuccessfulSyncAt)}`
@@ -78,18 +75,55 @@ export default async function CarriersPage() {
               {status && <Badge variant={status.variant}>{status.label}</Badge>}
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
+              {carrier === "SunFire" && (
+                <>
+                  <p className="text-sm text-muted-foreground">Collect enrollment details from SunFire, then compare them with your imported commissions. Nothing is linked automatically.</p>
+                  {connection && (
+                    <div className="grid gap-4 rounded-lg border bg-muted/30 p-4 lg:grid-cols-2">
+                      <div className="flex flex-col items-start gap-2">
+                        <Button asChild variant="outline" className="h-auto min-h-10 whitespace-normal text-left">
+                          <Link href="/carriers/sunfire">View enrollments</Link>
+                        </Button>
+                        <p className="text-sm text-muted-foreground">See the clients, plans and proposed effective dates collected from SunFire.</p>
+                      </div>
+                      <div className="flex flex-col items-start gap-2">
+                        <Button asChild className="h-auto min-h-10 whitespace-normal text-left">
+                          <Link href="/carriers/sunfire/matches">Review commission matches</Link>
+                        </Button>
+                        <p className="text-sm text-muted-foreground">Compare possible matches and check chargebacks before linking anything.</p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
               {carrier === "UnitedHealthcare" && <p className="text-sm text-muted-foreground">Sync downloads available PDF and text reports. Keep the local worker running; complete verification in its browser and open Commissions &gt; Statements and More. New PDFs appear in <Link className="underline" href="/statements">Statements for review</Link>. Existing imported entries stay unchanged.</p>}
               {carrier === "Devoted Health" && <p className="text-sm text-muted-foreground">Sync saves PDF and spreadsheet pairs for review. Keep the local worker running; complete any Devoted verification in its browser window. <Link className="underline" href="/statements/devoted">Review downloaded Devoted statements</Link></p>}
+              {connection && <section className="rounded-md border p-3 text-sm" aria-label="Latest sync result">
+                <h3 className="font-medium">Latest sync result</h3>
+                {summary ? <>
+                  <p className="text-muted-foreground">{formatDate(summary.finishedAt)} · {summary.outcome === "completed" ? "Download check finished" : "Sync stopped before a complete result"}</p>
+                  {summary.counts ? <ul className="mt-2 grid grid-cols-2 gap-2">
+                    <li>{summary.counts.found} statements found</li>
+                    <li>{summary.counts.downloaded} downloads saved</li>
+                    <li>{summary.counts.skipped} previously saved</li>
+                    <li>{summary.counts.failed} downloads failed</li>
+                  </ul> : <p className="mt-2">Complete counts are unavailable. Any files already saved remain available for review.</p>}
+                  <p className="mt-2 text-xs text-muted-foreground">Downloaded files may be repeats or possible corrections. Review statements before importing; syncing does not add commissions to the dashboard. Previously saved files may still need review.</p>
+                </> : <p className="text-muted-foreground">A detailed result will appear after your next sync with the updated worker.</p>}
+              </section>}
               {connection?.lastError && connection.status === "needs_attention" && (
                 <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{connection.lastError}</p>
               )}
               {connected && connection && (
-                <ConnectionActions connectionId={connection.id} syncPending={connection.syncRequestedAt !== null} />
+                <div className={carrier === "SunFire" ? "border-t pt-4" : undefined}>
+                  {carrier === "SunFire" && <p className="mb-2 text-sm font-medium">Update enrollment data</p>}
+                  <ConnectionActions connectionId={connection.id} syncPending={connection.syncRequestedAt !== null} enrollmentSource={carrier === "SunFire"} />
+                </div>
               )}
               <div className={connected ? "border-t border-border pt-4" : ""}>
                 <ConnectCarrierForm carrier={carrier} replacing={Boolean(connected)} />
                 <p className="mt-3 text-xs text-muted-foreground">
-                  Your login is encrypted before it is stored and is only used by the statement downloader.
+                  Your login is encrypted before it is stored and is only used by the {carrier === "SunFire" ? "enrollment collector" : "statement downloader"}.
                   It is never shown again.
                 </p>
               </div>
@@ -120,7 +154,7 @@ export default async function CarriersPage() {
                     <TableCell className="font-medium">{nameById.get(c.userId) ?? "Agent"}</TableCell>
                     <TableCell className="text-muted-foreground">{c.carrier}</TableCell>
                     <TableCell>
-                      <Badge variant={STATUS[c.status].variant}>{STATUS[c.status].label}</Badge>
+                      <Badge variant={connectionStatus(c.status, c.lastError).variant}>{connectionStatus(c.status, c.lastError).label}</Badge>
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
                       {c.lastSuccessfulSyncAt ? formatDate(c.lastSuccessfulSyncAt) : "—"}
