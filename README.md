@@ -884,6 +884,8 @@ This builds on the SunFire collector, sync and match-review work above. Ryan aut
 
 ## 15. Changelog (newest first)
 
+- **2026-11-10** - Branch cleanup, part two (Marshall approved): deleted the 36 remote branches already merged into `Main` and retired `sunfire-export-test`, plus the merged local branches. Six unmerged branches remain (register in section 16.0). Documentation only; no code or schema changes.
+
 - **2026-11-10** - Rulebook MVP scope now lists enrollment tracking and review (SunFire collection through the worker, owner review and confirmed links, the Sales page) as in scope, with the rule that enrollment, link and disposition data never decides what is payable and is PHI. Deleted the 13 merged or superseded remote branches (register in section 16.0 lists their last commit IDs for recovery). Approved by Marshall 2026-11-10. Documentation and branch cleanup only; no code or schema changes.
 
 - **2026-11-10** - README accuracy sweep against the 2026-10-21 changelog entries: refreshed the status table (393 tests, local vs hosted verification, UHC/Devoted/worker rows), moved loose feature paragraphs into role-based functionality and the verification log, rewrote the carrier worker section (supported carriers, automatic login, in-memory sessions), added the two Devoted environment flags and migration 0011, updated project structure, next steps and open decisions, and listed the unmerged feature branches and stale prototype notes. Documentation only; no code, schema or behavior changes. TypeScript, ESLint and `vitest` (393 tests) pass; no browser or database checks were re-run for this sweep.
@@ -1024,15 +1026,16 @@ Under the section 13 rules, the branches the guard reported as clear were merged
 - `sales-dispositions`, which carried the whole SunFire/sales chain below it: `sunfire-sync`, `sunfire-match-review`, `sunfire-confirmed-links`, `sunfire-followup-notes` (and the Sales page). `sunfire-enrollment-collector` is a duplicate of work rewritten inside `sunfire-sync`; its branch name can be deleted.
 - The three Medicare-ID-shaped values found in the SunFire tests/fixtures are the published CMS sample ID (two variants) in fixtures named "Example Person"/"SYNTHETIC001", so they are synthetic.
 
-**Held (7 branches still not merged after the cleanup):**
+**Held (6 branches still not merged after the cleanup):**
 
 | Branch | Why it is held |
 | --- | --- |
 | `attention-first-workflow` | Guard clear (18 files), but it replaces the dashboard home and conflicts with `feature/dashboard-filter-ui`. Decide the dashboard first (Marshall and Ryan). |
-| `sunfire-export-test` | Guard clear, but it is a research-only command that writes enrollment exports (client data) to local disk and was live-tested against the real portal. The merged SunFire collector already covers the product need. Recommend retiring. |
 | `automatic-enrollment-status`, `combined-review`, `ghl-connection-setup`, `scheduled-sync-recovery`, `ghl-contact-preview` | Stopped by the guard: they carry the `0012` core-RLS migration (protected) and, for the tip, hosting files, Go/Python/PowerShell and `0020` (see 16.4 and 16.6). Need Marshall's approval or must be split. |
 
 **Deleted on 2026-11-10 (13 remote branches).** Nine are merged into `Main`: `client-commission-history`, `statement-totals-check`, `carrier-sync-results`, `statement-review-queue`, `sunfire-sync`, `sunfire-match-review`, `sunfire-confirmed-links`, `sunfire-followup-notes`, `sales-dispositions`. Four were superseded or duplicate and were checked first: `sunfire-enrollment-collector` (collector code arrived through `sunfire-sync`), `devoted-import-approval`, `devoted-import-review` (`Main` has the activated, later versions) and `uhc-statement-download` (the payee-proof header fix is already in `Main`'s `uhcDownload.ts`). What was lost: only old "review branch" README text and `docs/uhc-integration.md` (its "no UHC parser" status is out of date; `docs/uhc-import.md` replaces it). To recover one while GitHub still keeps the commits: `git branch recover/<name> <commit>` using the last commit IDs `fc6f392` (`sunfire-enrollment-collector`), `9fa0e8f` (`devoted-import-approval`), `db33e63` (`devoted-import-review`) and `bfb18d4` (`uhc-statement-download`).
+
+**Second cleanup, 2026-11-10 (Marshall approved):** deleted `sunfire-export-test` (research-only; writes enrollment exports to local disk; last commit `308bb53`) and the 36 older branches that were already merged into `Main` (the `docs/…`, `feature/…` and `fix/…` branches from before 2026-10-21), plus the matching merged local branches. Nothing unmerged was deleted besides `sunfire-export-test`. Only `Main` and the six held branches remain on GitHub; `feature/dashboard-filter-ui` is local only.
 
 **How to see what is still open:** `git fetch && npm run guard -- --all` (section 13) lists every unmerged remote branch as PASS or STOPPED. Anything that is not on that list is merged.
 
@@ -1048,7 +1051,7 @@ Sections 16.1-16.6 below keep the original 2026-11-10 analysis for the branches 
 | `client-commission-history` | 1 | 8 | 0 | **Merged 2026-11-10** |
 | `statement-totals-check` | 1 | 11 | 0 | **Merged 2026-11-10** |
 | `carrier-sync-results` (+ `statement-review-queue`) | 3 (+1 inside) | 23 | 0 | **Merged 2026-11-10** |
-| `sunfire-export-test` | 2 | 4 | 0 | Hold; recommend retiring (research-only, writes client data to disk) |
+| `sunfire-export-test` | 2 | 4 | 0 | **Retired (deleted 2026-11-10)**; last commit `308bb53` |
 | Large stack, 12 branches ending at `ghl-contact-preview` | 83 total | 326 | 9 (`0012`-`0020`) | Slices 2-6 (`sunfire-sync` to `sales-dispositions`) **merged 2026-11-10**; the rest is held (16.4) |
 
 "Commits" counts commits not on `Main`. Branch names are shortened here; each is `feature/<name>` on `origin`.
