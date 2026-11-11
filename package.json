@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "sample:statement": "cd worker && npx tsx ../scripts/make-sample-statement.ts"
+    "sample:statement": "cd worker && npx tsx ../scripts/make-sample-statement.ts",
+    "guard": "cd worker && npx tsx ../scripts/check-protected-changes.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.3",

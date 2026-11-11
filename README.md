@@ -13,9 +13,11 @@ what the agency owes them).
 
 Last updated: 2026-11-10 (README accuracy sweep against `Main` as of the 2026-10-21 changelog entries; `Main` has no commits after 2026-10-21)
 
-> **Changing code? Read section 13 (Contributing) first.** Work on a branch, never directly on `Main`.
+> **ONE REPOSITORY ONLY: `https://github.com/mrro253/ComFlow.git`.** Everyone, including Ryan and every AI assistant, pushes branches to this repo and merges into its `Main`. There is no second repo, fork or mirror. Run `git remote -v`: it must show only that URL. Fix it with `git remote set-url origin https://github.com/mrro253/ComFlow.git` (section 13).
 >
-> **Looking at unmerged branches? Read section 16 (Unmerged branch review register).** Nothing listed there should be merged without Marshall's review.
+> **Changing code? Read section 13 (Contributing) first.** Work on a branch that starts from `Main` (never stack branches), never commit directly to `Main`, and run `npm run guard` before merging.
+>
+> **Looking at unmerged branches? Read section 16 (Unmerged branch review register).** Under the section 13 rules, only the protected items (tech stack, hosting, platform, core security, browser-automation location, the rulebook) need Marshall's approval; everything else may merge once the checks pass.
 
 ---
 
@@ -347,6 +349,7 @@ Ryan's answers from 2026-10-10 are marked **Ryan:**.
 13. **Product type for Ultimate:** **Ryan (2026-10-21):** Ultimate only offers MAPDs, so Ultimate payments report Medicare Advantage (MAPD). Other carriers need their own confirmed mapping (section 3).
 14. **Devoted approval gate:** **Ryan (2026-10-21)** explicitly told the assistant to proceed with the limited Devoted paired importer. **Open:** Marshall has not approved it (see `docs/devoted-import-approval.md`).
 15. **Open (Dashboard):** the redesigned filter-panel dashboard on `feature/dashboard-filter-ui` needs Ryan's feedback (which filters, default month, which table columns) before merge.
+16. **Merge rules (Marshall, 2026-11-10):** one repository (`mrro253/ComFlow`); Ryan may add features, carriers and tables without approval; protected list in section 13 needs Marshall; no stacked branches; outbound writes OFF by default with dry-run. **Open for Ryan:** agree to repoint his checkout and to work only from `Main`. **Approved by Marshall 2026-11-10:** the rulebook and the guard are themselves protected, and money/attribution and the non-negotiable rules were deliberately left off the approval list (they still bind all code).
 
 ---
 
@@ -482,11 +485,12 @@ TODO: nightly scheduled syncs; MFA-code retrieval; monitoring/alerts; Dockerfile
   auth/             session, role guards, agent-type validation, carrier-login access rule
   workbooks/        Devoted workbook reading
   commission-engine/, crm/   LEGACY CRM-driven model
+  repoGuard/        pure rules behind `npm run guard` (protected-change check)
 /worker             separate package: Playwright portal pull (carriers/ has ultimate, devoted, uhc)
 /supabase           migrations/ (0001-0011), seed.sql, tests/ (SQL regressions, run with psql)
 /docs               carrier import notes, regression tests, GHL plan
 /types              hand-written schema + domain types
-/scripts            make-sample-statement.ts, make-import-regression-fixtures.ts
+/scripts            make-sample-statement.ts, make-import-regression-fixtures.ts, check-protected-changes.ts (`npm run guard`)
 ```
 
 Layering: UI -> server actions -> services -> repositories (database) and
@@ -505,6 +509,8 @@ import function + storage bucket + sync request column, `0007` statement review 
 ## 12. Verification log
 
 **Last recorded full run (2026-10-21, `Main`):** `vitest` 393 tests in 55 files passing, app and worker `tsc` clean, `eslint` clean, `next build` succeeds. Earlier runs: 230 (2026-10-20), 170 (2026-10-10), 133, 113 (2026-10-08).
+
+**Merge-rules branch (2026-11-10):** app `tsc`, `eslint` and `vitest` (439 tests in 56 files, 46 of them new for `lib/repoGuard`) pass. `npm run guard` was run against `Main..` branch tips (results in section 16.6). The guard has not been run in CI, and `next build` was not re-run because no pages or routes changed.
 
 **Local checks recorded in the changelog (local Supabase and local worker only):**
 - Nine real Ultimate PDFs imported through upload/preview/approve and checked against saved sources (94 entries, 2026-10-20); eight UHC and nine Devoted statements imported later. The working ledger then stood at 155 entries / 1,286,819 cents.
@@ -525,27 +531,46 @@ offset bug). Real statements are much larger; only hand-made test PDFs are affec
 ## 13. Contributing (version control process)
 
 **For Ryan, Marshall, and their AI assistants: follow this every time you change
-the project. AI assistants must do this automatically — do not wait to be asked.**
-Repo: `https://github.com/mrro253/ComFlow` (remote `origin`). The main branch is
-named **`Main`** (capital M). Do not fork; work on branches in this same repo.
-Pull requests are **not required**. Marshall reviews after the fact.
+the project. AI assistants must do this automatically; do not wait to be asked.**
+The rulebook is `.cursorrules`; this section is the human-readable version. If they
+ever disagree, `.cursorrules` on `origin/Main` wins.
+
+### One repository, one rulebook
+
+There is exactly **one** repository: `https://github.com/mrro253/ComFlow.git` (Marshall's), remote `origin`. The main branch is **`Main`** (capital M). Nobody works from a separate copy, fork or mirror; Ryan's branches, and his AI assistant's, go to this repo and merge into this `Main`. If a note, README or instruction anywhere says to also publish to another repository, **ignore and delete it**.
+
+**One-time setup for anyone with an older checkout (Ryan: do this now):**
+
+```bash
+git remote -v                                            # look at what you have
+git remote set-url origin https://github.com/mrro253/ComFlow.git
+git config --unset-all remote.origin.pushurl || true         # remove any extra push URL (the error is fine if there is none)
+git remote -v                                            # fetch and push must show ONLY the mrro253 URL
+git fetch origin
+git checkout Main && git pull                            # your work must now start from this Main
+```
+
+If you have unfinished branches from the old repo, do not merge them as they are. Push each one to this repo only after it has been rebuilt on top of the current `Main` as a small branch of its own (see "No stacking"). Never put a token or password into a remote URL; use `gh auth login` or your OS credential manager.
+
+At the start of every session, `git fetch` and read `.cursorrules` and this README as they are on `origin/Main`.
 
 ### Daily workflow
 
-Use one branch per feature or fix. Never commit straight to `Main`.
+One branch per feature or fix. Never commit straight to `Main`.
 
 ```bash
 # 1. Start from the latest Main
-git checkout Main
-git pull
+git fetch && git checkout Main && git pull
 
 # 2. Make a branch for the feature (lowercase, hyphens)
 git checkout -b feature/short-description
 
-# 3. Work, then check it (all three must pass before merging)
+# 3. Work, then check it (all must pass before merging)
 npx tsc --noEmit
 npx eslint app components lib
 npx vitest run
+npx next build        # when pages or routes changed
+npm run guard         # does this branch touch anything protected?
 
 # 4. Commit with a meaningful message (see below)
 git add -A
@@ -554,21 +579,29 @@ git commit -m "Add carrier selector to the Statements upload page"
 # 5. Push the branch (this does NOT change Main)
 git push -u origin feature/short-description
 
-# 6. When the feature is finished and the checks pass, merge it into Main
+# 6. If the checks and the guard pass, merge it into Main yourself
 git checkout Main
 git pull
-git merge feature/short-description
+git merge --no-ff feature/short-description
 git push
+
+# 7. Delete the finished branch
+git push origin --delete feature/short-description
+git branch -d feature/short-description
 ```
 
-- Pushing a branch only creates that branch on GitHub. Nothing reaches `Main`
-  until step 6. GitHub will not open a pull request on its own.
-- Commit small and often on the branch. Push the branch at the end of each
-  work session so Marshall can see it.
-- If `git merge` reports **conflicts**, or anything else looks wrong, **stop and
-  ask Marshall**. Do not force anything.
-- Never use `git push --force`, `git reset --hard` on shared work, or delete
-  `Main`.
+- Pushing a branch only creates it on GitHub. Nothing reaches `Main` until step 6.
+- `--no-ff` keeps every merge visible as one commit that can be undone with `git revert -m 1 <merge-commit>`.
+- If `git merge` reports **conflicts**, **stop and ask the person in the session**. Do not force anything.
+- Never use `git push --force`, `git reset --hard` on shared work, or delete `Main`.
+
+### No stacking
+
+- **Every branch starts from `Main`, never from another feature branch.** If you need work that is not on `Main` yet, get that work merged first.
+- One topic per branch. Keep branches small and short-lived: merge within days. Merge `Main` into a long-running branch regularly so it does not drift.
+- Delete the branch (local and `origin`) once it is merged.
+- Open branches are reviewed at the start of each session using `git branch -r --no-merged Main`. Anything older than two weeks is merged, rebuilt smaller, or deleted.
+- Why this matters: stacked branches (each built on the previous) cannot be merged in pieces. That is how 12 branches became one 326-file change that nobody could review (section 16).
 
 ### Commit messages
 
@@ -578,57 +611,78 @@ Bad: `update`, `fix stuff`, `wip`, `changes`.
 
 ### What you can do on your own vs. what needs Marshall
 
-You can merge on your own when the change is **new functionality or a fix that
-fits the existing architecture and stack**: new screens, new carrier parsers,
-new reports, copy changes, tests.
+**Default: merge it yourself.** Once the checks and `npm run guard` pass, merge into `Main` without asking anyone for:
 
-**Branches held for review:** if Marshall says a branch must be reviewed (for example with Ryan) before it merges, push it and leave it unmerged until he says so, even when the change would otherwise be allowed.
+- new features, screens, reports and dashboards
+- new carriers, parsers and worker carrier adapters
+- new tables and migrations (new numbered files only), including money and attribution logic
+- GoHighLevel and other CRM work, **as long as outbound writes follow the rule below**
+- tests, docs, copy, small fixes
+- new packages, as long as each is named in section 8 with one line saying why (frameworks and platform pieces are protected, see below)
+- upgrades of any package within its current major version
 
-**Ask Marshall first** (do the work on a branch and push it, but do not merge) if the
-change would:
-- add or replace a library, framework, or hosting service
-- change the layering (UI -> server actions -> services -> repositories, pure logic in `lib/carriers`)
-- change the business rules in `.cursorrules` (carrier-driven commissions, no pay without carrier receipt AND owner approval, integer cents, locked rates, RLS)
-- alter or remove existing database tables, or touch money, RLS or audit tables in a way that changes meaning
-- make browser automation run anywhere other than the `worker/` service
+**Outbound writes to external systems** (GoHighLevel live updates, any future CRM or carrier write) must ship **OFF by default** behind a per-agency setting only the account owner can turn on, must offer a **dry-run preview** of exactly what would be sent, and must be audited.
+
+**Protected: needs Marshall's approval before it reaches `Main`.** Do the work on a branch and push it, but do not merge:
+
+1. **Frameworks and core tech:** adding or replacing a web/UI framework, language, or ORM; a major-version change of `next`, `react`, `typescript`, `tailwindcss`, `recharts`, `playwright` or the Supabase packages; changing the Node version.
+2. **Hosting and deployment:** Vercel/AWS/Fly or any other host configuration, Docker and compose files, gateways, CI/CD workflows, cloud templates, scheduled hosted jobs. Not until Marshall says the project is ready for hosting (section 14).
+3. **Platform:** the database platform, the auth provider, the Next.js/Tailwind/middleware configuration, `lib/supabase/`, and the layering UI -> server actions -> services -> repositories (`lib/` never imports UI; `lib/carriers`, `lib/reporting` and `lib/commission-engine` never import the database; components never import the database).
+4. **Core security:** redefining the RLS helper functions `get_my_agency_id()`, `get_my_role()`, `can_see_direct_reports()`; changing or dropping existing RLS policies; disabling RLS; changing audit tables or triggers; adding policies on `users`, `agencies`, `commission_statements`, `carrier_transactions` or the audit tables; editing an already-applied migration.
+5. **Browser automation** anywhere other than `worker/`.
+6. **The rulebook and the guard:** `.cursorrules`, `lib/repoGuard/`, `scripts/check-protected-changes.ts`.
+
+The business rules in `.cursorrules` (carrier-driven commissions, integer cents, locked rates, RLS, no PHI) still bind all code. Changing them is not on the protected list, but a change that needs it must be written up in section 7 and told to Marshall in the same message.
+
+### The guard (`npm run guard`)
+
+`npm run guard` compares the current branch with `Main` (add `-- --head origin/feature/some-branch` to check another branch) and prints anything on the protected list: hosting and CI files, new-language files, platform config, framework packages and major-version changes, new packages not named in this README, risky migration statements (editing an old migration, dropping or changing policies, redefining helper functions, adding policies to core tables), layering breaks, and Playwright outside `worker/`. It exits with an error unless an `Approved-by: Marshall` line is present in the branch's commit messages.
+
+- **`npm run guard -- --all`** (after `git fetch`) prints one line per remote branch not yet merged into `Main`: `PASS`, `STOPPED` with the protected categories and file counts, or `APPROVED`. It only reports (it never exits with an error), checks each branch separately against `Main`, and a branch stacked on another repeats the other's findings. Use `-- --head <branch>` for the full list of files and reasons.
+- It is a tripwire, not a judge: it works from file paths, package names and SQL keywords, so it can have false alarms and can miss a cleverly disguised change. Do not split a change to dodge it. Reviewers still read the diff.
+- If it stops you: push the branch, tell Marshall what is protected and why, and wait. Only after he says yes in conversation, add a commit ending with `Approved-by: Marshall (<date>) <what was approved>`. Never add that line yourself without his yes, and never copy it from another commit.
+- TODO: run the guard in CI once CI is approved (workflow files are protected).
+
+**Approvals log.** Every approval Marshall gives goes here too (one line each) so there is one place to look, in addition to the `Approved-by: Marshall` line in the branch's commit.
+
+| Date | What Marshall approved | Where recorded |
+| --- | --- | --- |
+| 2026-11-10 | The merge rules, protected list and the guard itself (`.cursorrules`, `lib/repoGuard/`, `scripts/check-protected-changes.ts`, `npm run guard` and `--all`), including protecting the rulebook and leaving money/attribution and the non-negotiable rules off the approval list | Branch `docs/single-repo-and-merge-rules`, tip commit trailer |
 
 ### Rules every change must follow
 
 1. **README updates ship with the change.** Update the affected sections (status, functionality, missing, next steps, decisions, setup) and add a line to the Changelog with the date, in the same commit.
-2. **Never mark something as working unless it was actually run.** Mark unrun things "unverified".
+2. **Never mark something as working unless it was actually run.** Say where: "verified locally" is not "verified hosted". Mark unrun things "unverified".
 3. **Database changes are new migration files** in `supabase/migrations/`, never edits to old ones. Use the next number. If someone else already used that number, rename yours to the next free one before merging.
-4. **No real client data, ever.** Statements and member data are PHI: no real PDFs, names, member IDs or screenshots in the repo, commit history, tests, fixtures or logs. Use synthetic data only (`npm run sample:statement`).
-5. **No secrets in the repo.** Logins, API keys and `CREDENTIAL_ENCRYPTION_KEY` live only in `.env.local` (gitignored). Never paste them into chat, issues or commits.
+4. **No real client data, ever.** Statements and member data are PHI: no real PDFs, names, member IDs or screenshots in the repo, commit history, tests, fixtures or logs. Use synthetic data only (`npm run sample:statement`). Send the browser aggregates, not client rows, unless a screen truly needs them.
+5. **No secrets in the repo.** Logins, API keys and `CREDENTIAL_ENCRYPTION_KEY` live only in `.env.local` (gitignored). Never paste them into chat, issues, commits or remote URLs.
 6. **Business logic is pure and tested.** Add Vitest tests for any new calculation or parsing logic.
 7. **Money is integer cents.** No floating-point money math.
 
 ### Reviewing (Marshall)
 
-Pull requests are optional. To review a pushed branch without one:
+Marshall reviews only what the guard stops, plus whatever he chooses to look at. Pull requests are optional. To look at any pushed branch without one:
 
 ```bash
 git fetch
 git log Main..origin/feature/short-description --oneline
 git diff Main...origin/feature/short-description
+git branch -r --no-merged Main        # everything open
 ```
 
-An AI assistant can review that diff on request. If a pull request is ever
-wanted, open one on GitHub from the branch into `Main`.
+An AI assistant can review that diff on request.
 
 ### Standing instruction for AI assistants
 
-This workflow applies to **every** task that changes files; nobody has to ask for
-it. Branch from an up-to-date `Main`, run the checks, commit with a meaningful
-message that includes the README/changelog update, push the branch, then merge only
-when "What you can do on your own" allows it. Big requests are split into one
-branch per phase. (Recorded in `.cursorrules`.)
+This workflow applies to **every** task that changes files; nobody has to ask for it. Branch from an up-to-date `Main`, run the checks and the guard, commit with a meaningful message that includes the README/changelog update, push the branch, then merge when "What you can do on your own" allows it. Ask first only for the protected list. Big requests are split into one branch per phase. (Recorded in `.cursorrules`.)
 
 ### Prompt to give an AI assistant
 
-> Read `README.md` (especially section 13) and `.cursorrules` before changing
-> anything. Work on a new `feature/...` branch, follow the checks and README rules,
-> and only merge into `Main` if the change needs no approval under "What you can do
-> on your own". Otherwise push the branch and tell me.
+> The only repository is `https://github.com/mrro253/ComFlow.git`; check `git remote -v`
+> first. Read `.cursorrules` and `README.md` (section 13) from `origin/Main` before
+> changing anything. Start a new `feature/...` branch from `Main` (no stacking), follow the
+> checks and README rules, run `npm run guard`, and merge into `Main` yourself unless the
+> guard reports a protected change. If it does, push the branch and tell me what is protected.
 
 ---
 
@@ -788,6 +842,8 @@ Each Independent-agent customer is their own business associate of their carrier
 
 - **2026-11-10** - Add section 16, the unmerged branch review register: for each of the 20 unmerged branches, what it adds, who committed it and when, size, migrations, test/check results on the largest branch, concerns and a recommendation, plus a suggested review order and per-slice merge checklist. Documentation only; nothing from those branches was merged, run live or changed. Checks run for the register: TypeScript, ESLint and `vitest` on `Main` content (the largest branch was checked separately in a temporary copy, since deleted).
 
+- **2026-11-10** - Single repository and new merge rules: `mrro253/ComFlow` is declared the only repository (README banner, section 13, `.cursorrules`) with steps to repoint Ryan's checkout; the "needs Marshall's approval" list is replaced by a short protected list (frameworks/core tech, hosting and CI, platform and layering, core RLS/audit, browser automation outside `worker/`, the rulebook itself) and everything else merges once checks pass; branches may no longer be stacked; outbound writes must be OFF by default with a dry-run preview; new packages must be named in the README; adds `npm run guard` (`lib/repoGuard/`, `scripts/check-protected-changes.ts`, 46 tests) which flags protected changes unless a commit carries `Approved-by: Marshall`, plus `npm run guard -- --all` for a one-line report on every unmerged remote branch; refreshes `.cursorrules` MVP scope, filter-UI, PHI-in-browser and "verified locally vs hosted" wording; section 16 now classifies each concern under the new rules and records the guard results. No schema or product behavior changes. Guard run against branch tips only; not yet wired into CI. Marshall approved this change on 2026-11-10 (see the approvals log in section 13). Checks recorded in section 12.
+
 - **2026-10-21** - Standardize automatic saved-login submission for Ultimate, Devoted and UHC, including Devoted Login/Auth0 and UHC username/Continue. Retain per-connection in-memory browsers; hand off verification and rejected/unknown/reset screens; guard exact HTTPS destinations and avoid repeated credential submission. Update connection guidance/progress labels and add synthetic authentication regressions. No imports, schema, permissions or dependency changes. Live Devoted tracing found the callback was being interrupted by early navigation; wait for a visible signed-in portal marker before leaving callback routes. A regression covers this ordering. The live Devoted retest automatically opened Login, submitted saved credentials and reached My Commissions without manual input. All 391 synthetic tests, app/worker TypeScript and ESLint pass; The live worker subsequently verified Devoted automatic login/sync (9 skipped, zero failures) and Ultimate automatic login/sync (8 skipped, 1 PDF saved for review, zero failures). UHC submitted the saved credentials but the carrier reported wrong username/password. Reject known credential-error screens immediately and preserve the browser for a user-requested retry after Replace login; do not repeat submissions. Ryan confirms the saved credentials are correct and suspects a carrier portal issue. Credentials are unchanged; no further UHC retry is requested. A later retry accepted the username and reached Enter Your Password. Skip any read-only username field on that second step and report password-field/submit failures safely. Manual password entry and SMS verification succeeded (first SMS required resend); subsequent sync downloaded ten pairs with zero failures. UHC automatic password acceptance remains unverified. Use typing/blur events and verify each field retains the entered value before submission. A separate fresh-context acceptance test still did not reach verification, so automatic UHC credential acceptance is not claimed; it requested/sent no verification code and left the working authenticated browser untouched. All 393 synthetic tests, app/worker TypeScript and ESLint pass. The working ledger remains 155 entries / 1,286,819 cents. Ledger unchanged at 155 entries / 1,286,819 cents.
 
 
@@ -876,11 +932,11 @@ Each Independent-agent customer is their own business associate of their carrier
 
 ## 16. Unmerged branch review register
 
-**Purpose.** Ryan has been working on branches in his own checkout while Marshall was away. This register lists every branch on `origin` that is **not merged into `Main`** so Marshall and Ryan can review them together instead of merging blind. **Nothing here is merged, and nothing here should be merged without Marshall's review.** Compiled 2026-11-10 from git history, diffs and automated checks only. **I did not run any of this against a live portal, GHL account or database**, and I did not read every line of the 326-file diff. Anything marked "inference" is a conclusion from file names, commit titles or merge conflicts, not something confirmed by reading the code.
+**Purpose.** Ryan has been working on branches in his own checkout while Marshall was away. This register lists every branch on `origin` that is **not merged into `Main`** so they can be sorted out together instead of merged blind. **Nothing here is merged.** Under the rules in section 13 (adopted 2026-11-10), the parts that touch the protected list need Marshall's approval; the rest may merge once rebuilt as small branches from `Main` that pass the checks and `npm run guard`. 16.6 shows what the guard says about each branch. Compiled 2026-11-10 from git history, diffs and automated checks only. **I did not run any of this against a live portal, GHL account or database**, and I did not read every line of the 326-file diff. Anything marked "inference" is a conclusion from file names, commit titles or merge conflicts, not something confirmed by reading the code.
 
 **Who and when.** Every unmerged commit is under the git identity `ryanb1210` (the same identity as 38 commits already on `Main`; Marshall Royce has 16). The commits are dated **2026-10-21 to 2026-11-07**. Git cannot say whether a given commit was typed by Ryan or produced with an AI assistant. Several commit messages say they were made at Ryan's explicit instruction.
 
-**Two repositories.** A README note on the largest branch says Ryan's checkout fetches from `ryanb1210/ComFlow` and pushes every branch to both `ryanb1210/ComFlow` and `mrro253/ComFlow` (Marshall's). **Unverified:** whether `Main` in Ryan's repository matches `Main` here. Confirm that before merging anything, so the two do not diverge.
+**Single repository (decided 2026-11-10).** A README note on the largest branch says Ryan's checkout fetches from `ryanb1210/ComFlow` and pushes every branch to both `ryanb1210/ComFlow` and `mrro253/ComFlow`. That arrangement is withdrawn: `mrro253/ComFlow` is the only repository (section 13). That note must be **deleted** from the branch's README before anything from it is merged, and Ryan's checkout must be repointed. **Unverified:** whether `Main` in `ryanb1210/ComFlow` matches `Main` here (that repository is private; I could not see it). Anything in it that is not on this `Main` should be pushed here as a branch or discarded; nothing needs to flow back.
 
 ### 16.1 Summary
 
@@ -906,7 +962,7 @@ All three were written 2026-10-21 by `ryanb1210`. `Main` now contains a later ve
 - **`uhc-statement-download`**: "Add UHC statement downloads with retries that retain sign-in" and "Read UHC payee proof from the shared account header". `Main` has the later UHC downloader. Conflicts: `uhcDownload.ts` and its test. **Check first:** confirm the small payee-proof fix (one commit, about 5 lines in `worker/src/carriers/uhcDownload.ts`) is in `Main`'s downloader; I did not verify this.
 
 To retire (Marshall, after the check; deletes a remote branch, so it is done by hand):
-`git push origin --delete feature/devoted-import-approval feature/devoted-import-review feature/uhc-statement-download` (and the same on Ryan's repository if both are used).
+`git push origin --delete feature/devoted-import-approval feature/devoted-import-review feature/uhc-statement-download` (Ryan's old repository is no longer used).
 
 ### 16.3 Stand-alone branches (not part of the large stack)
 
@@ -942,7 +998,7 @@ Whole stack versus `Main`: **326 files changed, +13,857 / -833 lines.** Too larg
 
 **Check results on the tip (`ghl-contact-preview`, run 2026-11-10 in a temporary copy, since deleted):** application and worker TypeScript clean; ESLint clean; `vitest` **750 of 751 tests pass** (`worker/src/__tests__/loginDiagnostics.test.ts`, "masks every form field in an opted-in capture", fails; cause not investigated and could be an artifact of the temporary copy). Not run: `next build`, the SQL tests in `supabase/tests`, anything live. On `Main` today there are 393 tests.
 
-**Concerns that need Marshall's decision before any of this reaches `Main`** (each verified by reading file names, migration statements or commit text, not by running the code):
+**Concerns to resolve before any of this reaches `Main`** (the rules adopted on 2026-11-10 decide who resolves each one; see 16.6). Each was verified by reading file names, migration statements or commit text, not by running the code):
 
 1. **Scope.** SunFire enrollment collection, sales dispositions, enrollment-based commission status and "assume paid enrollments are Active" are not in the `.cursorrules` MVP scope. They need a product decision with Ryan. The attention-first home also changes what the dashboard is for.
 2. **Core RLS and access (`0012`).** Redefines the shared helper functions `get_my_agency_id()`, `get_my_role()` and `can_see_direct_reports()` and replaces the `users` insert policy. Every table's RLS depends on those helpers. This is on the "needs approval" list in section 13. The branch contains a "Marshall account-access approval checklist" and a note of a local rollout; whether Marshall ever completed that checklist is not recorded.
@@ -960,16 +1016,45 @@ Whole stack versus `Main`: **326 files changed, +13,857 / -833 lines.** Too larg
 ### 16.5 Suggested review order
 
 1. Retire the three stale branches (16.2) after the payee-proof check.
-2. Confirm `Main` is the same in both repositories.
-3. Decide scope with Ryan: is SunFire enrollment tracking in the product? If not, slices 1-9 and `sunfire-export-test` are out.
+2. Ryan repoints his checkout to `mrro253/ComFlow` (section 13) and confirms nothing on `ryanb1210/ComFlow`'s `Main` is missing here.
+3. Decide scope with Ryan: is SunFire enrollment tracking in the product? If not, slices 1-9 and `sunfire-export-test` are out. This is a product call, not an approval-list item: if it is in scope, those slices need no approval from Marshall once they pass the checks.
 4. Choose the dashboard (`feature/dashboard-filter-ui` versus the stack's attention-first home).
-5. Review the stack bottom-up in slices, merging each only after its checklist:
+5. Rebuild the stack as **separate small branches, each from `Main`** (no stacking), bottom-up, merging each after its checklist. The slices marked protected below need Marshall's `Approved-by` line first:
    - **Slice A** (#1-#7): SunFire enrollment tracking, sales dispositions, attention-first home. No migrations.
-   - **Slice B** (#8-#9): `0012` core access change. Marshall's approval checklist first.
+   - **Slice B** (#8-#9): `0012` core access change. **Protected** (core security). Marshall's approval checklist first.
    - **Slice C** (#10-#11): scheduled collection and GHL connection setup (`0013`).
-   - **Slice D1**: GHL read-only preview and contact linking (`0014`-`0018`), with the import trigger and live writes behind an off switch.
-   - **Slice D2**: commission owners and splits (`0019`, `0020`). Separate approval; likely deferred.
-   - **Slice D3**: hosted worker, gateway and AWS scripts. Separate approval, after the HIPAA steps in section 14.5.
+   - **Slice D1**: GHL read-only preview and contact linking (`0014`-`0018`). Not protected, but live writes must be OFF by default with a dry-run preview (section 13) before this merges.
+   - **Slice D2**: commission owners and splits (`0019`, `0020`). `0020` adds a policy on `carrier_transactions`, which is **protected**; `0019` is not on the list, but it changes money attribution, so read it carefully and note the decision in section 7.
+   - **Slice D3**: hosted worker, gateway and AWS scripts. **Protected** (hosting, new language). Separate approval, after the HIPAA steps in section 14.5.
    The last branch holds D1-D3 together today, so it must be split before D2 and D3 can be decided on their own.
 
 **Per-slice checklist (all required):** back up the local database first (`pg_dump`) and tag `Main` (`git tag pre-<slice>`); merge with `--no-ff` so it can be undone with `git revert -m 1`; never `reset --hard` or force-push; run `npx tsc --noEmit`, `npx eslint app components lib`, `npx vitest run` and `npx next build`; for migrations, apply them to a throwaway database first, run the matching files in `supabase/tests`, and only then `npx supabase migration up --local` on the working database (never `db reset`); update this README (status, functionality, changelog) in the same change; stop and ask on any conflict.
+
+### 16.6 What the guard says about these branches (run 2026-11-10)
+
+`npm run guard -- --all` was run against all 20 remote branches (14 clear, 6 stopped); the table below summarizes it. The stopped branches are `ghl-contact-preview` (details below), `automatic-enrollment-status`, `combined-review`, `ghl-connection-setup` and `scheduled-sync-recovery` (each because it carries the `0012` core-RLS migration from lower in the stack), and `devoted-import-review` (an old version of `next.config.ts` and a package its README does not name; retire it per 16.2). The guard only reads paths, package names and SQL keywords; it ran on the repository's git data and did not execute any branch code.
+
+| Branch | Guard result |
+| --- | --- |
+| `ghl-contact-preview` (stack tip) | **Stopped.** Hosting files (`worker/Dockerfile`, `worker/container-entrypoint.sh`, everything in `worker/hosting/`, `.dockerignore`), new-language files (Go, Python, PowerShell), `lib/supabase/server.ts`, `0012` (redefines the RLS helpers, drops a policy, adds a policy on `users`), `0020` (adds a policy on `carrier_transactions`), and layering breaks in `lib/automation/runGhlImportJob.ts` and a few `lib/reporting` files. Also notes the `overrides` change in `package.json`. |
+| `attention-first-workflow`, `client-commission-history`, `statement-totals-check`, `carrier-sync-results`, `sunfire-export-test` | **Pass.** Nothing protected (the first two were briefly flagged for type-only imports; see note below). |
+| `feature/dashboard-filter-ui` | **Pass.** |
+
+Note: `lib/reporting/*` and a component were first flagged for `import type` lines that only pull record types from `lib/repositories`. Type-only imports vanish at build time, so the guard now ignores them and re-running gives the results above. The remaining layering flag in the stack tip is a real value import (`lib/automation/runGhlImportJob.ts` importing from `app/`). Passing the guard does not mean a branch is good; it means nothing on the protected list was detected.
+
+**Reading the concerns above under the new rules**
+
+| # | Concern | Who decides now |
+| --- | --- | --- |
+| 1 | Scope (SunFire, sales dispositions, enrollment status) | Marshall and Ryan, as a product decision; no approval-list item |
+| 2 | `0012` core RLS helpers | **Marshall** (protected: core security) |
+| 3 | `0019`/`0020` money and attribution | `0020`'s policy on `carrier_transactions` is **protected**; the rest follows the normal checks, with the decision written up in section 7 |
+| 4 | Import trigger queues GHL jobs | Allowed if outbound writes are OFF by default with a dry-run preview |
+| 5 | Live GHL writes | Same rule: OFF by default, dry-run, owner enables |
+| 6 | Hosting, Go gateway, AWS | **Marshall** (protected: hosting, new language); not until hosting is approved |
+| 7 | Hidden browsers, MFA relay | Allowed in `worker/`; read it for the worker and login rules in `.cursorrules` first |
+| 8 | Scheduling | Local scheduling is fine; hosted scheduled jobs are protected |
+| 9 | `playwright` pinned, `overrides` | Same-major pinning is fine; the `overrides` entry must be explained in section 8 |
+| 10 | Medicare-ID-shaped test values | Must be confirmed synthetic before merge (rule 4 above) |
+| 11 | Dashboard conflict | Marshall and Ryan, product decision |
+| 12 | README drift | Resolved when each slice is rebuilt from the current `Main` |
