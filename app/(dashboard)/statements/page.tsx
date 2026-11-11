@@ -43,6 +43,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
         </p>
       </div>
 
+      <Link href="/statements/checks" className="text-sm font-medium underline">Check imported statement totals</Link>
       {user.role === "owner" && process.env.DEVOTED_REVIEW_ENABLED === "true" && <Link href="/statements/devoted" className="text-sm font-medium underline">Review a Devoted PDF/workbook pair</Link>}
       <Card>
         <CardHeader>
