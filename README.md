@@ -26,8 +26,8 @@ Last updated: 2026-11-10 (README accuracy sweep against `Main` as of the 2026-10
 **"Verified locally"** means exercised on this project's *local* Supabase (Docker) with the
 app in a browser and/or synthetic tests. **Nothing has been run against a hosted Supabase
 project, Vercel, or a hosted worker** (section 14). All automated checks currently pass on `Main`:
-**393 Vitest tests in 55 files**, app and worker TypeScript, ESLint and `next build`
-(last recorded 2026-10-21).
+**556 Vitest tests in 83 files**, app and worker TypeScript, ESLint and `next build`
+(last recorded 2026-11-10, after the branch merges).
 
 | Area | State | How it was checked |
 | --- | --- | --- |
@@ -356,7 +356,7 @@ As of 2026-11-10 (`Main` unchanged since 2026-10-21): the local manual-upload, U
 2. **Review the Devoted integration with Marshall.** Ryan authorized the local migration/import while the approval gate was pending; Marshall's approval is not recorded.
 3. **Review UHC's downloaded August and October statements** in Statements without reimporting the eight earlier months, then verify later months as they become available.
 4. **Answer the open decisions** in section 7 (payee ID location, captive dollar visibility, hierarchy visibility, annual-premium source, TruePlan rates).
-5. **Review the unmerged branches together using section 16**, starting with the three recommended for retirement, then the SunFire/GHL stack one slice at a time. Several parts need Marshall's approval first (commission splits, core RLS changes, live GHL writes, AWS hosting).
+5. **Finish the branch cleanup using section 16.0.** Push `Main`, delete the merged and superseded remote branches, decide the dashboard (the filter dashboard versus `attention-first-workflow`), then work through the held GHL/hosting slices. Protected parts (core RLS `0012`, hosting, Go/Python files, the `carrier_transactions` policy in `0020`) need Marshall's approval; live GHL writes must be off by default with a dry-run preview.
 6. **Keep running locally. Do not deploy yet.** Run the app, local Supabase and the worker (`npm run start` in `worker/`) on your own machine. Hosting costs money and real client data (PHI) cannot go on any hosted service until HIPAA agreements are in place. Follow section 14 when ready (hosted setup, nightly sync, HIPAA).
 7. Career **earnings UI** (preview via `buildEarningsPlan`, Owner approval; no payouts).
 8. **Scheduled syncing** and a hosted worker (section 14.4 C and D), once hosting is decided.
@@ -547,6 +547,8 @@ import function + storage bucket + sync request column, `0007` statement review 
 ## 12. Verification log
 
 **Last recorded full run (2026-10-21, `Main`):** `vitest` 393 tests in 55 files passing, app and worker `tsc` clean, `eslint` clean, `next build` succeeds. Earlier runs: 230 (2026-10-20), 170 (2026-10-10), 133, 113 (2026-10-08).
+
+**After the 2026-11-10 branch merges:** app and worker `tsc`, ESLint, `vitest` (556 tests in 83 files) and `next build` pass on the merged result. Browser and live-portal behavior of the merged features is as claimed in their own changelog entries and was not re-run.
 
 **Merge-rules branch (2026-11-10):** app `tsc`, `eslint` and `vitest` (439 tests in 56 files, 46 of them new for `lib/repoGuard`) pass. `npm run guard` was run against `Main..` branch tips (results in section 16.6). The guard has not been run in CI, and `next build` was not re-run because no pages or routes changed.
 
@@ -887,6 +889,8 @@ This builds on the SunFire collector, sync and match-review work above. Ryan aut
 
 - **2026-11-10** - Single repository and new merge rules: `mrro253/ComFlow` is declared the only repository (README banner, section 13, `.cursorrules`) with steps to repoint Ryan's checkout; the "needs Marshall's approval" list is replaced by a short protected list (frameworks/core tech, hosting and CI, platform and layering, core RLS/audit, browser automation outside `worker/`, the rulebook itself) and everything else merges once checks pass; branches may no longer be stacked; outbound writes must be OFF by default with a dry-run preview; new packages must be named in the README; adds `npm run guard` (`lib/repoGuard/`, `scripts/check-protected-changes.ts`, 46 tests) which flags protected changes unless a commit carries `Approved-by: Marshall`, plus `npm run guard -- --all` for a one-line report on every unmerged remote branch; refreshes `.cursorrules` MVP scope, filter-UI, PHI-in-browser and "verified locally vs hosted" wording; section 16 now classifies each concern under the new rules and records the guard results. No schema or product behavior changes. Guard run against branch tips only; not yet wired into CI. Marshall approved this change on 2026-11-10 (see the approvals log in section 13). Checks recorded in section 12.
 
+- **2026-11-10** - Merge nine of Ryan's twenty unmerged branches into `Main` under the new rules: client commission history, statement totals check, statement review queue and sync results, and Sales with the SunFire enrollment chain (collector, sync, commission match review, confirmed links, follow-up notes). README conflicts were resolved by hand, "review only" wording rewritten, and the added documentation moved into section 3. Held: `attention-first-workflow` (dashboard decision), `sunfire-export-test`, and the GHL/hosting slices that the guard stops. Register in section 16.0. Checks: app and worker `tsc`, ESLint, `vitest` (556 tests), `next build`; nothing run live.
+
 - **2026-10-22** - Add Sales with manual GHL-aligned policy dispositions (Active, Inactive, Future Active, Unknown), required explanations, actor/time history and explicit owner-managed assignment to active agency agents. Agents can read/update only currently assigned enrollments; revocations and reassignments replace access. Source snapshots are verified and only selected assigned sale fields are returned, without raw MBIs or commission data. Dispositions remain separate from financial records and no-commission-expected follow-up outcomes; Active/Future Active conflicts reopen follow-up. Uses existing append-only audit events, with no schema/RLS/carrier/GHL API changes. No automatic assignments, statuses or cross-collection carry-forward. All 465 tests, TypeScript, ESLint and production build pass. Owner live browser verified Sales navigation/search, all four dropdown options, a saved Inactive disposition with explanation/history, reload persistence, and the matching-review display. The independent no-commission-expected outcome and all eleven links are preserved; financial-table fingerprints remain unchanged. No actual agent assignments were changed. Agent access/revocation and cross-owner/source-scope rejection are covered with synthetic tests; other-role live browser flows remain unverified. Keep on review branch the SunFire work; Main unchanged.
 
 - **2026-10-22** - Add owner-reported “Did not take effect — no commission expected” status with a required private explanation. Save notes in scoped append-only audit events; keep the original enrollment and all financial records unchanged. Exclude resolved enrollments from Needs follow-up and unresolved no-match counts, add a No commission expected filter, and reopen review if statement evidence appears. New collections require their own review. No schema, RLS or carrier-portal changes. All 453 tests, TypeScript, ESLint and production build pass. Live owner status/note save and reload verified; No commission expected shows one enrollment, Needs follow-up shows ten and excludes that enrollment, and unresolved no-match count is six. All imported financial-table fingerprints remain unchanged. Keep on review branch the SunFire work; Main unchanged.
@@ -1002,11 +1006,37 @@ This builds on the SunFire collector, sync and match-review work above. Ryan aut
 
 ## 16. Unmerged branch review register
 
-**Purpose.** Ryan has been working on branches in his own checkout while Marshall was away. This register lists every branch on `origin` that is **not merged into `Main`** so they can be sorted out together instead of merged blind. **Nothing here is merged.** Under the rules in section 13 (adopted 2026-11-10), the parts that touch the protected list need Marshall's approval; the rest may merge once rebuilt as small branches from `Main` that pass the checks and `npm run guard`. 16.6 shows what the guard says about each branch. Compiled 2026-11-10 from git history, diffs and automated checks only. **I did not run any of this against a live portal, GHL account or database**, and I did not read every line of the 326-file diff. Anything marked "inference" is a conclusion from file names, commit titles or merge conflicts, not something confirmed by reading the code.
+**Purpose.** Ryan has been working on branches in his own checkout while Marshall was away. This register lists every branch on `origin` that is **not merged into `Main`** so they can be sorted out together instead of merged blind. **Status 2026-11-10: 9 of the 20 branches were merged into `Main` and 11 remain (see 16.0).** Under the rules in section 13 (adopted 2026-11-10), the parts that touch the protected list need Marshall's approval; the rest may merge once rebuilt as small branches from `Main` that pass the checks and `npm run guard`. 16.6 shows what the guard says about each branch. Compiled 2026-11-10 from git history, diffs and automated checks only. **I did not run any of this against a live portal, GHL account or database**, and I did not read every line of the 326-file diff. Anything marked "inference" is a conclusion from file names, commit titles or merge conflicts, not something confirmed by reading the code.
 
 **Who and when.** Every unmerged commit is under the git identity `ryanb1210` (the same identity as 38 commits already on `Main`; Marshall Royce has 16). The commits are dated **2026-10-21 to 2026-11-07**. Git cannot say whether a given commit was typed by Ryan or produced with an AI assistant. Several commit messages say they were made at Ryan's explicit instruction.
 
 **Single repository (decided 2026-11-10).** A README note on the largest branch says Ryan's checkout fetches from `ryanb1210/ComFlow` and pushes every branch to both `ryanb1210/ComFlow` and `mrro253/ComFlow`. That arrangement is withdrawn: `mrro253/ComFlow` is the only repository (section 13). That note must be **deleted** from the branch's README before anything from it is merged, and Ryan's checkout must be repointed. **Unverified:** whether `Main` in `ryanb1210/ComFlow` matches `Main` here (that repository is private; I could not see it). Anything in it that is not on this `Main` should be pushed here as a branch or discarded; nothing needs to flow back.
+
+### 16.0 Status after the 2026-11-10 merges
+
+Under the section 13 rules, the branches the guard reported as clear were merged into `Main` on 2026-11-10 (README conflicts resolved by hand, status notes that said "review only" rewritten as normal documentation in section 3; each merge was checked with `tsc`, ESLint, `vitest`, the worker's `tsc`, and `next build` for the last one). **Verified: checks only. Nothing from these merges has been run against a live portal or a hosted database by me; the "locally verified" labels in section 1 are Ryan's own claims from his notes.**
+
+**Merged into `Main`:**
+- `client-commission-history`, `statement-totals-check`, `carrier-sync-results` (with `statement-review-queue` inside it)
+- `sales-dispositions`, which carried the whole SunFire/sales chain below it: `sunfire-sync`, `sunfire-match-review`, `sunfire-confirmed-links`, `sunfire-followup-notes` (and the Sales page). `sunfire-enrollment-collector` is a duplicate of work rewritten inside `sunfire-sync`; its branch name can be deleted.
+- The three Medicare-ID-shaped values found in the SunFire tests/fixtures are the published CMS sample ID (two variants) in fixtures named "Example Person"/"SYNTHETIC001", so they are synthetic.
+
+**Held (11 branches still not merged):**
+
+| Branch | Why it is held |
+| --- | --- |
+| `attention-first-workflow` | Guard clear (18 files), but it replaces the dashboard home and conflicts with `feature/dashboard-filter-ui`. Decide the dashboard first (Marshall and Ryan). |
+| `sunfire-export-test` | Guard clear, but it is a research-only command that writes enrollment exports (client data) to local disk and was live-tested against the real portal. The merged SunFire collector already covers the product need. Recommend retiring. |
+| `automatic-enrollment-status`, `combined-review`, `ghl-connection-setup`, `scheduled-sync-recovery`, `ghl-contact-preview` | Stopped by the guard: they carry the `0012` core-RLS migration (protected) and, for the tip, hosting files, Go/Python/PowerShell and `0020` (see 16.4 and 16.6). Need Marshall's approval or must be split. |
+| `devoted-import-approval`, `devoted-import-review`, `uhc-statement-download`, `sunfire-enrollment-collector` | Superseded or duplicate (16.2). Delete them. |
+
+**To delete the merged and superseded remote branches** (by hand; the agent cannot push or delete remote branches). Only after the merge below has been pushed:
+
+```bash
+git push origin --delete feature/client-commission-history feature/statement-totals-check feature/carrier-sync-results feature/statement-review-queue feature/sunfire-sync feature/sunfire-match-review feature/sunfire-confirmed-links feature/sunfire-followup-notes feature/sales-dispositions feature/sunfire-enrollment-collector feature/devoted-import-approval feature/devoted-import-review feature/uhc-statement-download
+```
+
+Sections 16.1-16.6 below keep the original 2026-11-10 analysis for the branches that remain; rows for merged branches are marked **merged**.
 
 ### 16.1 Summary
 
@@ -1015,15 +1045,17 @@ This builds on the SunFire collector, sync and match-review work above. Ryan aut
 | `devoted-import-approval` | 1 | 3 | 0 | **Retire** (superseded by `Main`) |
 | `devoted-import-review` | 1 | 39 | 1 (`0011`, identical to `Main`) | **Retire** (superseded by `Main`) |
 | `uhc-statement-download` | 2 | 8 | 0 | **Retire** after one check (16.2) |
-| `client-commission-history` | 1 | 8 | 0 | Hold; overlaps the large stack |
-| `statement-totals-check` | 1 | 11 | 0 | Hold; overlaps the large stack |
-| `carrier-sync-results` (+ `statement-review-queue`) | 3 (+1 inside) | 23 | 0 | Hold; overlaps the large stack |
-| `sunfire-export-test` | 2 | 4 | 0 | Hold: low code risk, but a scope decision |
-| Large stack, 12 branches ending at `ghl-contact-preview` | 83 total | 326 | 9 (`0012`-`0020`) | **Do not merge as-is**; review in slices (16.4) |
+| `client-commission-history` | 1 | 8 | 0 | **Merged 2026-11-10** |
+| `statement-totals-check` | 1 | 11 | 0 | **Merged 2026-11-10** |
+| `carrier-sync-results` (+ `statement-review-queue`) | 3 (+1 inside) | 23 | 0 | **Merged 2026-11-10** |
+| `sunfire-export-test` | 2 | 4 | 0 | Hold; recommend retiring (research-only, writes client data to disk) |
+| Large stack, 12 branches ending at `ghl-contact-preview` | 83 total | 326 | 9 (`0012`-`0020`) | Slices 2-6 (`sunfire-sync` to `sales-dispositions`) **merged 2026-11-10**; the rest is held (16.4) |
 
 "Commits" counts commits not on `Main`. Branch names are shortened here; each is `feature/<name>` on `origin`.
 
 ### 16.2 Recommended for retirement (superseded by `Main`)
+
+**Added 2026-11-10:** `sunfire-enrollment-collector` is a duplicate. Its commits reappear, rewritten, inside `sunfire-sync`, which is now merged, so the branch only adds noise. Delete it with the others.
 
 All three were written 2026-10-21 by `ryanb1210`. `Main` now contains a later version of the same work, so merging them produces conflicts (`add/add` in the same files) and would risk replacing the newer code.
 
@@ -1051,12 +1083,12 @@ The branches below are cumulative: each one contains everything above it. All co
 
 | # | Branch | Adds (from commit titles; not all code read) | Size | Migration |
 | --- | --- | --- | --- | --- |
-| 1 | `sunfire-enrollment-collector` | Private SunFire enrollment collector with identity checks (its commits reappear, rewritten, in #2) | 3 commits, +287 lines | none |
-| 2 | `sunfire-sync` | Connects SunFire enrollment sync and a private collection review | +4 commits, 27 files | none |
-| 3 | `sunfire-match-review` | Read-only matching of SunFire enrollments to commission entries, and chargeback review | +3 commits | none |
-| 4 | `sunfire-confirmed-links` | Owner-confirmed enrollment-to-commission links in the audit trail | +1 commit | none |
-| 5 | `sunfire-followup-notes` | Owner-reported "did not take effect, no commission expected" with private notes | +1 commit | none |
-| 6 | `sales-dispositions` | Agent-assigned sales and manual GHL-aligned policy dispositions (Active, Inactive, Future Active, Unknown) | +1 commit, 13 files | none |
+| 1 | `sunfire-enrollment-collector` | **Merged 2026-11-10 (duplicate; branch name can go)** Private SunFire enrollment collector with identity checks (its commits reappear, rewritten, in #2) | 3 commits, +287 lines | none |
+| 2 | `sunfire-sync` | **Merged 2026-11-10.** Connects SunFire enrollment sync and a private collection review | +4 commits, 27 files | none |
+| 3 | `sunfire-match-review` | **Merged 2026-11-10.** Read-only matching of SunFire enrollments to commission entries, and chargeback review | +3 commits | none |
+| 4 | `sunfire-confirmed-links` | **Merged 2026-11-10.** Owner-confirmed enrollment-to-commission links in the audit trail | +1 commit | none |
+| 5 | `sunfire-followup-notes` | **Merged 2026-11-10.** Owner-reported "did not take effect, no commission expected" with private notes | +1 commit | none |
+| 6 | `sales-dispositions` | **Merged 2026-11-10.** Agent-assigned sales and manual GHL-aligned policy dispositions (Active, Inactive, Future Active, Unknown) | +1 commit, 13 files | none |
 | 7 | `attention-first-workflow` | An "attention-first" home that leads with exceptions; changes the dashboard page and sidebar | +1 commit, 18 files | none |
 | 8 | `automatic-enrollment-status` | Automatic commission status per enrollment; account-access hardening; annual/quarterly dashboard totals; Marshall approval checklist | +10 commits, 37 files | `0012` |
 | 9 | `combined-review` | Client history and sync results combined for review | +2 commits, 36 files | none |
@@ -1101,6 +1133,8 @@ Whole stack versus `Main`: **326 files changed, +13,857 / -833 lines.** Too larg
 **Per-slice checklist (all required):** back up the local database first (`pg_dump`) and tag `Main` (`git tag pre-<slice>`); merge with `--no-ff` so it can be undone with `git revert -m 1`; never `reset --hard` or force-push; run `npx tsc --noEmit`, `npx eslint app components lib`, `npx vitest run` and `npx next build`; for migrations, apply them to a throwaway database first, run the matching files in `supabase/tests`, and only then `npx supabase migration up --local` on the working database (never `db reset`); update this README (status, functionality, changelog) in the same change; stop and ask on any conflict.
 
 ### 16.6 What the guard says about these branches (run 2026-11-10)
+
+**Update after the merges:** `npm run guard -- --all --base <merged branch>` now reports 11 unmerged branches: 5 clear (`attention-first-workflow`, `devoted-import-approval`, `sunfire-enrollment-collector`, `sunfire-export-test`, `uhc-statement-download`) and 6 stopped (the five `0012`/hosting branches above and `devoted-import-review`). The table below is the original pre-merge run.
 
 `npm run guard -- --all` was run against all 20 remote branches (14 clear, 6 stopped); the table below summarizes it. The stopped branches are `ghl-contact-preview` (details below), `automatic-enrollment-status`, `combined-review`, `ghl-connection-setup` and `scheduled-sync-recovery` (each because it carries the `0012` core-RLS migration from lower in the stack), and `devoted-import-review` (an old version of `next.config.ts` and a package its README does not name; retire it per 16.2). The guard only reads paths, package names and SQL keywords; it ran on the repository's git data and did not execute any branch code.
 
