@@ -14,6 +14,8 @@ what the agency owes them).
 Last updated: 2026-11-10 (README accuracy sweep against `Main` as of the 2026-10-21 changelog entries; `Main` has no commits after 2026-10-21)
 
 > **Changing code? Read section 13 (Contributing) first.** Work on a branch, never directly on `Main`.
+>
+> **Looking at unmerged branches? Read section 16 (Unmerged branch review register).** Nothing listed there should be merged without Marshall's review.
 
 ---
 
@@ -286,7 +288,7 @@ Important properties:
 - Not wanted for now: override tiers, chargeback rules, split-commission features beyond the compensation rules above.
 
 **Work on unmerged branches (not part of `Main`)**
-- `origin` holds about twenty feature branches that are **not merged into `Main`**, dated 2026-10-21 to 2026-11-07. By their commit titles they cover GoHighLevel connection/contact preview, SunFire enrollment checks, sales dispositions and attention-first review, scheduled-sync recovery, combined client-history review, and a gated AWS worker pilot plan. This README describes `Main` only: none of that work is described as working here, and this sweep did not review or run it. Marshall should decide which branches to review, merge or retire. The redesigned dashboard is `feature/dashboard-filter-ui`, held for review with Ryan.
+- `origin` holds **20 feature branches that are not merged into `Main`**, all committed under the git identity `ryanb1210` between 2026-10-21 and 2026-11-07. This README describes `Main` only; none of that work is described as working here. **Section 16 is the review register**: what each branch does, who/when, risks and a suggested review order. Merge nothing from it without Marshall. The redesigned dashboard is `feature/dashboard-filter-ui`, also held for review with Ryan.
 
 **Built: per-company compensation settings (2026-10-10)**
 - Career levels, visibility, Owner-editable rates (fixed or percent of annual premium), bonuses on/off, payouts removed. TruePlan's level names and MAPD rates remain **demo seed only**.
@@ -314,7 +316,7 @@ As of 2026-11-10 (`Main` unchanged since 2026-10-21): the local manual-upload, U
 2. **Review the Devoted integration with Marshall.** Ryan authorized the local migration/import while the approval gate was pending; Marshall's approval is not recorded.
 3. **Review UHC's downloaded August and October statements** in Statements without reimporting the eight earlier months, then verify later months as they become available.
 4. **Answer the open decisions** in section 7 (payee ID location, captive dollar visibility, hierarchy visibility, annual-premium source, TruePlan rates).
-5. **Decide what to do with the unmerged feature branches** listed in section 5 (review, merge or retire).
+5. **Review the unmerged branches together using section 16**, starting with the three recommended for retirement, then the SunFire/GHL stack one slice at a time. Several parts need Marshall's approval first (commission splits, core RLS changes, live GHL writes, AWS hosting).
 6. **Keep running locally. Do not deploy yet.** Run the app, local Supabase and the worker (`npm run start` in `worker/`) on your own machine. Hosting costs money and real client data (PHI) cannot go on any hosted service until HIPAA agreements are in place. Follow section 14 when ready (hosted setup, nightly sync, HIPAA).
 7. Career **earnings UI** (preview via `buildEarningsPlan`, Owner approval; no payouts).
 8. **Scheduled syncing** and a hosted worker (section 14.4 C and D), once hosting is decided.
@@ -784,6 +786,8 @@ Each Independent-agent customer is their own business associate of their carrier
 
 - **2026-11-10** - README accuracy sweep against the 2026-10-21 changelog entries: refreshed the status table (393 tests, local vs hosted verification, UHC/Devoted/worker rows), moved loose feature paragraphs into role-based functionality and the verification log, rewrote the carrier worker section (supported carriers, automatic login, in-memory sessions), added the two Devoted environment flags and migration 0011, updated project structure, next steps and open decisions, and listed the unmerged feature branches and stale prototype notes. Documentation only; no code, schema or behavior changes. TypeScript, ESLint and `vitest` (393 tests) pass; no browser or database checks were re-run for this sweep.
 
+- **2026-11-10** - Add section 16, the unmerged branch review register: for each of the 20 unmerged branches, what it adds, who committed it and when, size, migrations, test/check results on the largest branch, concerns and a recommendation, plus a suggested review order and per-slice merge checklist. Documentation only; nothing from those branches was merged, run live or changed. Checks run for the register: TypeScript, ESLint and `vitest` on `Main` content (the largest branch was checked separately in a temporary copy, since deleted).
+
 - **2026-10-21** - Standardize automatic saved-login submission for Ultimate, Devoted and UHC, including Devoted Login/Auth0 and UHC username/Continue. Retain per-connection in-memory browsers; hand off verification and rejected/unknown/reset screens; guard exact HTTPS destinations and avoid repeated credential submission. Update connection guidance/progress labels and add synthetic authentication regressions. No imports, schema, permissions or dependency changes. Live Devoted tracing found the callback was being interrupted by early navigation; wait for a visible signed-in portal marker before leaving callback routes. A regression covers this ordering. The live Devoted retest automatically opened Login, submitted saved credentials and reached My Commissions without manual input. All 391 synthetic tests, app/worker TypeScript and ESLint pass; The live worker subsequently verified Devoted automatic login/sync (9 skipped, zero failures) and Ultimate automatic login/sync (8 skipped, 1 PDF saved for review, zero failures). UHC submitted the saved credentials but the carrier reported wrong username/password. Reject known credential-error screens immediately and preserve the browser for a user-requested retry after Replace login; do not repeat submissions. Ryan confirms the saved credentials are correct and suspects a carrier portal issue. Credentials are unchanged; no further UHC retry is requested. A later retry accepted the username and reached Enter Your Password. Skip any read-only username field on that second step and report password-field/submit failures safely. Manual password entry and SMS verification succeeded (first SMS required resend); subsequent sync downloaded ten pairs with zero failures. UHC automatic password acceptance remains unverified. Use typing/blur events and verify each field retains the entered value before submission. A separate fresh-context acceptance test still did not reach verification, so automatic UHC credential acceptance is not claimed; it requested/sent no verification code and left the working authenticated browser untouched. All 393 synthetic tests, app/worker TypeScript and ESLint pass. The working ledger remains 155 entries / 1,286,819 cents. Ledger unchanged at 155 entries / 1,286,819 cents.
 
 
@@ -867,3 +871,105 @@ Each Independent-agent customer is their own business associate of their carrier
 - **2026-10-08** - MVP statement flow: upload/preview/approve import, Payments, Carriers (encrypted logins + Sync now), carrier-based dashboard, agent type/level in Users, carrier worker (unverified), `import_statement` + storage bucket migration (`0006`), sample statement generator, README rewritten as a living handoff document.
 - **2026-10-08** - Merged Ryan's carrier-statement logic: Ultimate parser, duplicate planning, writing-agent classification, rate locks and earnings plan (pure logic + tests), migration `0005`, `.cursorrules` rewritten for the statement-driven model.
 - Earlier - CRM-driven MVP (auth, roles, comp plans, bonuses, GoHighLevel scaffold). Now legacy.
+
+---
+
+## 16. Unmerged branch review register
+
+**Purpose.** Ryan has been working on branches in his own checkout while Marshall was away. This register lists every branch on `origin` that is **not merged into `Main`** so Marshall and Ryan can review them together instead of merging blind. **Nothing here is merged, and nothing here should be merged without Marshall's review.** Compiled 2026-11-10 from git history, diffs and automated checks only. **I did not run any of this against a live portal, GHL account or database**, and I did not read every line of the 326-file diff. Anything marked "inference" is a conclusion from file names, commit titles or merge conflicts, not something confirmed by reading the code.
+
+**Who and when.** Every unmerged commit is under the git identity `ryanb1210` (the same identity as 38 commits already on `Main`; Marshall Royce has 16). The commits are dated **2026-10-21 to 2026-11-07**. Git cannot say whether a given commit was typed by Ryan or produced with an AI assistant. Several commit messages say they were made at Ryan's explicit instruction.
+
+**Two repositories.** A README note on the largest branch says Ryan's checkout fetches from `ryanb1210/ComFlow` and pushes every branch to both `ryanb1210/ComFlow` and `mrro253/ComFlow` (Marshall's). **Unverified:** whether `Main` in Ryan's repository matches `Main` here. Confirm that before merging anything, so the two do not diverge.
+
+### 16.1 Summary
+
+| Branch | Commits | Files | Migrations | Recommendation |
+| --- | --- | --- | --- | --- |
+| `devoted-import-approval` | 1 | 3 | 0 | **Retire** (superseded by `Main`) |
+| `devoted-import-review` | 1 | 39 | 1 (`0011`, identical to `Main`) | **Retire** (superseded by `Main`) |
+| `uhc-statement-download` | 2 | 8 | 0 | **Retire** after one check (16.2) |
+| `client-commission-history` | 1 | 8 | 0 | Hold; overlaps the large stack |
+| `statement-totals-check` | 1 | 11 | 0 | Hold; overlaps the large stack |
+| `carrier-sync-results` (+ `statement-review-queue`) | 3 (+1 inside) | 23 | 0 | Hold; overlaps the large stack |
+| `sunfire-export-test` | 2 | 4 | 0 | Hold: low code risk, but a scope decision |
+| Large stack, 12 branches ending at `ghl-contact-preview` | 83 total | 326 | 9 (`0012`-`0020`) | **Do not merge as-is**; review in slices (16.4) |
+
+"Commits" counts commits not on `Main`. Branch names are shortened here; each is `feature/<name>` on `origin`.
+
+### 16.2 Recommended for retirement (superseded by `Main`)
+
+All three were written 2026-10-21 by `ryanb1210`. `Main` now contains a later version of the same work, so merging them produces conflicts (`add/add` in the same files) and would risk replacing the newer code.
+
+- **`devoted-import-approval`**: a decision document, "Prepare Devoted paired statement import decisions for Marshall approval". `Main` already has `docs/devoted-import-approval.md`. Conflicts: 3 files.
+- **`devoted-import-review`**: "Build gated Devoted paired imports for isolated review and testing", the original review version of the Devoted importer. `Main` has the activated version and the identical migration `0011`. Conflicts: 8 files.
+- **`uhc-statement-download`**: "Add UHC statement downloads with retries that retain sign-in" and "Read UHC payee proof from the shared account header". `Main` has the later UHC downloader. Conflicts: `uhcDownload.ts` and its test. **Check first:** confirm the small payee-proof fix (one commit, about 5 lines in `worker/src/carriers/uhcDownload.ts`) is in `Main`'s downloader; I did not verify this.
+
+To retire (Marshall, after the check; deletes a remote branch, so it is done by hand):
+`git push origin --delete feature/devoted-import-approval feature/devoted-import-review feature/uhc-statement-download` (and the same on Ryan's repository if both are used).
+
+### 16.3 Stand-alone branches (not part of the large stack)
+
+These branch directly from `Main`, add no migrations, and conflict with each other **only in the README**. The first three conflict in code with the large stack (inference: the stack holds its own version, see "Combine client history statement checks and sync results").
+
+- **`client-commission-history`** (1 commit, 2026-10-21): read-only client commission history across statement months, in the Commission activity page. Touches `payment-ledger.tsx`, `payments/actions.ts`, new `lib/reporting/clientCommissionHistory.ts` with tests. Code conflicts with the stack: `payments/actions.ts`, `payment-ledger.tsx`, `clientCommissionHistoryService.ts`.
+- **`statement-totals-check`** (1 commit, 2026-10-21): read-only comparison of statement totals against imported entries, a new `/statements/checks` page. Code conflict with the stack: the Statements page.
+- **`carrier-sync-results`** (3 commits, 2026-10-21; contains `statement-review-queue`): shows future carrier sync results, separates confirmed repeat downloads from statements needing review, records live Ultimate/Devoted sync checks. Code conflicts with the stack: Carriers and Statements pages, `lib/carriers/syncResult.ts`.
+- **`sunfire-export-test`** (2 commits, 2026-10-21; 4 files, +111 lines): a **research-only** worker command that opens a manually signed-in browser on the SunFire portal and exports two CSVs (Submitted Enrollments, then Book of Business). Reviewed concerns are small: it is locked to `https://www.sunfirematrix.com/app/agent/...`, touches no database, stores no credentials, imports nothing, and adds no dependency. Why it is still held: SunFire enrollment data is **outside the MVP scope in `.cursorrules`** (carrier statements, GHL as output), the README text says it was live-tested against the real portal, and Ryan's own note says the Book of Business view covers only the "Big 6" carrier group, not all enrollments. It merges cleanly with everything except the README. Decide whether SunFire is in scope first.
+
+Recommendation for the three history/sync branches: **do not merge separately.** Decide whether the stack's versions replace them; if so, retire them with the stack. If you want them sooner, review them one at a time with a rebase onto the stack decision.
+
+### 16.4 The large stack (12 branches in a single line)
+
+The branches below are cumulative: each one contains everything above it. All commits are `ryanb1210`, 2026-10-21 to 2026-11-07. Merging any branch merges all earlier ones. Sizes are the increase over the previous branch.
+
+| # | Branch | Adds (from commit titles; not all code read) | Size | Migration |
+| --- | --- | --- | --- | --- |
+| 1 | `sunfire-enrollment-collector` | Private SunFire enrollment collector with identity checks (its commits reappear, rewritten, in #2) | 3 commits, +287 lines | none |
+| 2 | `sunfire-sync` | Connects SunFire enrollment sync and a private collection review | +4 commits, 27 files | none |
+| 3 | `sunfire-match-review` | Read-only matching of SunFire enrollments to commission entries, and chargeback review | +3 commits | none |
+| 4 | `sunfire-confirmed-links` | Owner-confirmed enrollment-to-commission links in the audit trail | +1 commit | none |
+| 5 | `sunfire-followup-notes` | Owner-reported "did not take effect, no commission expected" with private notes | +1 commit | none |
+| 6 | `sales-dispositions` | Agent-assigned sales and manual GHL-aligned policy dispositions (Active, Inactive, Future Active, Unknown) | +1 commit, 13 files | none |
+| 7 | `attention-first-workflow` | An "attention-first" home that leads with exceptions; changes the dashboard page and sidebar | +1 commit, 18 files | none |
+| 8 | `automatic-enrollment-status` | Automatic commission status per enrollment; account-access hardening; annual/quarterly dashboard totals; Marshall approval checklist | +10 commits, 37 files | `0012` |
+| 9 | `combined-review` | Client history and sync results combined for review | +2 commits, 36 files | none |
+| 10 | `scheduled-sync-recovery` | Monthly (1st of the month) collection, opt-in local daily collection, interrupted-run recovery, live carrier verifications | +8 commits, 21 files | none |
+| 11 | `ghl-connection-setup` | Encrypted personal and shared GHL connection setup and agent mapping | +4 commits, 16 files | `0013` |
+| 12 | `ghl-contact-preview` | GHL read-only contact preview, reviewed GHL status/policy-detail writes, statement-contact linking and contact creation, per-agent GHL import automation, commission owner changes and credit splits, headless/hidden carrier browsers with an in-app verification relay, UHC/SunFire/Devoted fixes, AWS worker hosting scripts | +48 commits, 214 files, +8,864 lines | `0014`-`0020` |
+
+Whole stack versus `Main`: **326 files changed, +13,857 / -833 lines.** Too large to review as one change.
+
+**Check results on the tip (`ghl-contact-preview`, run 2026-11-10 in a temporary copy, since deleted):** application and worker TypeScript clean; ESLint clean; `vitest` **750 of 751 tests pass** (`worker/src/__tests__/loginDiagnostics.test.ts`, "masks every form field in an opted-in capture", fails; cause not investigated and could be an artifact of the temporary copy). Not run: `next build`, the SQL tests in `supabase/tests`, anything live. On `Main` today there are 393 tests.
+
+**Concerns that need Marshall's decision before any of this reaches `Main`** (each verified by reading file names, migration statements or commit text, not by running the code):
+
+1. **Scope.** SunFire enrollment collection, sales dispositions, enrollment-based commission status and "assume paid enrollments are Active" are not in the `.cursorrules` MVP scope. They need a product decision with Ryan. The attention-first home also changes what the dashboard is for.
+2. **Core RLS and access (`0012`).** Redefines the shared helper functions `get_my_agency_id()`, `get_my_role()` and `can_see_direct_reports()` and replaces the `users` insert policy. Every table's RLS depends on those helpers. This is on the "needs approval" list in section 13. The branch contains a "Marshall account-access approval checklist" and a note of a local rollout; whether Marshall ever completed that checklist is not recorded.
+3. **Money and attribution (`0019`, `0020`).** `0019` adds a `BEFORE INSERT` trigger on `carrier_transactions` that can change who an entry is credited to, plus triggers on `agent_earnings` and `policy_compensation_locks`. `0020` adds commission split tables and a **new read policy on `carrier_transactions`**. Ryan's answer in section 7 (#11) was "no split commissions beyond the compensation rules" for now. Changing the meaning of money, RLS or audit tables needs approval.
+4. **Imports now trigger outside effects (`0017`, `0018`).** A trigger on `commission_statements` queues GHL jobs when a statement is imported, and a worker processes them. The rule that imports and approvals are separate steps still holds for money, but an import now sets off automated writes to an external CRM.
+5. **Live writes to GoHighLevel.** The branch includes reviewed GHL status and policy-detail writes, contact creation, and per-agent import automation; its notes record three authorized live "Active" updates. GHL is meant to be an output target, but writing to a customer's real CRM needs your sign-off, a dry-run mode and a kill switch (I did not look for the latter two).
+6. **Hosting and new technology.** About 26 files under `worker/hosting/`: AWS pilot scripts, a Go TLS relay/gateway (new language in the repo), a seccomp profile, a verification relay for a hosted worker. `.cursorrules` says hosting is Vercel plus a separate small worker host, and README section 14.5 says no real data goes on any host before HIPAA agreements. Replacing hosting needs approval.
+7. **Hidden browsers and MFA.** "Keep carrier windows concealed outside verification", a headless worker candidate and an in-app verification relay change how carrier sign-in and MFA are handled. Security review needed.
+8. **Scheduling.** Collection on the 1st of each month and opt-in daily collection. README section 5 lists scheduling as not built.
+9. **Dependencies.** Pins `playwright` to 1.65.0 (was `^1.49.1`) and adds an npm `overrides` entry for `postcss`.
+10. **Test data.** Five distinct values that match the shape of a Medicare ID appear in tests, fixtures and drill scripts (the fixture files say they are synthetic). Only one is obviously synthetic by pattern. **Confirm all five are synthetic before merge** (rule 10: no real client data in the repo).
+11. **Dashboard conflict.** The stack changes `app/(dashboard)/dashboard/page.tsx`, `components/dashboard/*` and the sidebar. `feature/dashboard-filter-ui` changes the same page, so choosing one dashboard is a prerequisite.
+12. **README drift.** Each branch edited an older README, so every merge conflicts there. Per section 13, conflicts must be resolved with Marshall present.
+
+### 16.5 Suggested review order
+
+1. Retire the three stale branches (16.2) after the payee-proof check.
+2. Confirm `Main` is the same in both repositories.
+3. Decide scope with Ryan: is SunFire enrollment tracking in the product? If not, slices 1-9 and `sunfire-export-test` are out.
+4. Choose the dashboard (`feature/dashboard-filter-ui` versus the stack's attention-first home).
+5. Review the stack bottom-up in slices, merging each only after its checklist:
+   - **Slice A** (#1-#7): SunFire enrollment tracking, sales dispositions, attention-first home. No migrations.
+   - **Slice B** (#8-#9): `0012` core access change. Marshall's approval checklist first.
+   - **Slice C** (#10-#11): scheduled collection and GHL connection setup (`0013`).
+   - **Slice D1**: GHL read-only preview and contact linking (`0014`-`0018`), with the import trigger and live writes behind an off switch.
+   - **Slice D2**: commission owners and splits (`0019`, `0020`). Separate approval; likely deferred.
+   - **Slice D3**: hosted worker, gateway and AWS scripts. Separate approval, after the HIPAA steps in section 14.5.
+   The last branch holds D1-D3 together today, so it must be split before D2 and D3 can be decided on their own.
+
+**Per-slice checklist (all required):** back up the local database first (`pg_dump`) and tag `Main` (`git tag pre-<slice>`); merge with `--no-ff` so it can be undone with `git revert -m 1`; never `reset --hard` or force-push; run `npx tsc --noEmit`, `npx eslint app components lib`, `npx vitest run` and `npx next build`; for migrations, apply them to a throwaway database first, run the matching files in `supabase/tests`, and only then `npx supabase migration up --local` on the working database (never `db reset`); update this README (status, functionality, changelog) in the same change; stop and ask on any conflict.
