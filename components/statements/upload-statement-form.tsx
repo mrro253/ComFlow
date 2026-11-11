@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const SELECT_CLASS = "h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm";
+const SELECT_CLASS = "min-w-0 w-full h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm";
 
 export function UploadStatementForm({
   carriers,
@@ -24,7 +24,7 @@ export function UploadStatementForm({
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <Label htmlFor="carrier">Carrier</Label>
           <select id="carrier" name="carrier" className={SELECT_CLASS} defaultValue={carriers[0]}>
             {carriers.map((carrier) => (
@@ -35,7 +35,7 @@ export function UploadStatementForm({
           </select>
         </div>
         {!ownBookOnly && (
-          <div className="flex flex-col gap-2">
+          <div className="flex min-w-0 flex-col gap-2">
             <Label htmlFor="ownerUserId">Statement belongs to</Label>
             <select id="ownerUserId" name="ownerUserId" className={SELECT_CLASS} defaultValue="">
               <option value="">The agency</option>
@@ -47,7 +47,7 @@ export function UploadStatementForm({
             </select>
           </div>
         )}
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <Label htmlFor="file">Statement PDF</Label>
           <Input id="file" name="file" type="file" accept="application/pdf,.pdf" required />
         </div>

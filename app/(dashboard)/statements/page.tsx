@@ -1,3 +1,4 @@
+import { listStatementReview } from "@/lib/services/statementReviewService";
 import { statementCoverage } from "@/lib/reporting/statementCoverage";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -14,13 +15,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatDate } from "@/lib/utils";
 import { canManageStatements } from "@/lib/auth/statementAccess";
 
-export default async function StatementsPage({ searchParams }: { searchParams: Promise<{ year?: string }> }) {
+export default async function StatementsPage({ searchParams }: { searchParams: Promise<{ year?: string; repeats?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (!canManageStatements(user)) redirect("/dashboard");
 
   const [statements, team, coverageStatements] = await Promise.all([listStatements(), listUsersForAgency(user.agencyId), listStatementCoverage()]);
+  const review = await listStatementReview();
   const params = await searchParams;
+  const repeats = review.filter((r) => r.label === "Already imported");
+  const queue = review.filter((r) => r.label !== "Already imported");
+  const shown = params.repeats === "show" ? review : queue;
   const currentYear = new Date().getUTCFullYear();
   const years = [...new Set([currentYear, ...coverageStatements.flatMap((s) => s.statementMonth ? [Number(s.statementMonth.slice(0, 4))] : [])])].filter((y) => Number.isInteger(y) && y >= 2000 && y <= 2099).sort((a, b) => b - a);
   const requestedYear = Number(params.year);
@@ -45,7 +50,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
 
       <Link href="/statements/checks" className="text-sm font-medium underline">Check imported statement totals</Link>
       {user.role === "owner" && process.env.DEVOTED_REVIEW_ENABLED === "true" && <Link href="/statements/devoted" className="text-sm font-medium underline">Review a Devoted PDF/workbook pair</Link>}
-      <Card>
+      <Card className="min-w-0">
         <CardHeader>
           <CardTitle>Upload a statement</CardTitle>
           <CardDescription>
@@ -61,7 +66,24 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="min-w-0">
+        <CardHeader>
+          <CardTitle>Statements to review ({queue.length})</CardTitle>
+          <CardDescription>New statement means no imported statement for that carrier, owner, and month. Possible correction means one is already on file; compare the reports before importing. These labels do not change your commissions.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">{repeats.length} confirmed repeat downloads already imported. Saved files remain in History.</p>
+          <Link className="text-sm underline" href={`/statements?year=${year}${params.repeats === "show" ? "" : "&repeats=show"}`}>{params.repeats === "show" ? "Hide confirmed repeats" : "Show confirmed repeats"}</Link>
+          {shown.length === 0 && <p className="text-sm">No registered statements need review.</p>}
+          <ul className="divide-y">{shown.map(({ statement: s, label }) => <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+            <Link href={`/statements/${s.id}`} className="font-medium underline">{s.carrier} · {s.statementMonth ?? "Month needs verification"} · {s.userId ? nameById.get(s.userId) ?? "Agent" : "Agency"}</Link>
+            <Badge variant={label === "Already imported" ? "outline" : "secondary"}>{label}</Badge>
+          </li>)}</ul>
+          <p className="text-xs text-muted-foreground">Unreadable reports stay in review. Devoted PDF/spreadsheet pairs use the separate Devoted review link above.</p>
+        </CardContent>
+      </Card>
+
+      <Card className="min-w-0">
         <CardHeader>
           <CardTitle>Statements by month</CardTitle>
           <CardDescription>For each carrier and statement owner already on file. None on file means no saved statement for that month; it does not mean commission is missing or unpaid. Multiple statements can belong to one month.</CardDescription>
@@ -83,7 +105,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="min-w-0">
         <CardHeader>
           <CardTitle>History</CardTitle>
           <CardDescription>Latest 100 saved statements. On a phone, swipe the table sideways to see all columns. Statement totals are carrier-reported amounts, not verified bank deposits.</CardDescription>
@@ -127,7 +149,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
                     {s.source === "portal" ? "Carrier portal" : "Manual upload"}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={STATEMENT_STATUS_BADGE[s.status].variant}>{STATEMENT_STATUS_BADGE[s.status].label}</Badge>
+                    <Badge variant={STATEMENT_STATUS_BADGE[s.status].variant}>{review.find((r) => r.statement.id === s.id)?.label ?? STATEMENT_STATUS_BADGE[s.status].label}</Badge>
                   </TableCell>
                   <TableCell className="text-right">{s.transactionCount ?? "—"}</TableCell>
                   <TableCell className="text-right">

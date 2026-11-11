@@ -1,3 +1,5 @@
+import { loadSyncResult } from "@/lib/repositories/syncResultRepository";
+import { connectionStatus } from "@/lib/reporting/connectionStatus";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { canManageCarrierLogin } from "@/lib/auth/carrierAccess";
@@ -11,13 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
-
-const STATUS = {
-  pending: { label: "Saved - not synced yet", variant: "secondary" },
-  active: { label: "Connected", variant: "success" },
-  needs_attention: { label: "Needs attention", variant: "destructive" },
-  disabled: { label: "Disconnected", variant: "outline" },
-} as const;
 
 export default async function CarriersPage() {
   const user = await getCurrentUser();
@@ -46,6 +41,7 @@ export default async function CarriersPage() {
   const mine = connections.filter((c) => c.userId === user.id);
   const others = connections.filter((c) => c.userId !== user.id);
   const isOwner = user.role === "owner";
+  const summaries = new Map(await Promise.all(mine.map(async (c) => [c.id, await loadSyncResult(c.id, user.agencyId)] as const)));
 
   return (
     <div className="flex flex-col gap-6">
@@ -61,9 +57,8 @@ export default async function CarriersPage() {
       {connectionCarriers(isOwner).map((carrier) => {
         const connection = mine.find((c) => c.carrier === carrier);
         const connected = connection && connection.status !== "disabled";
-        const status = connection?.status === "needs_attention" && connection.lastError?.startsWith("Sync running.")
-          ? { label: "Sync in progress", variant: "secondary" as const }
-          : connection ? STATUS[connection.status] : null;
+        const status = connection ? connectionStatus(connection.status, connection.lastError) : null;
+        const summary = connection ? summaries.get(connection.id) : null;
         return (
           <Card key={carrier}>
             <CardHeader className="flex-row items-center justify-between space-y-0">
@@ -80,6 +75,19 @@ export default async function CarriersPage() {
             <CardContent className="flex flex-col gap-4">
               {carrier === "UnitedHealthcare" && <p className="text-sm text-muted-foreground">Sync downloads available PDF and text reports. Keep the local worker running; complete verification in its browser and open Commissions &gt; Statements and More. New PDFs appear in <Link className="underline" href="/statements">Statements for review</Link>. Existing imported entries stay unchanged.</p>}
               {carrier === "Devoted Health" && <p className="text-sm text-muted-foreground">Sync saves PDF and spreadsheet pairs for review. Keep the local worker running; complete any Devoted verification in its browser window. <Link className="underline" href="/statements/devoted">Review downloaded Devoted statements</Link></p>}
+              {connection && <section className="rounded-md border p-3 text-sm" aria-label="Latest sync result">
+                <h3 className="font-medium">Latest sync result</h3>
+                {summary ? <>
+                  <p className="text-muted-foreground">{formatDate(summary.finishedAt)} · {summary.outcome === "completed" ? "Download check finished" : "Sync stopped before a complete result"}</p>
+                  {summary.counts ? <ul className="mt-2 grid grid-cols-2 gap-2">
+                    <li>{summary.counts.found} statements found</li>
+                    <li>{summary.counts.downloaded} downloads saved</li>
+                    <li>{summary.counts.skipped} previously saved</li>
+                    <li>{summary.counts.failed} downloads failed</li>
+                  </ul> : <p className="mt-2">Complete counts are unavailable. Any files already saved remain available for review.</p>}
+                  <p className="mt-2 text-xs text-muted-foreground">Downloaded files may be repeats or possible corrections. Review statements before importing; syncing does not add commissions to the dashboard. Previously saved files may still need review.</p>
+                </> : <p className="text-muted-foreground">A detailed result will appear after your next sync with the updated worker.</p>}
+              </section>}
               {connection?.lastError && connection.status === "needs_attention" && (
                 <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{connection.lastError}</p>
               )}
@@ -120,7 +128,7 @@ export default async function CarriersPage() {
                     <TableCell className="font-medium">{nameById.get(c.userId) ?? "Agent"}</TableCell>
                     <TableCell className="text-muted-foreground">{c.carrier}</TableCell>
                     <TableCell>
-                      <Badge variant={STATUS[c.status].variant}>{STATUS[c.status].label}</Badge>
+                      <Badge variant={connectionStatus(c.status, c.lastError).variant}>{connectionStatus(c.status, c.lastError).label}</Badge>
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
                       {c.lastSuccessfulSyncAt ? formatDate(c.lastSuccessfulSyncAt) : "—"}

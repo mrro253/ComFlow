@@ -1,3 +1,4 @@
+import type { LoginHelp } from "../../../lib/carriers/syncResult.js";
 /**
  * Carrier portal abstraction for the worker. Each carrier implements `CarrierPortal`;
  * the worker only knows this interface. Parsing the PDF is NOT the worker's job -
@@ -21,7 +22,7 @@ export interface PullOptions {
   /** In-memory browser isolation per connection; never a credential or cookie. */
   sessionKey?: string;
   onProgress?(): Promise<void>;
-  onVerification?(): Promise<void>;
+  onVerification?(reason: LoginHelp): Promise<void>;
   onUhcPair?(pair: { pdf: Buffer; text: Buffer; filename: string; statementMonth: string; payeeHash: string }): Promise<"stored" | "duplicate">;
   /** True when this statement id was already downloaded for this connection. */
   isKnown(carrierStatementId: string): boolean;
