@@ -1,5 +1,6 @@
 "use server";
 
+import { loadClientCommissionHistory } from "@/lib/services/clientCommissionHistoryService";
 import { revalidatePath } from "next/cache";
 import { loadPaymentLedger } from "@/lib/services/paymentLedgerService";
 import { PaymentFilterError } from "@/lib/reporting/paymentQuery";
@@ -67,4 +68,16 @@ export async function queryPayments(input: unknown) {
   } catch (error) {
     return { error: error instanceof PaymentFilterError ? error.message : "Could not load commission entries. Check your connection and sign-in, then try again." };
   }
+}
+/** POST only: carrier member identifiers and names never enter history URLs. */
+export async function queryClientCommissionHistory(input: unknown) {
+  try {
+    const user = await requireRole();
+    if (!input || typeof input !== "object") return { error: "Choose a commission entry to view its history." };
+    const { transactionId, page } = input as { transactionId?: unknown; page?: unknown };
+    if (typeof transactionId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transactionId) ||
+      (page !== undefined && (typeof page !== "number" || !Number.isSafeInteger(page) || page < 1))) return { error: "Choose a valid commission entry and page." };
+    const data = await loadClientCommissionHistory(user, transactionId, page as number | undefined);
+    return data ? { data } : { error: "This commission entry is unavailable or has no usable carrier member ID. Refresh the list and try again." };
+  } catch { return { error: "Could not load client history. Check your sign-in and connection, then try again." }; }
 }
